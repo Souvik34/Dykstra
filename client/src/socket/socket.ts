@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 
    export const socket = io(
-    "http://15.252.139.152:5000",
+    "https://api.dykstra.in",
     {
         autoConnect: false,
         transports: ["websocket"],

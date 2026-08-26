@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 
 export const api = axios.create({
- baseURL: "http://15.252.139.152:5000/api/v1",
+baseURL: "https://api.dykstra.in/api/v1",
   withCredentials: false,
   timeout: 120000,
 });
