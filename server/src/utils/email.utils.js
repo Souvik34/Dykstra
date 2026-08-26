@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
  * Password reset email
  */
 export const sendPasswordResetEmail = async (to, token) => {
-  const resetLink = `http://localhost:8080/reset-password?token=${token}`;
+ const resetLink = `https://dykstra.in/reset-password?token=${token}`;
 
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
