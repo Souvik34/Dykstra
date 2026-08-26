@@ -38,7 +38,7 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:8080/login",
+    failureRedirect: "https://dykstra.in/login",
     session: false,
   }),
   googleCallback

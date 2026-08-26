@@ -38,7 +38,7 @@ export const googleCallback = async (req, res, next) => {
     const user = req.user;
 
     if (!user) {
-      return res.redirect("http://localhost:8080/login");
+      return res.redirect("https://dykstra.in/login");
     }
 
     const accessToken = generateAccessToken(user);
@@ -50,7 +50,7 @@ export const googleCallback = async (req, res, next) => {
     };
 
     res.redirect(
-      `http://localhost:8080/oauth-success?token=${encodeURIComponent(
+      `https://dykstra.in/oauth-success?token=${encodeURIComponent(
         accessToken
       )}&user=${encodeURIComponent(JSON.stringify(userData))}`
     );
