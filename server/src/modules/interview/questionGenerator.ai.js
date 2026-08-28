@@ -486,38 +486,13 @@ Return ONLY valid JSON.
 
 const result = await generateAI(prompt);
 
-const problem = JSON.parse(result);
+const cleaned = result
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
 
-// const invokers = [
-//     problem.executionMetadata?.javaInvoker,
-//     problem.executionMetadata?.cppInvoker,
-//     problem.executionMetadata?.pythonInvoker
-// ];
+const problem = JSON.parse(cleaned);
 
-// const forbidden = [
-//     "...",
-//     "TODO",
-//     "YOUR_ARGUMENTS",
-//     "PLACEHOLDER",
-//     "System.out.println(sol.",
-//     "sol."
-// ];
-
-// for (const invoker of invokers) {
-
-//     if (!invoker) {
-//         throw new Error("Missing execution invoker");
-//     }
-
-//     for (const word of forbidden) {
-//         if (invoker.includes(word)) {
-//             throw new Error(
-//                 `Invalid AI generated invoker: ${word}`
-//             );
-//         }
-//     }
-// }
 return problem;
-
 // return result.text;
   };
