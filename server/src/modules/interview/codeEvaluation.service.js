@@ -1,84 +1,208 @@
 import { executeCode } from "./codeExecution.js";
 
-/**
- * Runs user code against multiple testcases
- * and returns pass/fail + detailed results
- */
 
 export const evaluateCode = async ({
-  language,
-  code,
-  testCases = [],
-  problem
+    language,
+    code,
+    testCases = [],
+    problem
 }) => {
 
-  const results = [];
+    console.log("=================================");
+    console.log("EVALUATE CODE CALLED");
+    console.log("LANGUAGE =", language);
+    console.log("CODE LENGTH =", code?.length);
+    console.log("TEST CASE COUNT =", testCases.length);
+    console.log("=================================");
 
-  let passed = 0;
+    const results = [];
 
-  for (let tc of testCases) {
+    let passed = 0;
 
-    const { input, expectedOutput } = tc;
 
- const execution = await executeCode({
-  language,
-  code,
-  input,
-  problem
-    });
-console.log("PROBLEM METADATA");
-console.log(problem);
-    // runtime / compile error
-    if (execution.error) {
+    for (const [index, tc] of testCases.entries()) {
 
-      results.push({
-        input,
-        expectedOutput,
-        userOutput: null,
-        isCorrect: false,
-        error: execution.error
-      });
+        const {
+            input,
+            expectedOutput
+        } = tc;
 
-      continue;
+        console.log("=================================");
+        console.log(`TEST CASE ${index + 1}`);
+        console.log("INPUT =", input);
+        console.log("EXPECTED =", expectedOutput);
+        console.log("=================================");
+
+
+        try {
+
+            const execution =
+                await executeCode({
+
+                    language,
+                    code,
+                    input,
+                    problem
+
+                });
+
+
+            console.log(
+                `Execution Result - Test Case ${index + 1}`
+            );
+
+            console.dir(
+                execution,
+                { depth: null }
+            );
+
+
+            /*
+             * Compilation / runtime error
+             */
+
+            if (execution.error) {
+
+                results.push({
+
+                    input,
+
+                    expectedOutput,
+
+                    userOutput:
+                        execution.output ?? null,
+
+                    isCorrect:
+                        false,
+
+                    error:
+                        execution.error,
+
+                    status:
+                        execution.status
+
+                });
+
+                continue;
+            }
+
+
+            /*
+             * Normalize output.
+             */
+
+            const normalize = (str) =>
+                String(str ?? "")
+                    .trim()
+                    .replace(/\r/g, "")
+                    .replace(/\s+/g, " ");
+
+
+            const userOutput =
+                normalize(
+                    execution.output
+                );
+
+
+            const expected =
+                normalize(
+                    expectedOutput
+                );
+
+
+            const isCorrect =
+                userOutput === expected;
+
+
+            console.log(
+                "USER OUTPUT =",
+                userOutput
+            );
+
+            console.log(
+                "EXPECTED OUTPUT =",
+                expected
+            );
+
+            console.log(
+                "CORRECT =",
+                isCorrect
+            );
+
+
+            if (isCorrect) {
+                passed++;
+            }
+
+
+            results.push({
+
+                input,
+
+                expectedOutput,
+
+                userOutput,
+
+                isCorrect,
+
+                error:
+                    null,
+
+                status:
+                    execution.status
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                `Test Case ${index + 1} execution failed:`,
+                error
+            );
+
+
+            results.push({
+
+                input,
+
+                expectedOutput,
+
+                userOutput:
+                    null,
+
+                isCorrect:
+                    false,
+
+                error:
+                    error.message,
+
+                status:
+                    "Execution Error"
+
+            });
+        }
     }
 
-   const normalize = (str) =>
-  String(str ?? "")
-    .trim()
-    .replace(/\r/g, "")
-    .replace(/\s+/g, " ");
-console.log("Execution Result:");
-console.dir(execution, { depth: null });
-    const userOutput =
-      normalize(execution.output);
 
-    const expected =
-      normalize(expectedOutput);
+    return {
 
-    const isCorrect =
-      userOutput === expected;
+        total:
+            testCases.length,
 
-    if (isCorrect) passed++;
+        passed,
 
-    results.push({
-      input,
-      expectedOutput,
-      userOutput,
-      isCorrect,
-      error: null
-    });
-  }
+        failed:
+            testCases.length - passed,
 
-  return {
-    total: testCases.length,
-    passed,
-    failed: testCases.length - passed,
+        successRate:
+            testCases.length
+                ? (passed / testCases.length) * 100
+                : 0,
 
-    successRate:
-      testCases.length
-        ? (passed / testCases.length) * 100
-        : 0,
+        results,
 
-    results
-  };
+        executionMode:
+            "piston"
+
+    };
 };

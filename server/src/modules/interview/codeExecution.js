@@ -2,6 +2,28 @@ import axios from "axios";
 
 import { prepareCode } from "../../services/runners/index.js";
 
+
+const PISTON_URL =
+  "http://localhost:2000/api/v2/execute";
+
+
+const languageMap = {
+
+  java: {
+    language: "java",
+    version: "15.0.2",
+    filename: "Main.java"
+  },
+
+  cpp: {
+    language: "c++",
+    version: "10.2.0",
+    filename: "main.cpp"
+  }
+
+};
+
+
 export const executeCode = async ({
   language,
   code,
@@ -11,83 +33,208 @@ export const executeCode = async ({
 
   try {
 
-    const languageMap = {
-      javascript: 63,
-      python: 71,
-      cpp: 54,
-      java: 62
-    };
+    const runtime =
+      languageMap[language];
 
 
-    const preparedCode = prepareCode({
-      language,
-      code,
-      problem
-    });
+    if (!runtime) {
+
+      throw new Error(
+        `Unsupported language: ${language}`
+      );
+    }
 
 
     /*
-     * Judge0 expects base64 when
-     * base64_encoded=true.
+     * Prepare the complete executable program.
      *
-     * This prevents UTF-8 problems caused by
-     * Unicode characters/comments in submitted code.
+     * Java:
+     *   user Solution
+     *   + parsers
+     *   + serializers
+     *   + Main
+     *
+     * C++:
+     *   user Solution
+     *   + parsers
+     *   + serializers
+     *   + main
      */
 
-    const encodedSource =
-      Buffer.from(
-        preparedCode,
-        "utf8"
-      ).toString("base64");
+    const preparedCode =
+      prepareCode({
+        language,
+        code,
+        problem
+      });
 
 
-    const encodedInput =
+    const stdin =
       input == null
         ? ""
-        : Buffer.from(
-            String(input),
-            "utf8"
-          ).toString("base64");
+        : String(input);
 
 
-    const response = await axios.post(
-
-      "http://localhost:2358/submissions?base64_encoded=true&wait=false",
-
-      {
-        language_id:
-          languageMap[language] || 63,
-
-        source_code:
-          encodedSource,
-
-        stdin:
-          encodedInput
-      },
-
-      {
-        headers: {
-          "Content-Type":
-            "application/json"
-        }
-      }
+    console.log(
+      `Executing ${language} using Piston`
     );
 
 
-    const token =
-      response.data.token;
+    const response =
+      await axios.post(
+
+        PISTON_URL,
+
+        {
+          language:
+            runtime.language,
+
+          version:
+            runtime.version,
+
+          files: [
+            {
+              name:
+                runtime.filename,
+
+              content:
+                preparedCode
+            }
+          ],
+
+          stdin
+
+        },
+
+        {
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          /*
+           * Piston itself has execution limits.
+           * This is only the HTTP request timeout.
+           */
+
+          timeout: 30000
+        }
+
+      );
 
 
-    const result =
-      await pollResult(token);
+    const data =
+      response.data;
 
 
-    return result;
+    const compile =
+      data.compile || null;
+
+
+    const run =
+      data.run || null;
+
+
+    /*
+     * Compilation failed.
+     */
+
+    if (
+      compile &&
+      (
+        compile.code !== 0 ||
+        compile.signal ||
+        compile.stderr ||
+        compile.message
+      )
+    ) {
+
+      return {
+
+        output:
+          null,
+
+        error:
+          compile.stderr ||
+          compile.output ||
+          compile.message ||
+          "Compilation failed",
+
+        status:
+          "Compilation Error",
+
+        raw:
+          data
+
+      };
+
+    }
+
+
+    /*
+     * Runtime failed.
+     */
+
+    if (
+      run &&
+      (
+        run.code !== 0 ||
+        run.signal
+      )
+    ) {
+
+      return {
+
+        output:
+          run.stdout || null,
+
+        error:
+          run.stderr ||
+          run.output ||
+          run.message ||
+          run.signal ||
+          "Runtime Error",
+
+        status:
+          run.signal === "SIGKILL"
+            ? "Time Limit Exceeded"
+            : "Runtime Error",
+
+        raw:
+          data
+
+      };
+
+    }
+
+
+    /*
+     * Successful execution.
+     */
+
+    return {
+
+      output:
+        run?.stdout || "",
+
+      error:
+        null,
+
+      status:
+        "Accepted",
+
+      raw:
+        data
+
+    };
 
 
   } catch (err) {
 
-    console.error("Judge0 Error:");
+    console.error(
+      "Piston Error:"
+    );
+
 
     if (err.response) {
 
@@ -104,96 +251,14 @@ export const executeCode = async ({
     } else {
 
       console.error(err);
+
     }
+
 
     throw new Error(
       "Code execution failed"
     );
-  }
-};
 
-
-/* =========================================================
-   POLL
-========================================================= */
-
-const pollResult = async (token) => {
-
-  const url =
-    `http://localhost:2358/submissions/${token}?base64_encoded=true`;
-
-
-  for (let i = 0; i < 10; i++) {
-
-    const res =
-      await axios.get(url);
-
-
-    if (res.data.status.id <= 2) {
-
-      await new Promise(
-        r => setTimeout(r, 1000)
-      );
-
-      continue;
-    }
-
-
-    console.log(
-      "JUDGE0 RAW RESPONSE"
-    );
-
-    console.dir(
-      res.data,
-      { depth: null }
-    );
-
-
-    return {
-
-      output:
-        res.data.stdout
-          ? Buffer.from(
-              res.data.stdout,
-              "base64"
-            ).toString("utf8")
-          : null,
-
-
-      error:
-        res.data.compile_output
-          ? Buffer.from(
-              res.data.compile_output,
-              "base64"
-            ).toString("utf8")
-          : (
-              res.data.stderr
-                ? Buffer.from(
-                    res.data.stderr,
-                    "base64"
-                  ).toString("utf8")
-                : (
-                    res.data.message ||
-                    (
-                      res.data.status.id !== 3
-                        ? res.data.status.description
-                        : null
-                    )
-                )
-            ),
-
-
-      status:
-        res.data.status.description,
-
-
-      raw:
-        res.data
-    };
   }
 
-
-  throw new Error(
-    "Execution timeout"
-  );
 };

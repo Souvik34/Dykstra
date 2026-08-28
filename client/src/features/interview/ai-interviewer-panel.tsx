@@ -365,12 +365,19 @@ export default function AIInterviewerPanel({
     if (!sessionId) return;
     if (!code.trim()) return;
 
-    const timer = setTimeout(() => {
-      socket.emit("code-update", {
-        sessionId,
-        code,
-      });
-    }, 2000);
+   const timer = setTimeout(() => {
+  console.log("🚀 CODE UPDATE EMITTING", {
+    sessionId,
+    codeLength: code.length,
+    codePreview: code.slice(-100),
+    socketConnected: socket.connected,
+  });
+
+  socket.emit("code-update", {
+    sessionId,
+    code,
+  });
+}, 2000);
 
     return () => clearTimeout(timer);
   }, [code, sessionId]);

@@ -765,7 +765,7 @@ export const prepareCppCode = ({ code, problem }) => {
      * Java runner is completely untouched.
      */
 
-    return `
+   const preparedCode = `
 #include <bits/stdc++.h>
 
 using namespace std;
@@ -812,4 +812,10 @@ int main() {
     return 0;
 }
 `;
+
+console.log("========== GENERATED C++ ==========");
+console.log(preparedCode);
+console.log("==================================");
+
+return preparedCode;
 };

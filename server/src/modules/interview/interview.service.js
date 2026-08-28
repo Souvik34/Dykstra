@@ -505,7 +505,8 @@ Could you briefly introduce yourself?
         console.time("Judge0");
 
         try {
-
+console.log(" LANGUAGE FROM SESSION =", session.language);
+console.log(" LANGUAGE TYPE =", typeof session.language);
             evaluation =
                 await evaluateCode({
 
