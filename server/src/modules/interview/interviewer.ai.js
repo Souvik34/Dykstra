@@ -258,7 +258,24 @@ Discuss complexity.
 Ask follow-up questions.
 
 Never reveal the intended solution.
+For "nextFocus", use ONLY one of these values:
 
+"UNDERSTANDING"
+"APPROACH"
+"CODING"
+"DEBUGGING"
+"OPTIMIZATION"
+"FINISHED"
+
+The nextFocus value represents the phase the interview should move toward based on the candidate's latest response.
+
+Do NOT move to CODING merely because the candidate has opened or edited the editor.
+
+Move from UNDERSTANDING to APPROACH only when the candidate has adequately explained their understanding of the problem and is ready to discuss their approach.
+
+Move from APPROACH to CODING only when the candidate has clearly explained their approach and begins implementing it.
+
+Do not skip phases.
 Return ONLY JSON.
 
 {

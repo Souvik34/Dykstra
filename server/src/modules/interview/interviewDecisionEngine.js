@@ -19,10 +19,10 @@ export const shouldInterrupt = ({
     switch (phase) {
 
         case InterviewPhase.UNDERSTANDING:
-            return true;
+            return false;
 
         case InterviewPhase.APPROACH:
-            return true;
+            return false;
 
         case InterviewPhase.CODING:
 

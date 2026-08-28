@@ -633,20 +633,20 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
     */
 
     const nextPhase =
-        decideNextPhase({
+    decideNextPhase({
 
-            currentPhase:
-                session.phase,
+        currentPhase:
+            session.phase,
 
-            evaluation,
+        evaluation,
 
-            codeDetected,
+        codeDetected,
 
-            approachAccepted:
-                false,
+        approachAccepted:
+            aiNextFocus === InterviewPhase.APPROACH,
 
-            optimizationCompleted
-        });
+        optimizationCompleted
+    });
 
     console.log(
         "========== PHASE =========="
@@ -774,6 +774,7 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
     let rawResponse = null;
 
     let aiReply = null;
+    let aiNextFocus = null;
 
 
     if (
@@ -1005,7 +1006,31 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
 
     aiReply =
         getSafeAIReply(rawResponse);
+if (typeof rawResponse === "object" && rawResponse !== null) {
 
+    aiNextFocus = rawResponse.nextFocus || null;
+
+} else if (typeof rawResponse === "string") {
+
+    try {
+
+        const cleaned = rawResponse
+            .replace(/```json/gi, "")
+            .replace(/```/g, "")
+            .trim();
+
+        const parsed = JSON.parse(cleaned);
+
+        aiNextFocus =
+            typeof parsed.nextFocus === "string"
+                ? parsed.nextFocus
+                : null;
+
+    } catch (err) {
+
+        aiNextFocus = null;
+    }
+}
 
     /*
     ======================================
