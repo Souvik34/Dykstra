@@ -483,16 +483,50 @@ Return ONLY valid JSON.
 //   contents: prompt,
 //   // contents: "Generate an easy array interview problem in JSON."   
 // });
-
 const result = await generateAI(prompt);
 
-const cleaned = result
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
+console.log("========== QUESTION AI RAW RESPONSE ==========");
+console.dir(result, { depth: null });
+console.log("==============================================");
 
-const problem = JSON.parse(cleaned);
+let cleaned = result;
+
+if (typeof cleaned === "string") {
+    cleaned = cleaned
+        .replace(/```json/gi, "")
+        .replace(/```/g, "")
+        .trim();
+}
+
+const start = cleaned.indexOf("{");
+const end = cleaned.lastIndexOf("}");
+
+if (start === -1 || end === -1 || end <= start) {
+    console.error("QUESTION AI DID NOT RETURN JSON");
+    console.error(cleaned);
+    throw new Error(
+        "AI question response does not contain JSON"
+    );
+}
+
+cleaned = cleaned.substring(start, end + 1);
+
+let problem;
+
+try {
+
+    problem = JSON.parse(cleaned);
+
+} catch (parseError) {
+
+    console.error("========== QUESTION JSON PARSE FAILED ==========");
+    console.error(parseError);
+    console.error("CLEANED QUESTION RESPONSE:");
+    console.error(cleaned);
+    console.error("================================================");
+
+    throw parseError;
+}
 
 return problem;
-// return result.text;
-  };
+}
