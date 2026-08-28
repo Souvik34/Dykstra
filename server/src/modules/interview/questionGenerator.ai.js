@@ -489,27 +489,34 @@ console.log("========== QUESTION AI RAW RESPONSE ==========");
 console.dir(result, { depth: null });
 console.log("==============================================");
 
-let cleaned = result;
+if (typeof result !== "string") {
+    throw new Error("AI question response is not a string");
+}
 
-if (typeof cleaned === "string") {
-    cleaned = cleaned
+const extractJSON = (text) => {
+
+    let cleaned = text
         .replace(/```json/gi, "")
         .replace(/```/g, "")
         .trim();
-}
 
-const start = cleaned.indexOf("{");
-const end = cleaned.lastIndexOf("}");
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
 
-if (start === -1 || end === -1 || end <= start) {
-    console.error("QUESTION AI DID NOT RETURN JSON");
-    console.error(cleaned);
-    throw new Error(
-        "AI question response does not contain JSON"
-    );
-}
+    if (
+        start === -1 ||
+        end === -1 ||
+        end <= start
+    ) {
+        throw new Error(
+            "AI question response does not contain JSON"
+        );
+    }
 
-cleaned = cleaned.substring(start, end + 1);
+    return cleaned.substring(start, end + 1);
+};
+
+let cleaned = extractJSON(result);
 
 let problem;
 
@@ -519,13 +526,25 @@ try {
 
 } catch (parseError) {
 
-    console.error("========== QUESTION JSON PARSE FAILED ==========");
-    console.error(parseError);
-    console.error("CLEANED QUESTION RESPONSE:");
-    console.error(cleaned);
-    console.error("================================================");
+    console.error(
+        "========== QUESTION JSON PARSE FAILED =========="
+    );
 
-    throw parseError;
+    console.error(parseError);
+
+    console.error(
+        "========== INVALID JSON =========="
+    );
+
+    console.error(cleaned);
+
+    console.error(
+        "==================================="
+    );
+
+    throw new Error(
+        `AI generated invalid question JSON: ${parseError.message}`
+    );
 }
 
 return problem;

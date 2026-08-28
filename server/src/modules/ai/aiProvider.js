@@ -11,7 +11,10 @@ export async function generateAI(prompt) {
 
     } catch (err) {
 
-        console.log("Gemini unavailable.");
+        console.error("========== GEMINI FAILED ==========");
+        console.error("Status:", err?.status);
+        console.error("Message:", err?.message);
+        console.error("===================================");
 
         console.log("========== OPENROUTER ==========");
 
