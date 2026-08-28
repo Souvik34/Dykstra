@@ -632,22 +632,7 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
     ======================================
     */
 
-    const nextPhase =
-    decideNextPhase({
-
-        currentPhase:
-            session.phase,
-
-        evaluation,
-
-        codeDetected,
-
-        approachAccepted:
-            aiNextFocus === InterviewPhase.APPROACH,
-
-        optimizationCompleted
-    });
-
+   
     console.log(
         "========== PHASE =========="
     );
@@ -1031,6 +1016,43 @@ if (typeof rawResponse === "object" && rawResponse !== null) {
         aiNextFocus = null;
     }
 }
+
+/*
+======================================
+DECIDE NEXT PHASE
+======================================
+*/
+
+const approachAccepted =
+    session.phase === InterviewPhase.UNDERSTANDING &&
+    (
+        aiNextFocus === "APPROACH" ||
+        aiNextFocus === "APPROACH_DEVELOPMENT"
+    );
+
+const nextPhase =
+    decideNextPhase({
+
+        currentPhase:
+            session.phase,
+
+        evaluation,
+
+        codeDetected,
+
+        approachAccepted,
+
+        optimizationCompleted
+    });
+
+console.log("========== PHASE ==========");
+console.log("Current:", session.phase);
+console.log("AI nextFocus:", aiNextFocus);
+console.log("Code detected:", codeDetected);
+console.log("Evaluation failed:", evaluation?.failed);
+console.log("Approach accepted:", approachAccepted);
+console.log("Next:", nextPhase);
+console.log("===========================");
 
     /*
     ======================================
@@ -1498,10 +1520,18 @@ resetInterviewIdleTimer(sessionId);
     ======================================
     */
 
-    if (
-        session.phase === InterviewPhase.APPROACH &&
-        codeAnalysis.changed
-    ) {
+  if (
+    (
+        session.phase === InterviewPhase.UNDERSTANDING ||
+        session.phase === InterviewPhase.APPROACH
+    ) &&
+    codeAnalysis.changed &&
+    (
+        codeAnalysis.addedLines >= 3 ||
+        codeAnalysis.returnAdded ||
+        codeAnalysis.criticalLogicAdded
+    )
+) {
 
         const updated =
             await updateInterviewPhaseRepo(

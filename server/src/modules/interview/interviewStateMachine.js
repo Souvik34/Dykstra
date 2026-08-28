@@ -18,7 +18,7 @@ export const decideNextPhase = ({
     currentPhase,
     evaluation,
     codeDetected,
-    approachAccepted,
+    approachAccepted = false,
     optimizationCompleted = false
 }) => {
 
@@ -26,50 +26,76 @@ export const decideNextPhase = ({
 
         case InterviewPhase.UNDERSTANDING:
 
+            // Candidate has demonstrated the approach
             if (approachAccepted) {
                 return InterviewPhase.APPROACH;
             }
 
+            // Candidate skipped discussion and started coding
+            if (codeDetected) {
+                return InterviewPhase.CODING;
+            }
+
             return InterviewPhase.UNDERSTANDING;
+
 
         case InterviewPhase.APPROACH:
 
+            // Candidate started implementing
             if (codeDetected) {
                 return InterviewPhase.CODING;
             }
 
             return InterviewPhase.APPROACH;
 
+
         case InterviewPhase.CODING:
 
+            // No execution result yet
             if (!evaluation) {
                 return InterviewPhase.CODING;
             }
 
+            // Failed tests → debugging
             if (evaluation.failed > 0) {
                 return InterviewPhase.DEBUGGING;
             }
 
+            // All tests passed → optimization
             return InterviewPhase.OPTIMIZATION;
+
 
         case InterviewPhase.DEBUGGING:
 
-            if (
-                evaluation &&
-                evaluation.failed === 0
-            ) {
-                return InterviewPhase.OPTIMIZATION;
+            if (!evaluation) {
+                return InterviewPhase.DEBUGGING;
             }
 
-            return InterviewPhase.DEBUGGING;
+            // Still broken
+            if (evaluation.failed > 0) {
+                return InterviewPhase.DEBUGGING;
+            }
 
-  case InterviewPhase.OPTIMIZATION:
+            // Fixed
+            return InterviewPhase.OPTIMIZATION;
 
-    if (optimizationCompleted) {
-        return InterviewPhase.FINISHED;
+
+        case InterviewPhase.OPTIMIZATION:
+
+            if (optimizationCompleted) {
+                return InterviewPhase.FINISHED;
+            }
+
+            return InterviewPhase.OPTIMIZATION;
+
+
+        case InterviewPhase.FINISHED:
+
+            return InterviewPhase.FINISHED;
+
+
+        default:
+
+            return InterviewPhase.UNDERSTANDING;
     }
-
-    return InterviewPhase.OPTIMIZATION;
-}
-
 };
