@@ -626,36 +626,6 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
     }
 
 
-    /*
-    ======================================
-    DECIDE NEXT PHASE
-    ======================================
-    */
-
-   
-    console.log(
-        "========== PHASE =========="
-    );
-
-    console.log(
-        "Current:",
-        session.phase
-    );
-
-    console.log(
-        "Next:",
-        nextPhase
-    );
-
-    console.log(
-        "Evaluation failed:",
-        evaluation?.failed
-    );
-
-    console.log(
-        "==========================="
-    );
-
 
     /*
     ======================================
