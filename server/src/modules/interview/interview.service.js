@@ -627,26 +627,7 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
 
 
 
-    /*
-    ======================================
-    UPDATE PHASE
-    ======================================
-    */
-
-    if (
-        nextPhase !== session.phase
-    ) {
-
-        await updateInterviewPhaseRepo(
-            sessionId,
-            nextPhase
-        );
-
-        await resetInterruptRepo(
-            sessionId
-        );
-    }
-
+ 
 
     /*
     ======================================
@@ -745,7 +726,7 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
                 await generateInterviewerResponse({
 
                     phase:
-                        nextPhase,
+                        session.phase,
 
                     interviewGuide:
                         interviewPackage.interviewGuide,
@@ -1023,6 +1004,24 @@ console.log("Evaluation failed:", evaluation?.failed);
 console.log("Approach accepted:", approachAccepted);
 console.log("Next:", nextPhase);
 console.log("===========================");
+
+/*
+======================================
+UPDATE PHASE
+======================================
+*/
+
+if (nextPhase !== session.phase) {
+
+    await updateInterviewPhaseRepo(
+        sessionId,
+        nextPhase
+    );
+
+    await resetInterruptRepo(
+        sessionId
+    );
+}
 
     /*
     ======================================
