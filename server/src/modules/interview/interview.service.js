@@ -628,43 +628,40 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
 
 
  
+/*
+======================================
+INTERRUPT DECISION
+======================================
+*/
 
-    /*
-    ======================================
-    INTERRUPT DECISION
-    ======================================
-    */
-
-    const currentCodeVersion =
-        session.code_version +
-        (codeDetected ? 1 : 0);
-
-    const interrupt =
-        shouldInterrupt({
-
-            phase:
-                nextPhase,
-
-            evaluation,
-
-            interruptionCount:
-                session.interruption_count,
-
-            codeAnalysis,
-
-            lastInterruptAtVersion:
-                session.last_interrupt_at_version,
-
-            currentCodeVersion
-        });
+const currentCodeVersion =
+    session.code_version +
+    (codeDetected ? 1 : 0);
 
 
-    console.log(
-        "Should interrupt:",
-        interrupt
-    );
+const interrupt =
+    shouldInterrupt({
 
+        phase:
+            session.phase,
 
+        evaluation,
+
+        interruptionCount:
+            session.interruption_count,
+
+        codeAnalysis,
+
+        lastInterruptAtVersion:
+            session.last_interrupt_at_version,
+
+        currentCodeVersion
+    });
+
+console.log(
+    "Should interrupt:",
+    interrupt
+);
     /*
     ======================================
     INTERRUPT REASON
@@ -679,7 +676,7 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
             getInterruptReason({
 
                 phase:
-                    nextPhase,
+                    session.phase,
 
                 evaluation,
 
