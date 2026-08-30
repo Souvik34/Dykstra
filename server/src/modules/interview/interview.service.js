@@ -1,3 +1,4 @@
+
 import {
     createInterviewSessionRepo,
     insertInterviewMessageRepo,
@@ -11,19 +12,15 @@ import {
     markOptimizationCompletedRepo,
     resetInterruptRepo,
     getInterviewQuestionHistoryRepo,
-saveInterviewQuestionHistoryRepo,
-getInterviewHistoryRepo
-    
+    saveInterviewQuestionHistoryRepo,
+    getInterviewHistoryRepo,
+    getInterviewReportRepo
 } from "./interview.repository.js";
-
 
 import { getIO } from "../../socket.js";
 
-import { getInterviewReportRepo } from "./interview.repository.js";
 import { generateStructuredQuestion } from "./questionGenerator.ai.js";
-
 import { evaluateCode } from "./codeEvaluation.service.js";
-
 import { generateInterviewFeedback } from "./interview.ai.js";
 
 import {
@@ -46,17 +43,27 @@ import {
     generateInterviewerResponse
 } from "./interviewer.ai.js";
 
+
+/*
+=========================================================
+IDLE TIMER
+=========================================================
+*/
+
 const idleTimers = new Map();
 
 const IDLE_TIMEOUT = 2 * 60 * 1000;
 
 const resetInterviewIdleTimer = (sessionId) => {
+
     if (idleTimers.has(sessionId)) {
         clearTimeout(idleTimers.get(sessionId));
     }
 
     const timer = setTimeout(() => {
+
         try {
+
             getIO()
                 .to(`interview-${sessionId}`)
                 .emit("interview-idle", {
@@ -65,26 +72,364 @@ const resetInterviewIdleTimer = (sessionId) => {
                 });
 
             idleTimers.delete(sessionId);
+
         } catch (err) {
-            console.error("Idle timer error:", err);
+
+            console.error(
+                "Idle timer error:",
+                err
+            );
         }
+
     }, IDLE_TIMEOUT);
 
     idleTimers.set(sessionId, timer);
 };
 
+
 const clearInterviewIdleTimer = (sessionId) => {
+
     if (idleTimers.has(sessionId)) {
-        clearTimeout(idleTimers.get(sessionId));
+
+        clearTimeout(
+            idleTimers.get(sessionId)
+        );
+
         idleTimers.delete(sessionId);
     }
 };
-export const getInterviewReportService = async (sessionId) => {
 
-    const report = await getInterviewReportRepo(sessionId);
 
-    return report;
+/*
+=========================================================
+AI RESPONSE PARSER
+=========================================================
+*/
+
+const parseAIResponse = (response) => {
+
+    if (
+        response === null ||
+        response === undefined
+    ) {
+
+        return {
+            reply: null,
+            nextFocus: null,
+            optimizationCompleted: false
+        };
+    }
+
+
+    /*
+    OBJECT RESPONSE
+    */
+
+    if (
+        typeof response === "object"
+    ) {
+
+        return {
+
+            reply:
+                typeof response.reply === "string"
+                    ? response.reply.trim()
+                    : typeof response.response === "string"
+                        ? response.response.trim()
+                        : typeof response.message === "string"
+                            ? response.message.trim()
+                            : null,
+
+            nextFocus:
+                typeof response.nextFocus === "string"
+                    ? response.nextFocus.trim().toUpperCase()
+                    : null,
+
+            optimizationCompleted:
+                response.optimizationCompleted === true
+        };
+    }
+
+
+    /*
+    STRING RESPONSE
+    */
+
+    if (
+        typeof response === "string"
+    ) {
+
+        const cleaned =
+            response
+                .replace(/```json/gi, "")
+                .replace(/```/g, "")
+                .trim();
+
+        if (!cleaned) {
+
+            return {
+                reply: null,
+                nextFocus: null,
+                optimizationCompleted: false
+            };
+        }
+
+
+        /*
+        Try JSON.
+        */
+
+        try {
+
+            const parsed =
+                JSON.parse(cleaned);
+
+            return {
+
+                reply:
+                    typeof parsed.reply === "string"
+                        ? parsed.reply.trim()
+                        : typeof parsed.response === "string"
+                            ? parsed.response.trim()
+                            : typeof parsed.message === "string"
+                                ? parsed.message.trim()
+                                : null,
+
+                nextFocus:
+                    typeof parsed.nextFocus === "string"
+                        ? parsed.nextFocus.trim().toUpperCase()
+                        : null,
+
+                optimizationCompleted:
+                    parsed.optimizationCompleted === true
+            };
+
+        } catch {
+
+            /*
+            Gemini returned normal text.
+            */
+
+            return {
+
+                reply: cleaned,
+
+                nextFocus: null,
+
+                optimizationCompleted: false
+            };
+        }
+    }
+
+
+    return {
+
+        reply: null,
+
+        nextFocus: null,
+
+        optimizationCompleted: false
+    };
 };
+
+
+/*
+=========================================================
+CONTEXTUAL FALLBACK
+=========================================================
+*/
+
+const getFallbackReply = ({
+    message,
+    phase,
+    evaluation,
+    interrupt,
+    interruptReason,
+    codeAnalysis
+}) => {
+
+    const text =
+        typeof message === "string"
+            ? message.toLowerCase()
+            : "";
+
+
+    /*
+    Candidate explicitly wants to stop.
+    */
+
+    if (
+        text.includes("end interview") ||
+        text.includes("stop interview") ||
+        text.includes("not prepared") ||
+        text.includes("next time")
+    ) {
+
+        return (
+            "Understood. We can end the interview here. " +
+            "I'll record your current progress and provide feedback."
+        );
+    }
+
+
+    /*
+    Realtime interruption.
+    */
+
+    if (interrupt) {
+
+        if (
+            interruptReason &&
+            typeof interruptReason === "string"
+        ) {
+
+            return interruptReason;
+        }
+
+        if (
+            codeAnalysis?.criticalLogicAdded
+        ) {
+
+            return (
+                "I noticed you've introduced an important part of the solution. " +
+                "Can you explain why this approach works?"
+            );
+        }
+
+        if (
+            codeAnalysis?.returnAdded
+        ) {
+
+            return (
+                "You've added the return logic. " +
+                "Before continuing, can you walk me through the reasoning behind this implementation?"
+            );
+        }
+
+        return (
+            "Can you explain what you just changed and why?"
+        );
+    }
+
+
+    /*
+    Successful submission.
+    */
+
+    if (
+        evaluation &&
+        Number(evaluation.failed) === 0 &&
+        Number(evaluation.total) > 0
+    ) {
+
+        if (
+            phase === InterviewPhase.CODING
+        ) {
+
+            return (
+                "Your solution passes the test cases. " +
+                "Can you explain its time and space complexity?"
+            );
+        }
+
+        return (
+            "Your solution passes the test cases. " +
+            "Can you walk me through your approach?"
+        );
+    }
+
+
+    /*
+    Failed submission.
+    */
+
+    if (
+        evaluation &&
+        Number(evaluation.failed) > 0
+    ) {
+
+        return (
+            "Some test cases are still failing. " +
+            "Can you walk me through your approach and identify where you think the issue might be?"
+        );
+    }
+
+
+    /*
+    Phase-specific fallbacks.
+    */
+
+    switch (phase) {
+
+        case InterviewPhase.UNDERSTANDING:
+
+            return (
+                "Before we move on, could you explain your understanding " +
+                "of the problem and the constraints?"
+            );
+
+
+        case InterviewPhase.APPROACH:
+
+            return (
+                "Could you walk me through your proposed approach " +
+                "and explain why it should work?"
+            );
+
+
+        case InterviewPhase.CODING:
+
+            return (
+                "Could you walk me through the reasoning behind your implementation?"
+            );
+
+
+        case InterviewPhase.DEBUGGING:
+
+            return (
+                "Let's investigate the failing case. " +
+                "What do you think is causing the issue?"
+            );
+
+
+        case InterviewPhase.OPTIMIZATION:
+
+            return (
+                "Can you explain how you would optimize this solution further?"
+            );
+
+
+        default:
+
+            return (
+                "Could you walk me through your reasoning for this approach?"
+            );
+    }
+};
+
+
+/*
+=========================================================
+INTERVIEW REPORT
+=========================================================
+*/
+
+export const getInterviewReportService = async (
+    sessionId
+) => {
+
+    return await getInterviewReportRepo(
+        sessionId
+    );
+};
+
+
+/*
+=========================================================
+START INTERVIEW
+=========================================================
+*/
+
 export const startInterviewService = async ({
     userId,
     type,
@@ -95,7 +440,10 @@ export const startInterviewService = async ({
     questionStrategy
 }) => {
 
-    console.log("1. Starting interview");
+    console.log(
+        "========== START INTERVIEW =========="
+    );
+
 
     const normalizedCompany =
         company?.trim() || null;
@@ -106,117 +454,218 @@ export const startInterviewService = async ({
     let normalizedQuestionStrategy =
         questionStrategy || "RELEVANT";
 
+
     if (
         !normalizedCompany &&
         normalizedQuestionStrategy === "PYQ"
     ) {
-        normalizedQuestionStrategy = "RELEVANT";
+
+        normalizedQuestionStrategy =
+            "RELEVANT";
     }
-const previousQuestions =
-    await getInterviewQuestionHistoryRepo(userId);
- const rawQuestion =
-   await generateStructuredQuestion({
-    company: normalizedCompany,
-    role: normalizedRole,
-    difficulty,
-    language,
-    questionStyle: normalizedQuestionStrategy,
-    previousQuestions
-});
-        const questionText =
-    typeof rawQuestion === "string"
-        ? rawQuestion
-        : JSON.stringify(rawQuestion);
-        console.log("2. Question generated");
-console.log(rawQuestion);
-let question;
 
-try {
-    
-    const cleaned = questionText
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
-    
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    
-    const jsonString = cleaned.substring(start, end + 1);
-    
-    question = JSON.parse(jsonString);
-console.log("3. Parsed question");
-await saveInterviewQuestionHistoryRepo({
-    userId,
-    title: question.title
-});
-    const starter =
-        question.starterCode ||
-        question.starter_code ||
-        {};
 
-    question.starterCode =
-        typeof starter === "string"
-            ? starter
-            : starter[language] || "";
+    const previousQuestions =
+        await getInterviewQuestionHistoryRepo(
+            userId
+        );
 
-    delete question.optimal_solution;
-    delete question.solution;
-    delete question.answer;
 
-} catch (err) {
+    const rawQuestion =
+        await generateStructuredQuestion({
 
-    console.error("RAW RESPONSE:\n", rawQuestion);
-    console.error("PARSE ERROR:", err);
-    throw err;
+            company:
+                normalizedCompany,
 
-}
- const session =
-await createInterviewSessionRepo({
-    userId,
-    type,
-    difficulty,
-    language,
-    company: normalizedCompany,
-    role: normalizedRole,
-    questionStrategy:
-        normalizedQuestionStrategy,
-    title: question.title,
-    currentQuestion: JSON.stringify(question)
-});
-    
-        console.log("4. Session created", session.id);
+            role:
+                normalizedRole,
+
+            difficulty,
+
+            language,
+
+            questionStyle:
+                normalizedQuestionStrategy,
+
+            previousQuestions
+        });
+
+
+    const questionText =
+        typeof rawQuestion === "string"
+            ? rawQuestion
+            : JSON.stringify(rawQuestion);
+
+
+    let question;
+
+
+    try {
+
+        const cleaned =
+            questionText
+                .replace(/```json/gi, "")
+                .replace(/```/g, "")
+                .trim();
+
+
+        const start =
+            cleaned.indexOf("{");
+
+        const end =
+            cleaned.lastIndexOf("}");
+
+
+        if (
+            start === -1 ||
+            end === -1 ||
+            end <= start
+        ) {
+
+            throw new Error(
+                "AI did not return valid JSON."
+            );
+        }
+
+
+        const jsonString =
+            cleaned.substring(
+                start,
+                end + 1
+            );
+
+
+        question =
+            JSON.parse(jsonString);
+
+
+        await saveInterviewQuestionHistoryRepo({
+
+            userId,
+
+            title:
+                question.title
+        });
+
+
+        const starter =
+            question.starterCode ||
+            question.starter_code ||
+            {};
+
+
+        question.starterCode =
+            typeof starter === "string"
+                ? starter
+                : starter[language] || "";
+
+
+        /*
+        Never expose hidden answers.
+        */
+
+        delete question.optimal_solution;
+        delete question.solution;
+        delete question.answer;
+
+
+    } catch (err) {
+
+        console.error(
+            "RAW QUESTION:",
+            rawQuestion
+        );
+
+        console.error(
+            "QUESTION PARSE ERROR:",
+            err
+        );
+
+        throw err;
+    }
+
+
+    const session =
+        await createInterviewSessionRepo({
+
+            userId,
+
+            type,
+
+            difficulty,
+
+            language,
+
+            company:
+                normalizedCompany,
+
+            role:
+                normalizedRole,
+
+            questionStrategy:
+                normalizedQuestionStrategy,
+
+            title:
+                question.title,
+
+            currentQuestion:
+                JSON.stringify(question)
+        });
+
 
     await updateInterviewPhaseRepo(
-
         session.id,
-
         InterviewPhase.UNDERSTANDING
-
     );
-resetInterviewIdleTimer(session.id);
-  
-   const responseQuestion = {
-    ...question
+
+
+    resetInterviewIdleTimer(
+        session.id
+    );
+
+
+    const responseQuestion = {
+        ...question
+    };
+
+
+    delete responseQuestion.hiddenTestCases;
+    delete responseQuestion.interviewGuide;
+    delete responseQuestion.expectedConcepts;
+    delete responseQuestion.expectedComplexity;
+
+
+    console.log(
+        "Interview created:",
+        session.id
+    );
+
+
+    return {
+
+        session: {
+
+            id:
+                session.id,
+
+            status:
+                session.status,
+
+            phase:
+                InterviewPhase.UNDERSTANDING
+        },
+
+        firstQuestion:
+            responseQuestion
+    };
 };
 
-delete responseQuestion.hiddenTestCases;
-delete responseQuestion.interviewGuide;
-delete responseQuestion.expectedConcepts;
-delete responseQuestion.expectedComplexity;
-console.log("5. Returning response");
-return {
 
-    session: {
-        id: session.id,
-        status: session.status,
-        phase: InterviewPhase.UNDERSTANDING
-    },
-
-    firstQuestion: responseQuestion
-
-};
-};
-
+/*
+=========================================================
+MAIN INTERVIEW MESSAGE SERVICE
+=========================================================
+*/
 
 export const sendInterviewMessageService = async ({
     sessionId,
@@ -226,40 +675,74 @@ export const sendInterviewMessageService = async ({
     isSubmission = false
 }) => {
 
-    console.log("=================================");
-    console.log(">>> sendInterviewMessageService called");
-    console.log("Session:", sessionId);
-    console.log("Candidate message:", message);
-    console.log("=================================");
+    console.log(
+        "========================================"
+    );
 
-  const session =
-    await getInterviewSessionRepo({
-        sessionId,
-        userId
-    });
+    console.log(
+        ">>> sendInterviewMessageService"
+    );
+
+    console.log(
+        "Session:",
+        sessionId
+    );
+
+    console.log(
+        "Message:",
+        message
+    );
+
+    console.log(
+        "isSubmission:",
+        isSubmission
+    );
+
+    console.log(
+        "========================================"
+    );
+
+
+    const session =
+        await getInterviewSessionRepo({
+
+            sessionId,
+
+            userId
+        });
+
 
     if (!session) {
-        throw new Error("Interview session not found.");
+
+        throw new Error(
+            "Interview session not found."
+        );
     }
 
-    const isInterviewStart =
-        message === "__INTERVIEW_START__";
 
-    resetInterviewIdleTimer(sessionId);
+    resetInterviewIdleTimer(
+        sessionId
+    );
+
 
     /*
-    ======================================
-    INTERVIEW ALREADY FINISHED
-    ======================================
+    =====================================================
+    FINISHED
+    =====================================================
     */
 
-    if (session.phase === InterviewPhase.FINISHED) {
+    if (
+        session.phase ===
+        InterviewPhase.FINISHED
+    ) {
 
         return {
+
             aiReply:
                 "The interview has concluded and my evaluation has already been submitted. Thank you for your time and best of luck.",
 
-            phase: InterviewPhase.FINISHED,
+            phase:
+                InterviewPhase.FINISHED,
 
             evaluation: null,
 
@@ -269,30 +752,137 @@ export const sendInterviewMessageService = async ({
         };
     }
 
+
     /*
-    ======================================
-    SAVE USER MESSAGE
-    ======================================
+    =====================================================
+    INTERVIEW START
+    =====================================================
     */
 
-    await insertInterviewMessageRepo({
-        sessionId,
-        sender: "user",
-        message
-    });
+    const isInterviewStart =
+        message === "__INTERVIEW_START__";
+
+
+    if (isInterviewStart) {
+
+        const openingMessage =
+            `
+Hi, I'm Antonio and I'll be your interviewer today.
+
+We'll spend around 45 minutes together.
+
+Let's begin.
+
+Could you briefly introduce yourself?
+`.trim();
+
+
+        const conversation =
+            await getInterviewMessagesRepo(
+                sessionId
+            );
+
+
+        const existingIntroduction =
+            conversation.find(
+                msg =>
+                    msg.sender === "ai" &&
+                    typeof msg.message === "string" &&
+                    msg.message.includes(
+                        "Hi, I'm Antonio and I'll be your interviewer today."
+                    )
+            );
+
+
+        if (existingIntroduction) {
+
+            return {
+
+                aiReply:
+                    existingIntroduction.message,
+
+                phase:
+                    session.phase,
+
+                evaluation: null,
+
+                codeAnalysis: null,
+
+                interrupted: false
+            };
+        }
+
+
+        await insertInterviewMessageRepo({
+
+            sessionId,
+
+            sender: "ai",
+
+            message:
+                openingMessage
+        });
+
+
+        getIO()
+            .to(`interview-${sessionId}`)
+            .emit(
+                "interviewer-message",
+                {
+
+                    message:
+                        openingMessage,
+
+                    aiReply:
+                        openingMessage,
+
+                    phase:
+                        session.phase,
+
+                    evaluation: null,
+
+                    codeAnalysis: null,
+
+                    interrupted: false
+                }
+            );
+
+
+        return {
+
+            aiReply:
+                openingMessage,
+
+            message:
+                openingMessage,
+
+            phase:
+                session.phase,
+
+            evaluation: null,
+
+            codeAnalysis: null,
+
+            interrupted: false
+        };
+    }
+
 
     /*
-    ======================================
+    =====================================================
     LOAD INTERVIEW PACKAGE
-    ======================================
+    =====================================================
     */
 
     let interviewPackage;
 
+
     try {
 
         interviewPackage =
-            JSON.parse(session.current_question);
+            JSON.parse(
+                session.current_question
+            );
 
     } catch (err) {
 
@@ -306,149 +896,91 @@ export const sendInterviewMessageService = async ({
         );
     }
 
+
     /*
-    ======================================
+    =====================================================
+    SAVE USER MESSAGE
+    =====================================================
+    */
+
+    await insertInterviewMessageRepo({
+
+        sessionId,
+
+        sender: "user",
+
+        message:
+            message || ""
+    });
+
+
+    /*
+    =====================================================
     LOAD CONVERSATION
-    ======================================
+    =====================================================
     */
 
     const conversation =
-        await getInterviewMessagesRepo(sessionId);
-
-
-    /*
-    ======================================
-    INTERVIEW START / INTRODUCTION
-    ======================================
-    */
-
-   if (isInterviewStart) {
-
-    const openingMessage = `
-Hi, I'm Antonio and I'll be your interviewer today.
-
-We'll spend around 45 minutes together.
-
-Let's begin.
-
-Could you briefly introduce yourself?
-`.trim();
-
-    /*
-     * Check whether the introduction already exists.
-     *
-     * This can happen when:
-     * - React StrictMode triggers the effect twice
-     * - the user reconnects
-     * - the page is refreshed
-     * - the socket reconnects
-     */
-    const existingIntroduction = conversation.find(
-        msg =>
-            msg.sender === "ai" &&
-            typeof msg.message === "string" &&
-            msg.message.includes(
-                "Hi, I'm Antonio and I'll be your interviewer today."
-            )
-    );
-
-    /*
-     * Introduction already exists.
-     *
-     * IMPORTANT:
-     * Never return aiReply: null here.
-     *
-     * The frontend needs a usable response even if
-     * the introduction was already persisted.
-     */
-    if (existingIntroduction) {
-
-        return {
-            aiReply: existingIntroduction.message,
-            phase: session.phase,
-            evaluation: null,
-            codeAnalysis: null,
-            interrupted: false
-        };
-    }
-
-    /*
-     * First time introduction.
-     */
-    await insertInterviewMessageRepo({
-        sessionId,
-        sender: "ai",
-        message: openingMessage
-    });
-
-    const io = getIO();
-
-    io.to(`interview-${sessionId}`).emit(
-        "interviewer-message",
-        {
-            message: openingMessage,
-            aiReply: openingMessage,
-            phase: session.phase,
-            evaluation: null,
-            codeAnalysis: null,
-            interrupted: false
-        }
-    );
-
-    return {
-        aiReply: openingMessage,
-        message: openingMessage,
-        phase: session.phase,
-        evaluation: null,
-        codeAnalysis: null,
-        interrupted: false
-    };
-}
-
-    /*
-    ======================================
-    DETECT SUBMISSION TYPE
-    ======================================
-    */
-
-    console.log("=================================");
-    console.log("Candidate message:");
-    console.log(message);
-
-    console.log("Editor code:");
-    console.log(code);
-
-    const candidateContent =
-        code?.trim()
-            ? code
-            : message;
-
-    const submissionType =
-        detectSubmissionType(
-            candidateContent
+        await getInterviewMessagesRepo(
+            sessionId
         );
+
+
+    /*
+    =====================================================
+    IMPORTANT:
+    CODE DETECTION MUST NOT DEPEND ONLY ON EDITOR CODE.
+    
+    If the candidate says:
+    
+        "Hi I am Souvik"
+    
+    while starter code exists, that is CHAT,
+    NOT CODE.
+    
+    Code is considered submitted only when:
+    
+        isSubmission === true
+    AND
+        actual code is detected.
+    =====================================================
+    */
+
+    const submittedCode =
+        typeof code === "string"
+            ? code.trim()
+            : "";
+
+
+    const detectedSubmissionType =
+        submittedCode
+            ? detectSubmissionType(
+                submittedCode
+            )
+            : SubmissionType.TEXT;
+
+
+    const codeDetected =
+        isSubmission === true &&
+        detectedSubmissionType ===
+            SubmissionType.CODE;
+
 
     console.log(
         "Submission type:",
-        submissionType
+        detectedSubmissionType
     );
-
-    const codeDetected =
-        submissionType === SubmissionType.CODE &&
-        message !== "__INTERVIEW_START__";
 
     console.log(
         "Code detected:",
         codeDetected
     );
 
-    console.log("=================================");
-
 
     /*
-    ======================================
+    =====================================================
     INITIAL STATE
-    ======================================
+    =====================================================
     */
 
     let evaluation = null;
@@ -457,23 +989,23 @@ Could you briefly introduce yourself?
 
 
     /*
-    ======================================
-    JUDGE0 EVALUATION
-    ======================================
+    =====================================================
+    CODE SUBMISSION
+    =====================================================
     */
 
     if (
         codeDetected &&
-        isSubmission === true &&
         session.type === "DSA"
     ) {
 
         console.log(
-            "Entered CODE analysis block"
+            "========== CODE SUBMISSION =========="
         );
 
+
         /*
-        Analyze code progress
+        Analyze progress before evaluation.
         */
 
         codeAnalysis =
@@ -483,15 +1015,15 @@ Could you briefly introduce yourself?
                     session.last_code || "",
 
                 currentCode:
-                    candidateContent,
+                    submittedCode,
 
                 interviewGuide:
                     interviewPackage.interviewGuide
-
             });
 
+
         /*
-        Build test cases
+        Test cases.
         */
 
         const testCases = [
@@ -499,14 +1031,16 @@ Could you briefly introduce yourself?
             ...(interviewPackage.visibleTestCases || []),
 
             ...(interviewPackage.hiddenTestCases || [])
-
         ];
 
-        console.time("Judge0");
 
         try {
-console.log(" LANGUAGE FROM SESSION =", session.language);
-console.log(" LANGUAGE TYPE =", typeof session.language);
+
+            console.time(
+                "Judge0"
+            );
+
+
             evaluation =
                 await evaluateCode({
 
@@ -514,7 +1048,7 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
                         session.language,
 
                     code:
-                        candidateContent,
+                        submittedCode,
 
                     testCases,
 
@@ -522,28 +1056,17 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
                         interviewPackage
                 });
 
-            console.log(
-                "========== JUDGE0 =========="
+
+            console.timeEnd(
+                "Judge0"
             );
 
-            console.log(
-                "Passed:",
-                evaluation?.passed
-            );
 
             console.log(
-                "Failed:",
-                evaluation?.failed
+                "Evaluation:",
+                evaluation
             );
 
-            console.log(
-                "Total:",
-                evaluation?.total
-            );
-
-            console.log(
-                "============================"
-            );
 
         } catch (judgeError) {
 
@@ -552,34 +1075,18 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
                 judgeError
             );
 
+
             /*
-            Don't crash the interview if Judge0
-            temporarily fails.
+            Interview continues even if
+            execution service fails.
             */
 
             evaluation = null;
         }
 
-        console.timeEnd("Judge0");
-
-        console.log(
-            "========== EVALUATION =========="
-        );
-
-        console.dir(
-            evaluation,
-            {
-                depth: null
-            }
-        );
-
-        console.log(
-            "================================"
-        );
-
 
         /*
-        Save code snapshot
+        Always save submitted code.
         */
 
         try {
@@ -588,13 +1095,14 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
 
                 sessionId,
 
-                code: candidateContent
+                code:
+                    submittedCode
             });
 
         } catch (snapshotError) {
 
             console.error(
-                "Code snapshot update failed:",
+                "Code snapshot failed:",
                 snapshotError
             );
         }
@@ -602,16 +1110,20 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
 
 
     /*
-    ======================================
+    =====================================================
     OPTIMIZATION COMPLETION
-    ======================================
+    =====================================================
     */
 
     let optimizationCompleted =
-        session.optimization_completed;
+        Boolean(
+            session.optimization_completed
+        );
+
 
     if (
-        session.phase === InterviewPhase.OPTIMIZATION &&
+        session.phase ===
+            InterviewPhase.OPTIMIZATION &&
         !optimizationCompleted &&
         !codeDetected &&
         typeof message === "string" &&
@@ -626,147 +1138,80 @@ console.log(" LANGUAGE TYPE =", typeof session.language);
     }
 
 
-
- 
-/*
-======================================
-INTERRUPT DECISION
-======================================
-*/
-
-const currentCodeVersion =
-    session.code_version +
-    (codeDetected ? 1 : 0);
-
-
-const interrupt =
-    shouldInterrupt({
-
-        phase:
-            session.phase,
-
-        evaluation,
-
-        interruptionCount:
-            session.interruption_count,
-
-        codeAnalysis,
-
-        lastInterruptAtVersion:
-            session.last_interrupt_at_version,
-
-        currentCodeVersion
-    });
-
-console.log(
-    "Should interrupt:",
-    interrupt
-);
     /*
-    ======================================
-    INTERRUPT REASON
-    ======================================
-    */
-
-    let interruptReason = null;
-
-    if (interrupt) {
-
-        interruptReason =
-            getInterruptReason({
-
-                phase:
-                    session.phase,
-
-                evaluation,
-
-                codeAnalysis
-            });
-
-        console.log(
-            "Interrupt reason:",
-            interruptReason
-        );
-
-        await recordInterruptRepo({
-
-            sessionId,
-
-            codeVersion:
-                currentCodeVersion
-        });
-    }
-
-
-    /*
-    ======================================
-    GENERATE AI RESPONSE
-    ======================================
+    =====================================================
+    AI RESPONSE
+    =====================================================
+    
+    IMPORTANT:
+    
+    AI is called for:
+    
+      - normal candidate messages
+      - actual code submissions
+      - NOT merely because editor code exists
+    
+    Realtime code interruptions are handled by
+    realtimeCodeUpdateService separately.
+    =====================================================
     */
 
     let rawResponse = null;
 
     let aiReply = null;
+
     let aiNextFocus = null;
 
+    let aiOptimizationCompleted = false;
 
-    if (
-        interrupt ||
-        !codeDetected
-    ) {
 
-        console.time("AI");
+    try {
 
-        try {
+        console.time(
+            "Interviewer AI"
+        );
 
-            rawResponse =
-                await generateInterviewerResponse({
 
-                    phase:
-                        session.phase,
+        rawResponse =
+            await generateInterviewerResponse({
 
-                    interviewGuide:
-                        interviewPackage.interviewGuide,
+                phase:
+                    session.phase,
 
-                    expectedConcepts:
-                        interviewPackage.expectedConcepts,
+                interviewGuide:
+                    interviewPackage.interviewGuide,
 
-                    conversation,
+                expectedConcepts:
+                    interviewPackage.expectedConcepts,
 
-                    candidateMessage:
-                        message,
+                conversation,
 
-                    candidateCode:
-                        codeDetected
-                            ? candidateContent
-                            : session.last_code || null,
+                candidateMessage:
+                    message || "",
 
-                    evaluation,
+                candidateCode:
+                    codeDetected
+                        ? submittedCode
+                        : session.last_code || null,
 
-                    codeAnalysis,
+                evaluation,
 
-                    interruptReason,
+                codeAnalysis,
 
-                    interactionType:
-                        codeDetected
-                            ? "CODE_SUBMIT"
-                            : "CHAT",
+                interruptReason: null,
 
-                    optimizationCompleted:
-                        optimizationCompleted
-                });
+                interactionType:
+                    codeDetected
+                        ? "CODE_SUBMIT"
+                        : "CHAT",
 
-        } catch (aiError) {
+                optimizationCompleted
+            });
 
-            console.error(
-                "Interviewer AI generation failed:",
-                aiError
-            );
 
-            rawResponse = null;
-        }
-
-        console.timeEnd("AI");
+        console.timeEnd(
+            "Interviewer AI"
+        );
 
 
         console.log(
@@ -783,331 +1228,246 @@ console.log(
         console.log(
             "======================================"
         );
+
+
+    } catch (aiError) {
+
+        console.error(
+            "Interviewer AI generation failed:",
+            aiError
+        );
+
+        rawResponse = null;
     }
 
 
     /*
-    ======================================
-    ROBUST AI RESPONSE PARSER
-    ======================================
+    =====================================================
+    PARSE AI
+    =====================================================
     */
 
-    const getSafeAIReply = (response) => {
+    const parsedAI =
+        parseAIResponse(
+            rawResponse
+        );
 
-        /*
-        Case 1:
-        Gemini returned nothing
-        */
-
-        if (
-            response === null ||
-            response === undefined
-        ) {
-
-            console.warn(
-                "AI returned null/undefined."
-            );
-
-            return null;
-        }
-
-
-        /*
-        Case 2:
-        Gemini returned an object
-        */
-
-        if (
-            typeof response === "object"
-        ) {
-
-            const reply =
-                response.reply;
-
-            if (
-                typeof reply === "string" &&
-                reply.trim().length > 0
-            ) {
-
-                return reply.trim();
-            }
-
-            /*
-            Sometimes AI may return:
-            { response: "..." }
-            */
-
-            if (
-                typeof response.response === "string" &&
-                response.response.trim().length > 0
-            ) {
-
-                return response.response.trim();
-            }
-
-            /*
-            Sometimes AI may return:
-            { message: "..." }
-            */
-
-            if (
-                typeof response.message === "string" &&
-                response.message.trim().length > 0
-            ) {
-
-                return response.message.trim();
-            }
-
-            return null;
-        }
-
-
-        /*
-        Case 3:
-        Gemini returned a string
-        */
-
-        if (
-            typeof response === "string"
-        ) {
-
-            let cleaned =
-                response
-                    .replace(/```json/gi, "")
-                    .replace(/```/g, "")
-                    .trim();
-
-            if (!cleaned) {
-                return null;
-            }
-
-
-            /*
-            Try JSON first
-            */
-
-            try {
-
-                const parsed =
-                    JSON.parse(cleaned);
-
-                if (
-                    parsed &&
-                    typeof parsed.reply === "string" &&
-                    parsed.reply.trim().length > 0
-                ) {
-
-                    return parsed.reply.trim();
-                }
-
-                if (
-                    parsed &&
-                    typeof parsed.response === "string" &&
-                    parsed.response.trim().length > 0
-                ) {
-
-                    return parsed.response.trim();
-                }
-
-            } catch (parseError) {
-
-                /*
-                Not JSON.
-                That's okay.
-                Gemini sometimes returns plain text.
-                */
-            }
-
-
-            /*
-            Plain text response
-            */
-
-            return cleaned;
-        }
-
-
-        return null;
-    };
-
-
-    /*
-    ======================================
-    EXTRACT AI REPLY
-    ======================================
-    */
 
     aiReply =
-        getSafeAIReply(rawResponse);
-if (typeof rawResponse === "object" && rawResponse !== null) {
+        parsedAI.reply;
 
-    aiNextFocus = rawResponse.nextFocus || null;
+    aiNextFocus =
+        parsedAI.nextFocus;
 
-} else if (typeof rawResponse === "string") {
+    aiOptimizationCompleted =
+        parsedAI.optimizationCompleted;
 
-    try {
 
-        const cleaned = rawResponse
-            .replace(/```json/gi, "")
-            .replace(/```/g, "")
-            .trim();
+    /*
+    =====================================================
+    DECIDE NEXT PHASE
+    =====================================================
+    
+    This happens AFTER AI parsing.
+    
+    Never use nextPhase before it exists.
+    =====================================================
+    */
 
-        const parsed = JSON.parse(cleaned);
+    const approachAccepted =
+        session.phase ===
+            InterviewPhase.UNDERSTANDING &&
+        (
+            aiNextFocus === "APPROACH" ||
+            aiNextFocus === "APPROACH_DEVELOPMENT"
+        );
 
-        aiNextFocus =
-            typeof parsed.nextFocus === "string"
-                ? parsed.nextFocus
-                : null;
 
-    } catch (err) {
+    /*
+    The state machine is the authoritative
+    phase-transition mechanism.
+    */
 
-        aiNextFocus = null;
+    let nextPhase =
+        decideNextPhase({
+
+            currentPhase:
+                session.phase,
+
+            evaluation,
+
+            codeDetected,
+
+            approachAccepted,
+
+            optimizationCompleted
+        });
+
+
+    /*
+    If realtime code already caused the
+    session to enter CODING, do not move
+    it backwards because the current AI
+    response did not contain nextFocus.
+    */
+
+    if (
+        session.phase ===
+            InterviewPhase.CODING &&
+        nextPhase ===
+            InterviewPhase.UNDERSTANDING
+    ) {
+
+        nextPhase =
+            InterviewPhase.CODING;
     }
-}
 
-/*
-======================================
-DECIDE NEXT PHASE
-======================================
-*/
 
-const approachAccepted =
-    session.phase === InterviewPhase.UNDERSTANDING &&
-    (
-        aiNextFocus === "APPROACH" ||
-        aiNextFocus === "APPROACH_DEVELOPMENT"
+    console.log(
+        "========== PHASE DECISION =========="
     );
 
-const nextPhase =
-    decideNextPhase({
+    console.log(
+        "Current:",
+        session.phase
+    );
 
-        currentPhase:
-            session.phase,
+    console.log(
+        "AI nextFocus:",
+        aiNextFocus
+    );
 
-        evaluation,
+    console.log(
+        "Code detected:",
+        codeDetected
+    );
 
-        codeDetected,
+    console.log(
+        "Evaluation:",
+        evaluation
+    );
 
-        approachAccepted,
+    console.log(
+        "Approach accepted:",
+        approachAccepted
+    );
 
-        optimizationCompleted
-    });
-
-console.log("========== PHASE ==========");
-console.log("Current:", session.phase);
-console.log("AI nextFocus:", aiNextFocus);
-console.log("Code detected:", codeDetected);
-console.log("Evaluation failed:", evaluation?.failed);
-console.log("Approach accepted:", approachAccepted);
-console.log("Next:", nextPhase);
-console.log("===========================");
-
-/*
-======================================
-UPDATE PHASE
-======================================
-*/
-
-if (nextPhase !== session.phase) {
-
-    await updateInterviewPhaseRepo(
-        sessionId,
+    console.log(
+        "Next:",
         nextPhase
     );
 
-    await resetInterruptRepo(
-        sessionId
+    console.log(
+        "===================================="
     );
-}
+
 
     /*
-    ======================================
-    HANDLE NULL / INVALID AI RESPONSE
-    ======================================
+    =====================================================
+    UPDATE PHASE
+    =====================================================
+    */
+
+    if (
+        nextPhase !== session.phase
+    ) {
+
+        console.log(
+            `PHASE CHANGE: ${session.phase} -> ${nextPhase}`
+        );
+
+
+        await updateInterviewPhaseRepo(
+            sessionId,
+            nextPhase
+        );
+
+
+        /*
+        Interrupt state belongs to the
+        current phase. Reset it when phase
+        changes.
+        */
+
+        await resetInterruptRepo(
+            sessionId
+        );
+    }
+
+
+    /*
+    =====================================================
+    AI REQUEST FAILED / INVALID
+    =====================================================
+    
+    Do NOT crash the interview.
+    
+    Do NOT return null.
+    
+    Generate a contextual fallback.
+    =====================================================
     */
 
     if (!aiReply) {
 
         console.warn(
-            "AI response was invalid. Using contextual fallback."
+            "AI response missing. Using contextual fallback."
         );
 
-        /*
-        Don't give the same generic sentence
-        for every failure.
-        */
 
-        if (
-            message?.toLowerCase().includes("end") ||
-            message?.toLowerCase().includes("stop") ||
-            message?.toLowerCase().includes("not prepared") ||
-            message?.toLowerCase().includes("next time")
-        ) {
+        aiReply =
+            getFallbackReply({
 
-            aiReply =
-                "Understood. We can end the interview here. I'll record the current progress and provide feedback based on what you've completed.";
+                message,
 
-        } else if (
-            evaluation &&
-            evaluation.failed === 0
-        ) {
+                phase:
+                    nextPhase,
 
-            aiReply =
-                "Your solution passes the test cases. Could you explain your approach and its time and space complexity?";
+                evaluation,
 
-        } else if (
-            evaluation &&
-            evaluation.failed > 0
-        ) {
+                interrupt: false,
 
-            aiReply =
-                "Some test cases are still failing. Could you walk me through your approach and identify where you think the issue might be?";
+                interruptReason: null,
 
-        } else if (
-            nextPhase === InterviewPhase.CODING
-        ) {
+                codeAnalysis
+            });
 
-            aiReply =
-                "Could you walk me through the reasoning behind your implementation?";
 
-        } else if (
-            nextPhase === InterviewPhase.OPTIMIZATION
-        ) {
-
-            aiReply =
-                "Can you explain how you would optimize this solution further?";
-
-        } else {
-
-            aiReply =
-                "Could you walk me through your reasoning for this approach?";
-        }
+        console.log(
+            "Fallback reply:",
+            aiReply
+        );
     }
 
 
     /*
-    ======================================
-    HANDLE INTERVIEW END FROM AI
-    ======================================
+    =====================================================
+    AI REQUESTED INTERVIEW COMPLETION
+    =====================================================
     */
 
     if (
-        typeof rawResponse === "object" &&
-        rawResponse !== null &&
-        rawResponse.optimizationCompleted
+        aiOptimizationCompleted
     ) {
 
         console.log(
             "AI marked optimization completed."
         );
 
+
         await markOptimizationCompletedRepo(
             sessionId
         );
 
-        await endInterviewService(
-            sessionId
-        );
+
+        const feedback =
+            await endInterviewService({
+
+                sessionId,
+
+                userId
+            });
+
 
         return {
 
@@ -1122,15 +1482,17 @@ if (nextPhase !== session.phase) {
 
             codeAnalysis,
 
+            feedback,
+
             interrupted: false
         };
     }
 
 
     /*
-    ======================================
-    SAVE AI MESSAGE
-    ======================================
+    =====================================================
+    SAVE AI RESPONSE
+    =====================================================
     */
 
     try {
@@ -1141,7 +1503,8 @@ if (nextPhase !== session.phase) {
 
             sender: "ai",
 
-            message: aiReply
+            message:
+                aiReply
         });
 
     } catch (saveError) {
@@ -1154,25 +1517,30 @@ if (nextPhase !== session.phase) {
 
 
     /*
-    ======================================
-    SOCKET EMIT
-    ======================================
+    =====================================================
+    SOCKET
+    =====================================================
     */
 
     try {
 
-        const io = getIO();
-
-        io.to(`interview-${sessionId}`)
+        getIO()
+            .to(`interview-${sessionId}`)
             .emit(
                 "interviewer-message",
                 {
-                    message: aiReply,
+
+                    message:
+                        aiReply,
 
                     phase:
                         nextPhase,
 
-                    evaluation
+                    evaluation,
+
+                    codeAnalysis,
+
+                    interrupted: false
                 }
             );
 
@@ -1186,9 +1554,9 @@ if (nextPhase !== session.phase) {
 
 
     /*
-    ======================================
-    RETURN TO FRONTEND
-    ======================================
+    =====================================================
+    RESPONSE
+    =====================================================
     */
 
     const response = {
@@ -1202,9 +1570,9 @@ if (nextPhase !== session.phase) {
 
         codeAnalysis,
 
-        interrupted:
-            interrupt
+        interrupted: false
     };
+
 
     console.log(
         "========== RETURNING TO FRONTEND =========="
@@ -1221,11 +1589,17 @@ if (nextPhase !== session.phase) {
         "============================================"
     );
 
+
     return response;
 };
 
-    
-    
+
+/*
+=========================================================
+END INTERVIEW
+=========================================================
+*/
+
 export const endInterviewService = async ({
     sessionId,
     userId
@@ -1233,84 +1607,134 @@ export const endInterviewService = async ({
 
     const session =
         await getInterviewSessionRepo({
+
             sessionId,
+
             userId
         });
 
 
     if (!session) {
-        throw new Error("Interview session not found");
+
+        throw new Error(
+            "Interview session not found"
+        );
     }
-      if (
+
+
+    if (
         session.status === "completed" ||
-        session.phase === InterviewPhase.FINISHED
+        session.phase ===
+            InterviewPhase.FINISHED
     ) {
-        const error = new Error("INTERVIEW_ALREADY_COMPLETED");
-        error.code = "INTERVIEW_ALREADY_COMPLETED";
+
+        const error =
+            new Error(
+                "INTERVIEW_ALREADY_COMPLETED"
+            );
+
+        error.code =
+            "INTERVIEW_ALREADY_COMPLETED";
+
         throw error;
     }
 
-    // clearInterviewIdleTimer(sessionId);
-     clearInterviewIdleTimer(sessionId);
+
+    clearInterviewIdleTimer(
+        sessionId
+    );
+
 
     const conversation =
-        await getInterviewMessagesRepo(sessionId);
+        await getInterviewMessagesRepo(
+            sessionId
+        );
+
 
     let interviewPackage = {};
+
 
     try {
 
         interviewPackage =
-            JSON.parse(session.current_question);
+            JSON.parse(
+                session.current_question
+            );
 
     } catch (err) {
 
         console.error(
-            "Interview package parse failed",
+            "Interview package parse failed:",
             err
         );
-
     }
 
-    const rawFeedback =
-        await generateInterviewFeedback({
 
-            type: session.type,
+    let rawFeedback;
 
-            difficulty: session.difficulty,
 
-            conversation,
+    try {
 
-            expectedConcepts:
-                interviewPackage.expectedConcepts || [],
+        rawFeedback =
+            await generateInterviewFeedback({
 
-            expectedComplexity:
-                interviewPackage.expectedComplexity || {},
+                type:
+                    session.type,
 
-            interviewGuide:
-                interviewPackage.interviewGuide || {}
+                difficulty:
+                    session.difficulty,
 
-        });
+                conversation,
+
+                expectedConcepts:
+                    interviewPackage.expectedConcepts || [],
+
+                expectedComplexity:
+                    interviewPackage.expectedComplexity || {},
+
+                interviewGuide:
+                    interviewPackage.interviewGuide || {}
+            });
+
+    } catch (feedbackError) {
+
+        console.error(
+            "Feedback generation failed:",
+            feedbackError
+        );
+
+        rawFeedback = null;
+    }
+
 
     let feedback;
+
 
     try {
 
         const cleaned =
-            rawFeedback
-                .replace(/```json/g, "")
-                .replace(/```/g, "")
-                .trim();
+            typeof rawFeedback === "string"
+                ? rawFeedback
+                    .replace(/```json/gi, "")
+                    .replace(/```/g, "")
+                    .trim()
+                : JSON.stringify(
+                    rawFeedback
+                );
+
 
         feedback =
-            JSON.parse(cleaned);
+            JSON.parse(
+                cleaned
+            );
 
     } catch (err) {
 
         console.error(
-            "Feedback Parse Error",
+            "Feedback Parse Error:",
             rawFeedback
         );
+
 
         feedback = {
 
@@ -1323,19 +1747,18 @@ export const endInterviewService = async ({
             optimizationScore: 0,
 
             strengths: [
-                "Could not evaluate"
+                "Feedback could not be generated."
             ],
 
             weaknesses: [
-                "Parsing failed"
+                "The interview evaluation service did not return valid feedback."
             ],
 
             finalFeedback:
                 "Interview feedback generation failed."
-
         };
-
     }
+
 
     await createInterviewFeedbackRepo({
 
@@ -1354,32 +1777,49 @@ export const endInterviewService = async ({
             feedback.optimizationScore,
 
         strengths:
-            Array.isArray(feedback.strengths)
+            Array.isArray(
+                feedback.strengths
+            )
                 ? feedback.strengths.join("\n")
                 : feedback.strengths,
 
         weaknesses:
-            Array.isArray(feedback.weaknesses)
+            Array.isArray(
+                feedback.weaknesses
+            )
                 ? feedback.weaknesses.join("\n")
                 : feedback.weaknesses,
 
         finalFeedback:
             feedback.finalFeedback
-
     });
 
+
     await updateInterviewPhaseRepo(
-    sessionId,
-    InterviewPhase.FINISHED
-);
+        sessionId,
+        InterviewPhase.FINISHED
+    );
+
+
     await endInterviewSessionRepo(
         sessionId
     );
 
-    return feedback;
 
+    clearInterviewIdleTimer(
+        sessionId
+    );
+
+
+    return feedback;
 };
 
+
+/*
+=========================================================
+GET INTERVIEW BY ID
+=========================================================
+*/
 
 export const getInterviewByIdService = async ({
     sessionId,
@@ -1388,446 +1828,799 @@ export const getInterviewByIdService = async ({
 
     const session =
         await getInterviewSessionRepo({
+
             sessionId,
+
             userId
         });
 
 
     if (!session) {
-        throw new Error("Interview session not found");
+
+        throw new Error(
+            "Interview session not found"
+        );
     }
+
 
     if (
         session.status === "completed" ||
-        session.phase === InterviewPhase.FINISHED
+        session.phase ===
+            InterviewPhase.FINISHED
     ) {
-        const error = new Error("INTERVIEW_ALREADY_COMPLETED");
-        error.code = "INTERVIEW_ALREADY_COMPLETED";
+
+        const error =
+            new Error(
+                "INTERVIEW_ALREADY_COMPLETED"
+            );
+
+        error.code =
+            "INTERVIEW_ALREADY_COMPLETED";
+
         throw error;
     }
 
-    const question = JSON.parse(session.current_question);
+
+    const question =
+        JSON.parse(
+            session.current_question
+        );
+
 
     delete question.hiddenTestCases;
     delete question.interviewGuide;
     delete question.expectedConcepts;
     delete question.expectedComplexity;
 
+
     return {
+
         session: {
-            id: session.id,
-            language: session.language,
-            difficulty: session.difficulty,
-            phase: session.phase,
-            status: session.status,
+
+            id:
+                session.id,
+
+            language:
+                session.language,
+
+            difficulty:
+                session.difficulty,
+
+            phase:
+                session.phase,
+
+            status:
+                session.status
         },
-        firstQuestion: question,
+
+        firstQuestion:
+            question
     };
 };
+
+
+/*
+=========================================================
+REALTIME CODE UPDATE SERVICE
+=========================================================
+
+This service is completely separate from
+normal candidate-message processing.
+
+Responsibilities:
+
+1. Observe editor changes.
+2. Save latest code.
+3. Detect meaningful implementation progress.
+4. Move UNDERSTANDING / APPROACH -> CODING.
+5. Interrupt candidate when decision engine says so.
+6. Ask interviewer about the code change.
+7. Never run Judge0 on every keystroke.
+8. Never move CODING backwards.
+=========================================================
+*/
 
 export const realtimeCodeUpdateService = async ({
     sessionId,
     code
 }) => {
 
-    try
-    {
-  console.log("======== REALTIME SERVICE START ========");
+    try {
 
-    const session = await getInterviewSessionRepo(sessionId);
+        console.log(
+            "======== REALTIME SERVICE START ========"
+        );
 
-    if (!session) {
-        return;
-    }
-resetInterviewIdleTimer(sessionId);
-    console.log("Current phase:", session.phase);
 
-    const interviewPackage =
-        JSON.parse(session.current_question);
+        if (
+            typeof code !== "string"
+        ) {
 
-    const codeAnalysis =
-        analyzeCodeProgress({
+            return;
+        }
 
-            previousCode:
-                session.last_code || "",
 
-            currentCode: code,
-
-            interviewGuide:
-                interviewPackage.interviewGuide
-
-        });
-
-    console.log("Code Analysis:");
-    console.dir(codeAnalysis, { depth: null });
-
-    const saveSnapshot = async () => {
-
-        await updateCodeSnapshotRepo({
-            sessionId,
-            code
-        });
-
-    };
-
-    /*
-    ======================================
-    Nothing changed
-    ======================================
-    */
-
-    if (!codeAnalysis.changed) {
-        return;
-    }
-
-    /*
-    ======================================
-    AUTO MOVE APPROACH -> CODING
-    ======================================
-    */
-
-  if (
-    (
-        session.phase === InterviewPhase.UNDERSTANDING ||
-        session.phase === InterviewPhase.APPROACH
-    ) &&
-    codeAnalysis.changed &&
-    (
-        codeAnalysis.addedLines >= 3 ||
-        codeAnalysis.returnAdded ||
-        codeAnalysis.criticalLogicAdded
-    )
-) {
-
-        const updated =
-            await updateInterviewPhaseRepo(
-                sessionId,
-                InterviewPhase.CODING
+        const session =
+            await getInterviewSessionRepo(
+                sessionId
             );
 
-        session.phase = updated.phase;
 
-        console.log(" Phase switched -> CODING");
-        console.log("Phase after switch:", session.phase);
-        console.log("I AM HERE 111111111");
-    }
+        if (!session) {
 
-    /*
-    ======================================
-    Ignore until coding phase
-    ======================================
-    */
+            console.warn(
+                "Realtime update: session not found",
+                sessionId
+            );
 
-    if (session.phase !== InterviewPhase.CODING) {
-
-        await saveSnapshot();
-
-        return;
-    }
-
-    /*
-    ======================================
-    Ignore insignificant edits
-    ======================================
-    */
-
-   if (
-    codeAnalysis.addedLines < 3 &&
-    !codeAnalysis.returnAdded
-) {
-
-    await saveSnapshot();
-
-    return;
-
-}
-
-    /*
-    ======================================
-    Should interrupt?
-    ======================================
-    */
-   console.log("Calling shouldInterrupt...");
-
-    const interrupt =
-        shouldInterrupt({
-
-            phase: session.phase,
-
-            evaluation: null,
-
-            interruptionCount:
-                session.interruption_count,
-
-            codeAnalysis,
-
-            lastInterruptAtVersion:
-                session.last_interrupt_at_version,
-
-            currentCodeVersion:
-                session.code_version + 1
-
-        });
-console.log("Interrupt =", interrupt);
-
-    if (!interrupt) {
-
-        await saveSnapshot();
-
-        return;
-    }
-
-    /*
-    ======================================
-    Record interrupt
-    ======================================
-    */
-
-    await recordInterruptRepo({
-
-        sessionId,
-
-        codeVersion:
-            session.code_version + 1
-
-    });
-
-    const conversation =
-        await getInterviewMessagesRepo(sessionId);
-
-    const interruptReason =
-        getInterruptReason({
-
-            phase: session.phase,
-
-            evaluation: null,
-
-            codeAnalysis
-
-        });
-
-    /*
-    ======================================
-    Generate AI response
-    ======================================
-    */
-console.log("Calling Gemini...");
-
-    const rawResponse =
-        await generateInterviewerResponse({
-
-            phase: session.phase,
-
-            interviewGuide:
-                interviewPackage.interviewGuide,
-
-            expectedConcepts:
-                interviewPackage.expectedConcepts,
-
-            conversation,
-
-            candidateMessage: "",
-
-            candidateCode: code,
-
-            evaluation: null,
-
-            codeAnalysis,
-
-            interruptReason,
-
-            interactionType: "CODE_INTERRUPT"
-
-        });
-
-        console.log("Gemini replied.");
-        console.log(rawResponse);
-    let aiReply;
-
-  try {
-
-    if (typeof rawResponse === "string") {
-
-        const cleaned = rawResponse
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim();
-
-        try {
-
-            const parsed = JSON.parse(cleaned);
-
-            aiReply = parsed.reply;
-
-            if (!aiReply) {
-                throw new Error();
-            }
-
-        } catch {
-
-            aiReply = cleaned;
+            return;
         }
 
-    } else {
 
-        aiReply = rawResponse.reply;
+        if (
+            session.phase ===
+                InterviewPhase.FINISHED ||
+            session.status === "completed"
+        ) {
 
-        if (!aiReply) {
-            throw new Error();
+            return;
         }
 
-    }
 
-} catch {
+        resetInterviewIdleTimer(
+            sessionId
+        );
 
-    aiReply =
-        "Can you explain what you just changed?";
 
-}
+        const interviewPackage =
+            JSON.parse(
+                session.current_question
+            );
 
-    /*
-    ======================================
-    Save AI message
-    ======================================
-    */
 
-    await insertInterviewMessageRepo({
+        /*
+        Analyze code evolution.
+        */
 
-        sessionId,
+        const codeAnalysis =
+            analyzeCodeProgress({
 
-        sender: "ai",
+                previousCode:
+                    session.last_code || "",
 
-        message: aiReply
+                currentCode:
+                    code,
 
-    });
+                interviewGuide:
+                    interviewPackage.interviewGuide
+            });
 
-    /*
-    ======================================
-    Save latest code snapshot
-    ======================================
-    */
 
-    await saveSnapshot();
+        console.log(
+            "Current phase:",
+            session.phase
+        );
 
-    /*
-    ======================================
-    Emit socket event
-    ======================================
-    */
-   console.log("Emitting interviewer-message...");
-console.log(aiReply);
+        console.log(
+            "Code analysis:"
+        );
 
-    getIO()
-        .to(`interview-${sessionId}`)
-        .emit(
-            "interviewer-message",
+        console.dir(
+            codeAnalysis,
             {
-                message: aiReply,
-                phase: session.phase,
-                evaluation: null
+                depth: null
             }
         );
 
-    console.log("Realtime Analysis:");
-    console.dir(codeAnalysis, {
-        depth: null
-    });
-    }
 
-     catch (err) {
-        console.error("REALTIME ERROR:");
-        console.error(err);
-    }
-  
+        /*
+        Save helper.
+        */
 
-};
+        const saveSnapshot = async () => {
 
-export const getInterviewHistoryService = async (userId) => {
+            try {
 
-    const interviews =
-        await getInterviewHistoryRepo(userId);
+                await updateCodeSnapshotRepo({
 
-    return interviews.map((interview) => {
+                    sessionId,
 
-        let question = {};
+                    code
+                });
+
+            } catch (err) {
+
+                console.error(
+                    "Realtime snapshot failed:",
+                    err
+                );
+            }
+        };
+
+
+        /*
+        =====================================================
+        NOTHING CHANGED
+        =====================================================
+        */
+
+        if (
+            !codeAnalysis.changed
+        ) {
+
+            return;
+        }
+
+
+        /*
+        =====================================================
+        ALWAYS SAVE THE LATEST CODE
+        =====================================================
+        
+        This is important.
+        
+        The realtime service should keep
+        session.last_code current even when
+        no interruption happens.
+        */
+
+        await saveSnapshot();
+
+
+        /*
+        =====================================================
+        PHASE TRANSITION -> CODING
+        =====================================================
+        
+        Meaningful implementation activity means
+        the candidate has started coding.
+        
+        We allow:
+        
+        UNDERSTANDING -> CODING
+        APPROACH -> CODING
+        
+        We NEVER move:
+        
+        CODING -> UNDERSTANDING
+        CODING -> APPROACH
+        =====================================================
+        */
+
+        const meaningfulCodingActivity =
+            codeAnalysis.addedLines >= 3 ||
+            codeAnalysis.returnAdded === true ||
+            codeAnalysis.criticalLogicAdded === true;
+
+
+        if (
+            meaningfulCodingActivity &&
+            (
+                session.phase ===
+                    InterviewPhase.UNDERSTANDING ||
+                session.phase ===
+                    InterviewPhase.APPROACH
+            )
+        ) {
+
+            try {
+
+                const updated =
+                    await updateInterviewPhaseRepo(
+                        sessionId,
+                        InterviewPhase.CODING
+                    );
+
+
+                session.phase =
+                    updated?.phase ||
+                    InterviewPhase.CODING;
+
+
+                /*
+                Phase changed, therefore
+                old interrupt state should not
+                carry over.
+                */
+
+                await resetInterruptRepo(
+                    sessionId
+                );
+
+
+                console.log(
+                    `REALTIME PHASE CHANGE: ${session.phase} -> CODING`
+                );
+
+            } catch (phaseError) {
+
+                console.error(
+                    "Realtime phase update failed:",
+                    phaseError
+                );
+
+                return;
+            }
+        }
+
+
+        /*
+        =====================================================
+        DO NOT INTERRUPT OUTSIDE CODING
+        =====================================================
+        */
+
+        if (
+            session.phase !==
+                InterviewPhase.CODING
+        ) {
+
+            console.log(
+                "Realtime: waiting for CODING phase."
+            );
+
+            return;
+        }
+
+
+        /*
+        =====================================================
+        IGNORE SMALL / INSIGNIFICANT EDITS
+        =====================================================
+        */
+
+        const significantEdit =
+            codeAnalysis.addedLines >= 3 ||
+            codeAnalysis.returnAdded === true ||
+            codeAnalysis.criticalLogicAdded === true;
+
+
+        if (!significantEdit) {
+
+            console.log(
+                "Realtime: insignificant edit."
+            );
+
+            return;
+        }
+
+
+        /*
+        =====================================================
+        INTERRUPT DECISION
+        =====================================================
+        
+        IMPORTANT:
+        
+        evaluation is null here intentionally.
+        
+        Realtime monitoring does NOT execute code.
+        It observes the implementation.
+        =====================================================
+        */
+
+        const currentCodeVersion =
+            Number(
+                session.code_version || 0
+            ) + 1;
+
+
+        const interrupt =
+            shouldInterrupt({
+
+                phase:
+                    session.phase,
+
+                evaluation: null,
+
+                interruptionCount:
+                    Number(
+                        session.interruption_count || 0
+                    ),
+
+                codeAnalysis,
+
+                lastInterruptAtVersion:
+                    session.last_interrupt_at_version,
+
+                currentCodeVersion
+            });
+
+
+        console.log(
+            "Realtime interrupt:",
+            interrupt
+        );
+
+
+        /*
+        =====================================================
+        NO INTERRUPT
+        =====================================================
+        */
+
+        if (!interrupt) {
+
+            return;
+        }
+
+
+        /*
+        =====================================================
+        RECORD INTERRUPT
+        =====================================================
+        */
+
+        const interruptReason =
+            getInterruptReason({
+
+                phase:
+                    session.phase,
+
+                evaluation: null,
+
+                codeAnalysis
+            });
+
+
+        console.log(
+            "Realtime interrupt reason:",
+            interruptReason
+        );
+
+
+        await recordInterruptRepo({
+
+            sessionId,
+
+            codeVersion:
+                currentCodeVersion
+        });
+
+
+        /*
+        =====================================================
+        LOAD CONVERSATION
+        =====================================================
+        */
+
+        const conversation =
+            await getInterviewMessagesRepo(
+                sessionId
+            );
+
+
+        /*
+        =====================================================
+        ASK INTERVIEWER
+        =====================================================
+        */
+
+        let rawResponse = null;
+
 
         try {
-            question =
-                JSON.parse(interview.current_question || "{}");
-        } catch (error) {
+
+            console.log(
+                "Calling interviewer AI for realtime interrupt..."
+            );
+
+
+            rawResponse =
+                await generateInterviewerResponse({
+
+                    phase:
+                        session.phase,
+
+                    interviewGuide:
+                        interviewPackage.interviewGuide,
+
+                    expectedConcepts:
+                        interviewPackage.expectedConcepts,
+
+                    conversation,
+
+                    candidateMessage:
+                        "",
+
+                    candidateCode:
+                        code,
+
+                    evaluation:
+                        null,
+
+                    codeAnalysis,
+
+                    interruptReason,
+
+                    interactionType:
+                        "CODE_INTERRUPT",
+
+                    optimizationCompleted:
+                        session.optimization_completed
+                });
+
+
+            console.log(
+                "Realtime AI response:"
+            );
+
+            console.dir(
+                rawResponse,
+                {
+                    depth: null
+                }
+            );
+
+
+        } catch (aiError) {
+
             console.error(
-                "Failed to parse interview question:",
-                error
+                "Realtime interviewer AI failed:",
+                aiError
             );
         }
 
+
         /*
-         * Never expose internal interviewer data
-         */
-        delete question.hiddenTestCases;
-        delete question.interviewGuide;
-        delete question.expectedConcepts;
-        delete question.expectedComplexity;
-        delete question.solution;
-        delete question.optimal_solution;
-        delete question.answer;
+        =====================================================
+        PARSE AI
+        =====================================================
+        */
 
-        return {
-            id: interview.id,
+        const parsedAI =
+            parseAIResponse(
+                rawResponse
+            );
 
-            title: interview.title,
 
-            type: interview.type,
+        let aiReply =
+            parsedAI.reply;
 
-            difficulty: interview.difficulty,
 
-            language: interview.language,
+        /*
+        =====================================================
+        REALTIME FALLBACK
+        =====================================================
+        
+        If Gemini fails, the realtime
+        interruption STILL happens.
+        
+        The candidate will not be left
+        without an interviewer message.
+        =====================================================
+        */
 
-            company: interview.company,
+        if (!aiReply) {
 
-            role: interview.role,
+            aiReply =
+                getFallbackReply({
 
-            questionStrategy:
-                interview.question_strategy,
+                    message: "",
 
-            createdAt:
-                interview.created_at,
+                    phase:
+                        session.phase,
 
-            endedAt:
-                interview.ended_at,
+                    evaluation: null,
 
-            question,
+                    interrupt: true,
 
-            code:
-                interview.last_code || "",
+                    interruptReason,
 
-            report: interview.overall_score === null
-                ? null
-                : {
-                    overallScore:
-                        interview.overall_score,
+                    codeAnalysis
+                });
+        }
 
-                    communicationScore:
-                        interview.communication_score,
 
-                    problemSolvingScore:
-                        interview.problem_solving_score,
+        /*
+        =====================================================
+        SAVE AI INTERRUPTION
+        =====================================================
+        */
 
-                    optimizationScore:
-                        interview.optimization_score,
+        try {
 
-                    strengths:
-                        interview.strengths,
+            await insertInterviewMessageRepo({
 
-                    weaknesses:
-                        interview.weaknesses,
+                sessionId,
 
-                    finalFeedback:
-                        interview.final_feedback,
+                sender: "ai",
 
-                    createdAt:
-                        interview.report_created_at
-                }
-        };
-    });
+                message:
+                    aiReply
+            });
+
+        } catch (saveError) {
+
+            console.error(
+                "Realtime AI message save failed:",
+                saveError
+            );
+        }
+
+
+        /*
+        =====================================================
+        EMIT INTERRUPTION
+        =====================================================
+        */
+
+        try {
+
+            getIO()
+                .to(`interview-${sessionId}`)
+                .emit(
+                    "interviewer-message",
+                    {
+
+                        message:
+                            aiReply,
+
+                        phase:
+                            session.phase,
+
+                        evaluation:
+                            null,
+
+                        codeAnalysis,
+
+                        interrupted:
+                            true
+                    }
+                );
+
+        } catch (socketError) {
+
+            console.error(
+                "Realtime socket emit failed:",
+                socketError
+            );
+        }
+
+
+        console.log(
+            "======== REALTIME SERVICE END ========"
+        );
+
+
+    } catch (err) {
+
+        /*
+        CRITICAL:
+        
+        Realtime monitoring must NEVER
+        crash the interview process.
+        */
+
+        console.error(
+            "REALTIME CODE UPDATE ERROR:"
+        );
+
+        console.error(
+            err
+        );
+    }
+};
+
+
+/*
+=========================================================
+INTERVIEW HISTORY
+=========================================================
+*/
+
+export const getInterviewHistoryService = async (
+    userId
+) => {
+
+    const interviews =
+        await getInterviewHistoryRepo(
+            userId
+        );
+
+
+    return interviews.map(
+        (interview) => {
+
+            let question = {};
+
+
+            try {
+
+                question =
+                    JSON.parse(
+                        interview.current_question || "{}"
+                    );
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to parse interview question:",
+                    error
+                );
+            }
+
+
+            /*
+            Never expose internal interviewer data.
+            */
+
+            delete question.hiddenTestCases;
+            delete question.interviewGuide;
+            delete question.expectedConcepts;
+            delete question.expectedComplexity;
+            delete question.solution;
+            delete question.optimal_solution;
+            delete question.answer;
+
+
+            return {
+
+                id:
+                    interview.id,
+
+                title:
+                    interview.title,
+
+                type:
+                    interview.type,
+
+                difficulty:
+                    interview.difficulty,
+
+                language:
+                    interview.language,
+
+                company:
+                    interview.company,
+
+                role:
+                    interview.role,
+
+                questionStrategy:
+                    interview.question_strategy,
+
+                createdAt:
+                    interview.created_at,
+
+                endedAt:
+                    interview.ended_at,
+
+                question,
+
+                code:
+                    interview.last_code || "",
+
+                report:
+                    interview.overall_score === null
+                        ? null
+                        : {
+
+                            overallScore:
+                                interview.overall_score,
+
+                            communicationScore:
+                                interview.communication_score,
+
+                            problemSolvingScore:
+                                interview.problem_solving_score,
+
+                            optimizationScore:
+                                interview.optimization_score,
+
+                            strengths:
+                                interview.strengths,
+
+                            weaknesses:
+                                interview.weaknesses,
+
+                            finalFeedback:
+                                interview.final_feedback,
+
+                            createdAt:
+                                interview.report_created_at
+                        }
+            };
+        }
+    );
 };
