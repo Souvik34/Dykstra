@@ -9,7 +9,7 @@ export interface BackendProblem {
   topic: string;
   tags: string;
   platform: string;
-  updatedAt?: string;
+  // updatedAt?: string;
 }
 
 export interface Problem {
@@ -19,9 +19,12 @@ export interface Problem {
   topic: string;
   companies: string[];
   leetcodeUrl: string;
-    updatedAt?: string;
+    // updatedAt?: string;
 }
-
+export interface ProblemsResponse {
+  problems: BackendProblem[];
+  lastUpdated: string | null;
+}
 // export const PROBLEMS: Problem[] = [
 //   {
 //     id: "two-sum",

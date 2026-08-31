@@ -1,16 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { api } from "@/lib/api";
-import { BackendProblem } from "../features/problems/problems-data";
+import { BackendProblem, ProblemsResponse } from "../features/problems/problems-data";
 
-type ProblemsResponse = {
-  problems?: BackendProblem[];
-  data?: BackendProblem[];
-};
 
-type ProblemResponse = {
-  problem?: BackendProblem;
-  data?: BackendProblem;
-};
 
 type ProgressResponse = {
   progress?: unknown;
@@ -22,7 +14,7 @@ async list(params: {
   page?: number;
   limit?: number;
   ids?: number[];
-} = {}): Promise<BackendProblem[]> {
+} = {}): Promise<ProblemsResponse> {
   console.log("PROBLEMS REQUEST PARAMS:", params);
 
   const queryParams = {
@@ -43,9 +35,17 @@ async list(params: {
 
   console.log("PROBLEMS RAW RESPONSE:", data);
 
-  if (Array.isArray(data)) return data;
+if (Array.isArray(data)) {
+  return {
+    problems: data,
+    lastUpdated: null,
+  };
+}
 
-  return data?.problems ?? data?.data ?? [];
+return {
+  problems: data?.problems ?? data?.data ?? [],
+  lastUpdated: data?.lastUpdated ?? null,
+};
 },
 async getById(id: number | string): Promise<BackendProblem> {
   console.log("GETTING PROBLEM BY ID:", id);

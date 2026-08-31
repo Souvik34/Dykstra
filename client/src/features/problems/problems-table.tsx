@@ -39,6 +39,7 @@ import type {
   Problem,
   BackendProblem,
   Difficulty,
+  ProblemsResponse
 } from "./problems-data";
 
 import problemService from "../../services/problemService";
@@ -332,17 +333,20 @@ export function ProblemsTable() {
           let currentPage = 1;
 
           while (true) {
-            const batch =
-              await problemService.list({
-                page: currentPage,
-                limit: LIMIT,
-              });
+          const response = await problemService.list({
+  page: currentPage,
+  limit: LIMIT,
+});
 
-            data.push(...batch);
+data.push(...response.problems);
 
-            if (batch.length < LIMIT) {
-              break;
-            }
+if (currentPage === 1) {
+  setLastUpdated(response.lastUpdated);
+}
+
+if (response.problems.length < LIMIT) {
+  break;
+}
 
             currentPage++;
           }
@@ -1117,9 +1121,9 @@ export function ProblemsTable() {
               iconClass="text-violet-400"
             />
           </div>
-          {lastUpdated && (
+   {lastUpdated && (
   <div className="mt-3 flex justify-end">
-    <span className="rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1 text-xs text-zinc-400">
+    <span className="rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1.5 text-xs text-zinc-400">
       Last updated ·{" "}
       {new Date(lastUpdated).toLocaleDateString("en-IN", {
         day: "2-digit",
