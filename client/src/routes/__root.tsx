@@ -166,27 +166,27 @@ export const Route =
         },
 
         {
-          title: "Dystra",
+          title: "Dykstra",
         },
 
         {
           name: "description",
-          content: "Dystra - A modern interview platform",
+          content: "Dykstra - A modern interview platform",
         },
 
         {
           name: "author",
-          content: "Dystra",
+          content: "Dykstra",
         },
 
         {
           property: "og:title",
-          content: "Dystra",
+          content: "Dykstra",
         },
 
         {
           property: "og:description",
-          content: "Dystra - A modern interview platform",
+          content: "Dykstra - A modern interview platform",
         },
 
         {

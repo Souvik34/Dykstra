@@ -46,8 +46,8 @@ const response =
             }
         ],
 
-        max_tokens: 500,
-        temperature: 0.3
+       max_tokens: 8000,
+temperature: 0.2
     });
 
             console.log(`Success -> ${model}`);

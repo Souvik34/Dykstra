@@ -22,26 +22,36 @@ export async function generateWithGemini(prompt) {
             const result =
                 await ai.models.generateContent({
                     model,
-                    contents: prompt
+                    contents: prompt,
+                    config: {
+                        temperature: 0.2,
+                        responseMimeType: "application/json"
+                    }
                 });
 
             console.log(`Success: ${model}`);
 
-            return result.text;
+            const text = result?.text;
 
-            }catch (err) {
+            if (!text) {
+                throw new Error(`Empty response from Gemini: ${model}`);
+            }
 
-    console.log(`Failed: ${model}`);
+            return text;
 
-    lastError = err;
+        } catch (err) {
 
-    // Continue to next model for quota, overload, or retired model
-    if ([404, 429, 500, 503].includes(err.status)) {
-        continue;
-    }
+            console.log(`Failed: ${model}`);
+            console.log(err?.message);
 
-    throw err;
-}
+            lastError = err;
+
+            if ([404, 429, 500, 503].includes(err?.status)) {
+                continue;
+            }
+
+            throw err;
+        }
     }
 
     throw lastError;
