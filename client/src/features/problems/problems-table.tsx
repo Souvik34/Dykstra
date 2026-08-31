@@ -177,6 +177,7 @@ export function ProblemsTable() {
 
   const [status, setStatus] =
     useState<string>("all");
+    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const [notesFor, setNotesFor] =
     useState<Problem | null>(null);
@@ -404,6 +405,8 @@ export function ProblemsTable() {
             companies: [],
             leetcodeUrl:
               p.question_link,
+             updatedAt: p.updatedAt,
+              
           }));
 
         if (!ignore) {
@@ -1114,6 +1117,18 @@ export function ProblemsTable() {
               iconClass="text-violet-400"
             />
           </div>
+          {lastUpdated && (
+  <div className="mt-3 flex justify-end">
+    <span className="rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1 text-xs text-zinc-400">
+      Last updated ·{" "}
+      {new Date(lastUpdated).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })}
+    </span>
+  </div>
+)}
         </div>
 
         {/* =================================================
@@ -1955,6 +1970,8 @@ function ProblemRow({
             {problem.topic ||
               "General"}
           </span>
+
+          
         </div>
       </div>
 

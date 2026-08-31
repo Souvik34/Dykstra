@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 export type Difficulty = "Easy" | "Medium" | "Hard";
 
 export interface BackendProblem {
@@ -8,6 +9,7 @@ export interface BackendProblem {
   topic: string;
   tags: string;
   platform: string;
+  updatedAt?: string;
 }
 
 export interface Problem {
@@ -17,6 +19,7 @@ export interface Problem {
   topic: string;
   companies: string[];
   leetcodeUrl: string;
+    updatedAt?: string;
 }
 
 // export const PROBLEMS: Problem[] = [
