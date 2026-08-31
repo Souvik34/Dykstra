@@ -86,18 +86,27 @@ if (idsArr.length > 0) {
   query += ` ORDER BY id ASC LIMIT $${values.length - 1} OFFSET $${values.length}`;
 
   const result = await pool.query(query, values);
+  const updatedResult = await pool.query(
+  `SELECT MAX(updated_at) AS last_updated FROM problems`
+);
 
   try {
-    await redisClient.setEx(
-      cacheKey,
-      300, // 5 min TTL
-      JSON.stringify(result.rows)
-    );
+await redisClient.setEx(
+  cacheKey,
+  300,
+  JSON.stringify({
+    problems: result.rows,
+    lastUpdated: updatedResult.rows[0].last_updated,
+  })
+);
   } catch (err) {
     console.error("Redis SET error:", err);
   }
 
-  return result.rows;
+ return {
+  problems: result.rows,
+  lastUpdated: updatedResult.rows[0].last_updated,
+};
 };
 
 
