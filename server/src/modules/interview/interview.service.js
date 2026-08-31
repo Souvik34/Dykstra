@@ -1922,6 +1922,7 @@ Responsibilities:
 
 export const realtimeCodeUpdateService = async ({
     sessionId,
+    userId,
     code
 }) => {
 
