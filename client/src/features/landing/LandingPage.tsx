@@ -1544,7 +1544,7 @@ via-[#030408]/42
         </p>
 
         <a
-          href="https://github.com"
+          href="https://github.com/Souvik34/Dykstra"
           target="_blank"
           rel="noreferrer"
           className="
