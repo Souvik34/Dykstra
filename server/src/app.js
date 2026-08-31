@@ -4,7 +4,12 @@ import { connectRedis } from "./config/redis.js";
 const app = express();
 import "./workers/solve.worker.js";
 await connectRedis();
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://dykstra.in",
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 

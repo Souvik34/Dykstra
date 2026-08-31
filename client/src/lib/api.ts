@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 export const api = axios.create({
 baseURL: "https://api.dykstra.in/api/v1",
-  withCredentials: false,
+  withCredentials: true,
   timeout: 120000,
 });
 

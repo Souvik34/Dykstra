@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import crypto from "crypto";
 import * as authRepository from './auth.repository.js';
-import { generateAccessToken,generateRefreshToken} from "../../utils/token.utils.js";
+import { generateAccessToken,generateRefreshToken,  verifyRefreshToken,} from "../../utils/token.utils.js";
 import { sendPasswordResetEmail } from '../../utils/email.utils.js';
 
 export const signUp = async({name, email, password})=> {
