@@ -96,17 +96,9 @@ export const getInterruptReason = ({
         case InterviewPhase.APPROACH:
             return "APPROACH_DISCUSSION";
 
-    case InterviewPhase.CODING:
+            case InterviewPhase.CODING:
 
-    /*
-    Obvious garbage / non-code activity.
-    This must take priority over normal
-    coding milestones.
-    */
-
-    if (
-        codeAnalysis?.garbageDetected
-    ) {
+    if (codeAnalysis?.garbageDetected) {
         return "NON_CODE_ACTIVITY";
     }
 
@@ -120,22 +112,23 @@ export const getInterruptReason = ({
     if (
         codeAnalysis?.criticalLogicAdded
     ) {
-        return "USER_IMPLEMENTED_MAIN_ALGORITHM";
+        return "IMPLEMENTATION_PROGRESS";
     }
 
     if (
         codeAnalysis?.edgeCaseAdded
     ) {
-        return "USER_HANDLED_EDGE_CASE";
+        return "EDGE_CASE_ADDED";
     }
 
     if (
         codeAnalysis?.returnAdded
     ) {
-        return "FIRST_WORKING_IMPLEMENTATION";
+        return "RETURN_ADDED";
     }
 
-    return null;
+    return "IMPLEMENTATION_PROGRESS";
+ 
         case InterviewPhase.DEBUGGING:
             return "DEBUGGING";
 

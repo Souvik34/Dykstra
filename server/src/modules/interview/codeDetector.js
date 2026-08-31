@@ -228,10 +228,10 @@ export const analyzeCodeProgress = ({
     some text.
     */
 
-    const garbageDetected =
-        garbageLines.length > 0 &&
-        garbageLines.length >=
-            Math.ceil(addedLines.length * 0.5);
+const garbageDetected =
+    garbageLines.length >= 2 &&
+    garbageLines.length >=
+        Math.ceil(addedLines.length * 0.5);
 
     /*
     =====================================================
