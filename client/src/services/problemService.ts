@@ -35,17 +35,53 @@ async list(params: {
 
   console.log("PROBLEMS RAW RESPONSE:", data);
 
-if (Array.isArray(data)) {
+  // Backend returns an array directly
+  if (Array.isArray(data)) {
+    return {
+      problems: data,
+      lastUpdated: null,
+    };
+  }
+
+  // Backend returns:
+  // { problems: [...], lastUpdated: "..." }
+  if (Array.isArray(data?.problems)) {
+    return {
+      problems: data.problems,
+      lastUpdated: data.lastUpdated ?? null,
+    };
+  }
+
+  // Backend returns:
+  // { data: [...] }
+  if (Array.isArray(data?.data)) {
+    return {
+      problems: data.data,
+      lastUpdated: data.lastUpdated ?? null,
+    };
+  }
+
+  // Backend returns:
+  // { data: { problems: [...], lastUpdated: "..." } }
+  if (Array.isArray(data?.data?.problems)) {
+    return {
+      problems: data.data.problems,
+      lastUpdated:
+        data.data.lastUpdated ??
+        data.lastUpdated ??
+        null,
+    };
+  }
+
+  console.error(
+    "UNKNOWN PROBLEMS RESPONSE FORMAT:",
+    data,
+  );
+
   return {
-    problems: data,
+    problems: [],
     lastUpdated: null,
   };
-}
-
-return {
-  problems: data?.problems ?? data?.data ?? [],
-  lastUpdated: data?.lastUpdated ?? null,
-};
 },
 async getById(id: number | string): Promise<BackendProblem> {
   console.log("GETTING PROBLEM BY ID:", id);

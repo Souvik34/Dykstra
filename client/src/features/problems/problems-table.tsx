@@ -409,7 +409,7 @@ if (response.problems.length < LIMIT) {
             companies: [],
             leetcodeUrl:
               p.question_link,
-             updatedAt: p.updatedAt,
+            //  updatedAt: p.updatedAt,
               
           }));
 
