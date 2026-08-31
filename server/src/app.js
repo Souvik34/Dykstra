@@ -6,7 +6,10 @@ import "./workers/solve.worker.js";
 await connectRedis();
 app.use(
   cors({
-    origin: "https://dykstra.in",
+    origin: [
+      "https://dykstra.in",
+      "https://www.dykstra.in",
+    ],
     credentials: true,
   })
 );
