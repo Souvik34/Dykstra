@@ -58,6 +58,7 @@ function WorkspacePage() {
   const [problem, setProblem] = useState<any>(null);
 const [loading, setLoading] = useState(true);
 const navigate = useNavigate();
+const [endDialogOpen, setEndDialogOpen] = useState(false);
 const [endingInterview, setEndingInterview] = useState(false);
 
 
@@ -140,32 +141,27 @@ console.log(response);
 };
 
 const onEndInterview = async () => {
+  try {
+    setEndingInterview(true);
 
-    try {
+    await interviewService.endInterview(sessionId);
 
-        setEndingInterview(true);
-
-        await interviewService.endInterview(sessionId);
-
-     await navigate({
-    to: "/interview/$sessionId/report",
-    params: {
+    await navigate({
+      to: "/interview/$sessionId/report",
+      params: {
         sessionId,
-    },
-});
+      },
+    });
+  } catch (err) {
+    console.error(err);
 
-    } catch (err) {
+    toast.error(
+      "Failed to generate interview report."
+    );
 
-        console.error(err);
-
-        toast.error("Failed to generate interview report.");
-
-    } finally {
-
-        setEndingInterview(false);
-
-    }
-
+    // Allow the user to try again
+    setEndingInterview(false);
+  }
 };
   if (loading) {
   return (
@@ -211,75 +207,78 @@ const onEndInterview = async () => {
           </Badge>
         </div>
 
-        <AlertDialog>
+    <AlertDialog
+  open={endDialogOpen}
+  onOpenChange={(open) => {
+    // Don't allow the dialog to close while report is generating
+    if (endingInterview) return;
 
-    <AlertDialogTrigger asChild>
+    setEndDialogOpen(open);
+  }}
+>
+  <AlertDialogTrigger asChild>
+    <Button
+      variant="destructive"
+      size="sm"
+      onClick={() => setEndDialogOpen(true)}
+    >
+      End Interview
+    </Button>
+  </AlertDialogTrigger>
 
-        <Button
-            variant="destructive"
-            size="sm"
-        >
-            End Interview
-        </Button>
+  <AlertDialogContent
+    onEscapeKeyDown={(event) => {
+      if (endingInterview) {
+        event.preventDefault();
+      }
+    }}
+    onPointerDownOutside={(event) => {
+      if (endingInterview) {
+        event.preventDefault();
+      }
+    }}
+  >
+    <AlertDialogHeader>
+      <AlertDialogTitle>
+        End Interview?
+      </AlertDialogTitle>
 
-    </AlertDialogTrigger>
+      <AlertDialogDescription>
+        This will permanently end the interview.
 
-    <AlertDialogContent>
+        Your performance report will be generated immediately.
 
-        <AlertDialogHeader>
+        This action cannot be undone.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
 
-            <AlertDialogTitle>
+    <AlertDialogFooter>
+      <AlertDialogCancel
+        disabled={endingInterview}
+      >
+        Continue Interview
+      </AlertDialogCancel>
 
-                End Interview?
+      <AlertDialogAction
+        disabled={endingInterview}
+        onClick={(event) => {
+          /*
+           * IMPORTANT:
+           * Prevent Radix AlertDialog from automatically
+           * closing the modal.
+           */
+          event.preventDefault();
 
-            </AlertDialogTitle>
-
-            <AlertDialogDescription>
-
-                This will permanently end the interview.
-
-                Your performance report will be generated immediately.
-
-                This action cannot be undone.
-
-            </AlertDialogDescription>
-
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-
-            <AlertDialogCancel>
-
-                Continue Interview
-
-            </AlertDialogCancel>
-
-            <AlertDialogAction
-
-                onClick={onEndInterview}
-
-                disabled={endingInterview}
-
-            >
-
-                {
-
-                    endingInterview
-
-                        ? "Generating Report..."
-
-                        : "End Interview"
-
-                }
-
-            </AlertDialogAction>
-
-        </AlertDialogFooter>
-
-    </AlertDialogContent>
-
+          onEndInterview();
+        }}
+      >
+        {endingInterview
+          ? "Generating Report..."
+          : "End Interview"}
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
 </AlertDialog>
-    
       </header>
 
       {/* 3-pane grid */}
