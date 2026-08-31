@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   createFileRoute,
   Outlet,
@@ -105,7 +105,9 @@ function InterviewHistoryPage() {
   >([]);
 
   const [loading, setLoading] = useState(true);
+const [currentPage, setCurrentPage] = useState(1);
 
+const ITEMS_PER_PAGE = 10;
   /**
    * Load history.
    *
@@ -123,7 +125,7 @@ function InterviewHistoryPage() {
           await interviewService.getInterviewHistory();
 
         console.log(
-          "📚 History response:",
+          " History response:",
           res.data
         );
 
@@ -174,9 +176,23 @@ function InterviewHistoryPage() {
    *
    * render the child route through Outlet.
    */
+
+  const totalPages = Math.ceil(
+  interviews.length / ITEMS_PER_PAGE
+);
+
+const paginatedInterviews = useMemo(() => {
+  const startIndex =
+    (currentPage - 1) * ITEMS_PER_PAGE;
+
+  return interviews.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE
+  );
+}, [interviews, currentPage]);
   if (isDetailPage) {
     console.log(
-      "🔥 DETAIL ROUTE ACTIVE → RENDERING OUTLET"
+      " DETAIL ROUTE ACTIVE → RENDERING OUTLET"
     );
 
     return <Outlet />;
@@ -305,7 +321,7 @@ function InterviewHistoryPage() {
 
           <div className="space-y-4">
 
-            {interviews.map((interview) => (
+           {paginatedInterviews.map((interview) => (
 
               <Card
                 key={interview.id}
@@ -450,7 +466,56 @@ function InterviewHistoryPage() {
           </div>
 
         )}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() =>
+                setCurrentPage((page) => page - 1)
+              }
+              className="gap-1 text-muted-foreground hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Previous
+            </Button>
 
+            <div className="flex items-center gap-1">
+              {Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+              ).map((page) => (
+                <Button
+                  key={page}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                  className={
+                    currentPage === page
+                      ? "bg-violet-500/15 text-violet-400 hover:bg-violet-500/20 hover:text-violet-300"
+                      : "text-muted-foreground hover:bg-white/[0.05] hover:text-white"
+                  }
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() =>
+                setCurrentPage((page) => page + 1)
+              }
+              className="gap-1 text-muted-foreground hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+            >
+              Next
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         {/* Bottom info */}
 
         {interviews.length > 0 && (

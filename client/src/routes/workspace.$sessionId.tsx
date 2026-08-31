@@ -285,7 +285,7 @@ const onEndInterview = async () => {
       <div className="grid flex-1 min-h-0 grid-cols-1 lg:grid-cols-[1fr_1.2fr_320px]">
         {/* Left: problem statement */}
         <section className="min-h-0 overflow-y-auto border-r border-border/60 p-5">
-          <h1 className="text-lg font-semibold">{problem.title}</h1>
+          {/* <h1 className="text-lg font-semibold">{problem.title}</h1> */}
        <div className="mt-2 flex flex-wrap gap-2">
   <Badge variant="outline">
     {problem.topic}
