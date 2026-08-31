@@ -102,102 +102,60 @@ export function InterviewSocketProvider({
     }, []);
 
 
-    const joinInterview =
-        async (sessionId: string) => {
+ const joinInterview = async (sessionId: string) => {
 
-            /*
-            Make sure the socket uses the
-            latest JWT.
-            */
+    const token =
+        localStorage.getItem("auth_token");
 
-            const token =
-                localStorage.getItem(
-                    "auth_token"
-                );
+    console.log(
+        "JOIN INTERVIEW TOKEN:",
+        token ? "PRESENT" : "MISSING"
+    );
 
-            console.log(
-                "JOIN INTERVIEW TOKEN:",
-                token
-                    ? "PRESENT"
-                    : "MISSING"
-            );
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
 
+    socket.auth = {
+        token
+    };
 
-            socket.auth = {
-                token
+    if (!socket.connected) {
+
+        await new Promise<void>((resolve, reject) => {
+
+            const onConnect = () => {
+                cleanup();
+                resolve();
             };
 
+            const onError = (error: Error) => {
+                cleanup();
+                reject(error);
+            };
 
-            /*
-            If socket isn't connected,
-            connect it first.
-            */
+            const cleanup = () => {
+                socket.off("connect", onConnect);
+                socket.off("connect_error", onError);
+            };
 
-            if (!socket.connected) {
+            socket.once("connect", onConnect);
+            socket.once("connect_error", onError);
 
-                await new Promise<void>(
-                    (resolve, reject) => {
+            socket.connect();
+        });
+    }
 
-                        const handleConnect = () => {
+    console.log(
+        "EMITTING join-interview:",
+        sessionId
+    );
 
-                            cleanup();
-
-                            resolve();
-
-                        };
-
-                        const handleError =
-                            (error: Error) => {
-
-                                cleanup();
-
-                                reject(error);
-
-                            };
-
-                        const cleanup = () => {
-
-                            socket.off(
-                                "connect",
-                                handleConnect
-                            );
-
-                            socket.off(
-                                "connect_error",
-                                handleError
-                            );
-
-                        };
-
-
-                        socket.once(
-                            "connect",
-                            handleConnect
-                        );
-
-                        socket.once(
-                            "connect_error",
-                            handleError
-                        );
-
-                        socket.connect();
-
-                    }
-                );
-            }
-
-
-            console.log(
-                "EMITTING join-interview:",
-                sessionId
-            );
-
-            socket.emit(
-                "join-interview",
-                sessionId
-            );
-        };
-
+    socket.emit(
+        "join-interview",
+        sessionId
+    );
+};
 
     const leaveInterview = () => {
 
