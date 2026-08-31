@@ -1939,6 +1939,8 @@ export const realtimeCodeUpdateService = async ({
 
             return;
         }
+console.log("REALTIME sessionId:", sessionId);
+console.log("REALTIME userId:", userId);
 
 
         const session =
@@ -1947,13 +1949,14 @@ export const realtimeCodeUpdateService = async ({
                 userId
             }
             );
-
+console.log("REALTIME SESSION RESULT:", session ? "FOUND" : "NOT FOUND");
 
         if (!session) {
 
             console.warn(
                 "Realtime update: session not found",
-                sessionId
+                sessionId,
+                userId
             );
 
             return;

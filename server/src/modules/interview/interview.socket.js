@@ -57,36 +57,44 @@ if (result.interviewEnded) {
       }
     );
 
-    socket.on(
-    "code-update",
-    async (payload) => {
-      console.log("Backend received code-update");
-console.log(payload);
+ socket.on("code-update", async (payload) => {
 
-        try {
+    console.log("Backend received code-update");
+    console.log(payload);
 
-            const {
-                sessionId,
-                code
-            } = payload;
+    try {
 
-         await realtimeCodeUpdateService({
-    sessionId,
-      userId: socket.userId,
-    code
-});
+        const {
+            sessionId,
+            code
+        } = payload;
 
-        } catch (err) {
+        console.log(
+            "CODE UPDATE socket.userId:",
+            socket.userId
+        );
 
-            socket.emit(
-                "interview-error",
-                {
-                    message: err.message
-                }
-            );
+        console.log(
+            "CODE UPDATE sessionId:",
+            sessionId
+        );
 
-        }
+        await realtimeCodeUpdateService({
+            sessionId,
+            userId: socket.userId,
+            code
+        });
 
+    } catch (err) {
+
+        console.error("Code update error:", err);
+
+        socket.emit(
+            "interview-error",
+            {
+                message: err.message
+            }
+        );
     }
-);
+});
 };
