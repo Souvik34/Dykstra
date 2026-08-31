@@ -6,7 +6,7 @@ import {
 } from "./interviewLimit.repository.js";
 
 
-const DAILY_INTERVIEW_LIMIT = 10;
+const DAILY_INTERVIEW_LIMIT = 3;
 
 const WINDOW_DURATION_MS =
     24 * 60 * 60 * 1000;
