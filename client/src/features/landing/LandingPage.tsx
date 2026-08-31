@@ -1721,7 +1721,7 @@ via-[#030408]/42
         <div className="mt-4 space-y-3">
 
           <a
-            href="https://github.com"
+            href="https://github.com/Souvik34/Dykstra"
             target="_blank"
             rel="noreferrer"
             className="
