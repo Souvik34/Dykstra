@@ -1942,9 +1942,10 @@ export const realtimeCodeUpdateService = async ({
 
 
         const session =
-            await getInterviewSessionRepo(
+            await getInterviewSessionRepo({
                 sessionId,
                 userId
+            }
             );
 
 
