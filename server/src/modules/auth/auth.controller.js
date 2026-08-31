@@ -19,7 +19,9 @@ export const googleSignIn = async (req, res, next) => {
 
     res.cookie("refreshToken", result.refreshToken, {
       httpOnly: true,
+        secure: true,
       sameSite: "strict",
+       path: "/",
     });
 
     res.status(200).json({
@@ -66,7 +68,9 @@ export const signIn = async (req, res, next) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
+      secure: true,
       sameSite: "strict",
+       path: "/",
     });
 
     res.status(200).json({
