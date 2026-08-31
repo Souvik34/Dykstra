@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient
+      id="dykstra-gradient"
+      x1="15"
+      y1="15"
+      x2="113"
+      y2="113"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0%" stop-color="#06B6F5"/>
+      <stop offset="50%" stop-color="#1688F2"/>
+      <stop offset="100%" stop-color="#7048F5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dykstra gradient circle -->
+  <circle
+    cx="64"
+    cy="64"
+    r="58"
+    fill="url(#dykstra-gradient)"
+  />
+
+  <!-- Left < -->
+  <path
+    d="M47 42L25 64L47 86"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Right > -->
+  <path
+    d="M81 42L103 64L81 86"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Slash / -->
+  <path
+    d="M70 31L58 97"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
+</svg>
