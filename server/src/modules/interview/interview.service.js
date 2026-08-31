@@ -276,6 +276,28 @@ const getFallbackReply = ({
     Realtime interruption.
     */
 
+    if (
+    interruptReason === "NON_CODE_ACTIVITY"
+) {
+
+    const garbageReplies = [
+
+        "I noticed the recent changes don't appear related to the implementation. Please stay focused on the problem and continue with your solution.",
+
+        "The recent editor changes don't seem to be part of the solution. Please continue with the implementation and talk me through your reasoning.",
+
+        "I noticed some unrelated content in the editor. Let's stay focused on the problem and continue with your implementation."
+
+    ];
+
+    return garbageReplies[
+        Math.floor(
+            Math.random() *
+            garbageReplies.length
+        )
+    ];
+}
+
     if (interrupt) {
 
         if (
@@ -2268,6 +2290,102 @@ console.log("REALTIME SESSION RESULT:", session ? "FOUND" : "NOT FOUND");
                 codeAnalysis
             });
 
+            /*
+=====================================================
+NON-CODE ACTIVITY
+=====================================================
+
+Obvious garbage is deterministic.
+
+Do NOT spend an AI request on it.
+*/
+
+if (
+    interruptReason === "NON_CODE_ACTIVITY"
+) {
+
+    const aiReply =
+        getFallbackReply({
+
+            message: "",
+
+            phase:
+                session.phase,
+
+            evaluation:
+                null,
+
+            interrupt:
+                true,
+
+            interruptReason,
+
+            codeAnalysis
+        });
+
+    await recordInterruptRepo({
+
+        sessionId,
+
+        codeVersion:
+            currentCodeVersion
+    });
+
+    try {
+
+        await insertInterviewMessageRepo({
+
+            sessionId,
+
+            sender: "ai",
+
+            message: aiReply
+        });
+
+    } catch (saveError) {
+
+        console.error(
+            "Garbage interruption save failed:",
+            saveError
+        );
+    }
+
+    try {
+
+        getIO()
+            .to(`interview-${sessionId}`)
+            .emit(
+                "interviewer-message",
+                {
+                    message: aiReply,
+
+                    phase:
+                        session.phase,
+
+                    evaluation:
+                        null,
+
+                    codeAnalysis,
+
+                    interrupted:
+                        true
+                }
+            );
+
+    } catch (socketError) {
+
+        console.error(
+            "Garbage interruption socket failed:",
+            socketError
+        );
+    }
+
+    console.log(
+        "Realtime garbage interruption sent."
+    );
+
+    return;
+}
 
         console.log(
             "Realtime interrupt reason:",

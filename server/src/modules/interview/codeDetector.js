@@ -65,13 +65,9 @@ export const detectSubmissionType = (
 };
 
 export const analyzeCodeProgress = ({
-
     previousCode = "",
-
     currentCode = "",
-
     interviewGuide = {}
-
 }) => {
 
     const previousLines =
@@ -88,131 +84,256 @@ export const analyzeCodeProgress = ({
 
     const addedLines =
         currentLines.filter(
-
-            line =>
-
-                !previousLines.includes(line)
-
+            line => !previousLines.includes(line)
         );
 
+    /*
+    =====================================================
+    CODE / GARBAGE CLASSIFICATION
+    =====================================================
+    */
 
+    const javaKeywords = [
+        "class",
+        "public",
+        "private",
+        "protected",
+        "static",
+        "final",
+        "void",
+        "int",
+        "long",
+        "double",
+        "float",
+        "boolean",
+        "char",
+        "new",
+        "return",
+        "if",
+        "else",
+        "for",
+        "while",
+        "do",
+        "switch",
+        "case",
+        "break",
+        "continue",
+        "try",
+        "catch",
+        "throw",
+        "throws",
+        "import",
+        "package",
+        "extends",
+        "implements",
+        "this",
+        "null",
+        "true",
+        "false"
+    ];
 
-    const completion = Math.min(
+    const codePatterns = [
+        /[{}()[\];]/,
+        /\b(int|long|double|float|boolean|char|String)\b/,
+        /\b(if|else|for|while|switch|case|return|new)\b/,
+        /[=!<>+\-*/%]=?/,
+        /\w+\s*\(/,
+        /\w+\s*\[/,
+        /\w+\s*=\s*[^=]/,
+        /^\s*(\/\/|\/\*|\*)/,
+    ];
 
-        100,
+    const garbagePatterns = [
+        /^[a-zA-Z]{1,20}$/,
+        /^(.)\1{3,}$/,
+        /^(asdf|qwer|zxcv|hjkl|jkl|aaaa|bbbb|test)+$/i,
+        /\b(hello bro|random|nonsense|blah blah)\b/i
+    ];
 
-        Math.round(
+    const isCodeLike = (line) => {
 
-            (currentLines.length / 40) * 100
+        if (!line) {
+            return false;
+        }
 
-        )
+        if (
+            codePatterns.some(
+                pattern => pattern.test(line)
+            )
+        ) {
+            return true;
+        }
 
-    );
+        const words =
+            line
+                .split(/\s+/)
+                .map(word =>
+                    word
+                        .replace(/[^a-zA-Z]/g, "")
+                        .toLowerCase()
+                )
+                .filter(Boolean);
 
+        return words.some(
+            word =>
+                javaKeywords.includes(word)
+        );
+    };
 
+    const looksLikeGarbage = (line) => {
+
+        if (!line) {
+            return false;
+        }
+
+        /*
+        Obvious repeated/random keyboard patterns.
+        */
+
+        if (
+            garbagePatterns.some(
+                pattern => pattern.test(line)
+            )
+        ) {
+            return true;
+        }
+
+        /*
+        A line containing normal programming
+        syntax is NOT garbage.
+        */
+
+        if (isCodeLike(line)) {
+            return false;
+        }
+
+        /*
+        If the line is mostly alphabetic natural/random
+        text and has no programming structure, flag it.
+        */
+
+        const letters =
+            (line.match(/[a-zA-Z]/g) || []).length;
+
+        const programmingSymbols =
+            (line.match(/[{}()[\];=<>+\-*/%]/g) || []).length;
+
+        const words =
+            line
+                .split(/\s+/)
+                .filter(Boolean);
+
+        if (
+            letters >= 5 &&
+            programmingSymbols === 0 &&
+            words.length >= 1
+        ) {
+            return true;
+        }
+
+        return false;
+    };
+
+    const garbageLines =
+        addedLines.filter(
+            line => looksLikeGarbage(line)
+        );
+
+    /*
+    Don't classify the entire edit as garbage
+    if the candidate added legitimate code alongside
+    some text.
+    */
+
+    const garbageDetected =
+        garbageLines.length > 0 &&
+        garbageLines.length >=
+            Math.ceil(addedLines.length * 0.5);
+
+    /*
+    =====================================================
+    EXISTING ANALYSIS
+    =====================================================
+    */
+
+    const completion =
+        Math.min(
+            100,
+            Math.round(
+                (currentLines.length / 40) * 100
+            )
+        );
 
     let matchedTrigger = null;
-
     let criticalLogicAdded = false;
-
-
 
     const triggers =
         interviewGuide.codingTriggers || [];
 
-
-
     for (const trigger of triggers) {
 
-        const lower = trigger.concept.toLowerCase();
+        const lower =
+            trigger.concept.toLowerCase();
 
-        const matched = addedLines.find(
-
-            line =>
-                line.toLowerCase().includes(lower)
-
-        );
+        const matched =
+            addedLines.find(
+                line =>
+                    line
+                        .toLowerCase()
+                        .includes(lower)
+            );
 
         if (matched) {
-matchedTrigger = trigger.concept;
 
-            criticalLogicAdded = true;
+            matchedTrigger =
+                trigger.concept;
+
+            criticalLogicAdded =
+                true;
 
             break;
-
         }
-
     }
 
-
-
     const edgeCaseAdded =
-
         addedLines.some(
-
             line =>
-
                 line.includes("null") ||
-
                 line.includes("length==0") ||
-
                 line.includes("isEmpty") ||
-
                 line.includes("size()==0")
-
         );
-
-
 
     const returnAdded =
-
         addedLines.some(
-
             line =>
-                line.includes("return")
-
+                /\breturn\b/.test(line)
         );
-
-
 
     return {
 
         changed:
-
             addedLines.length > 0,
 
-
-
         addedLines:
-
             addedLines.length,
-
-
 
         completion,
 
-
-
         triggerMatched:
-
             matchedTrigger,
-
-
 
         criticalLogicAdded,
 
-
-
         edgeCaseAdded,
-
-
 
         returnAdded,
 
+        garbageDetected,
 
+        garbageLines,
 
-        snapshot: currentCode
-
+        snapshot:
+            currentCode
     };
-
 };

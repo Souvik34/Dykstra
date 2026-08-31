@@ -24,26 +24,38 @@ export const shouldInterrupt = ({
         case InterviewPhase.APPROACH:
             return false;
 
-        case InterviewPhase.CODING:
+      case InterviewPhase.CODING:
 
-            // Already interrupted for this code version
-            if (
-                lastInterruptAtVersion === currentCodeVersion
-            ) {
-                return false;
-            }
+    if (
+        lastInterruptAtVersion === currentCodeVersion
+    ) {
+        return false;
+    }
 
-            // Nothing meaningful changed
-         if (
-    codeAnalysis.addedLines < 3 &&
-    !codeAnalysis.returnAdded &&
-    !(evaluation && evaluation.failed > 0)
-) {
-    return false;
-}
+    /*
+    Obvious non-code activity should interrupt
+    immediately.
+    */
 
-            return true;
+    if (
+        codeAnalysis?.garbageDetected
+    ) {
+        return true;
+    }
 
+    /*
+    Normal coding interruption rules.
+    */
+
+    if (
+        codeAnalysis.addedLines < 3 &&
+        !codeAnalysis.returnAdded &&
+        !(evaluation && evaluation.failed > 0)
+    ) {
+        return false;
+    }
+
+    return true;
         case InterviewPhase.DEBUGGING:
             return true;
 
@@ -79,6 +91,16 @@ export const getInterruptReason = ({
             return "APPROACH_DISCUSSION";
 
         case InterviewPhase.CODING:
+
+            /*
+            Garbage takes priority.
+            */
+
+            if (
+                codeAnalysis?.garbageDetected
+            ) {
+                return "NON_CODE_ACTIVITY";
+            }
 
             if (
                 evaluation &&
