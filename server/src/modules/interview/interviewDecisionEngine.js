@@ -24,7 +24,11 @@ export const shouldInterrupt = ({
         case InterviewPhase.APPROACH:
             return false;
 
-      case InterviewPhase.CODING:
+ case InterviewPhase.CODING:
+
+    /*
+    Already interrupted for this code version.
+    */
 
     if (
         lastInterruptAtVersion === currentCodeVersion
@@ -33,8 +37,8 @@ export const shouldInterrupt = ({
     }
 
     /*
-    Obvious non-code activity should interrupt
-    immediately.
+    Obvious garbage should interrupt immediately.
+    Do not require 3 added lines.
     */
 
     if (
@@ -44,18 +48,20 @@ export const shouldInterrupt = ({
     }
 
     /*
-    Normal coding interruption rules.
+    Normal coding activity.
     */
 
     if (
         codeAnalysis.addedLines < 3 &&
         !codeAnalysis.returnAdded &&
+        !codeAnalysis.criticalLogicAdded &&
         !(evaluation && evaluation.failed > 0)
     ) {
         return false;
     }
 
     return true;
+
         case InterviewPhase.DEBUGGING:
             return true;
 
@@ -90,45 +96,46 @@ export const getInterruptReason = ({
         case InterviewPhase.APPROACH:
             return "APPROACH_DISCUSSION";
 
-        case InterviewPhase.CODING:
+    case InterviewPhase.CODING:
 
-            /*
-            Garbage takes priority.
-            */
+    /*
+    Obvious garbage / non-code activity.
+    This must take priority over normal
+    coding milestones.
+    */
 
-            if (
-                codeAnalysis?.garbageDetected
-            ) {
-                return "NON_CODE_ACTIVITY";
-            }
+    if (
+        codeAnalysis?.garbageDetected
+    ) {
+        return "NON_CODE_ACTIVITY";
+    }
 
-            if (
-                evaluation &&
-                evaluation.failed > 0
-            ) {
-                return "FAILED_HIDDEN_TESTCASE";
-            }
+    if (
+        evaluation &&
+        evaluation.failed > 0
+    ) {
+        return "FAILED_HIDDEN_TESTCASE";
+    }
 
-            if (
-                codeAnalysis?.criticalLogicAdded
-            ) {
-                return "USER_IMPLEMENTED_MAIN_ALGORITHM";
-            }
+    if (
+        codeAnalysis?.criticalLogicAdded
+    ) {
+        return "USER_IMPLEMENTED_MAIN_ALGORITHM";
+    }
 
-            if (
-                codeAnalysis?.edgeCaseAdded
-            ) {
-                return "USER_HANDLED_EDGE_CASE";
-            }
+    if (
+        codeAnalysis?.edgeCaseAdded
+    ) {
+        return "USER_HANDLED_EDGE_CASE";
+    }
 
-            if (
-                codeAnalysis?.returnAdded
-            ) {
-                return "FIRST_WORKING_IMPLEMENTATION";
-            }
+    if (
+        codeAnalysis?.returnAdded
+    ) {
+        return "FIRST_WORKING_IMPLEMENTATION";
+    }
 
-            return null;
-
+    return null;
         case InterviewPhase.DEBUGGING:
             return "DEBUGGING";
 

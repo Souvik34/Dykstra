@@ -276,17 +276,15 @@ const getFallbackReply = ({
     Realtime interruption.
     */
 
-    if (
-    interruptReason === "NON_CODE_ACTIVITY"
-) {
+  if (interruptReason === "NON_CODE_ACTIVITY") {
 
     const garbageReplies = [
 
-        "I noticed the recent changes don't appear related to the implementation. Please stay focused on the problem and continue with your solution.",
+        "I noticed some content in the editor that doesn't appear to be part of the implementation. Please stay focused on the problem and continue.",
 
-        "The recent editor changes don't seem to be part of the solution. Please continue with the implementation and talk me through your reasoning.",
+        "I noticed the recent changes don't appear to be part of the solution. Let's stay focused on the implementation.",
 
-        "I noticed some unrelated content in the editor. Let's stay focused on the problem and continue with your implementation."
+        "The recent editor changes don't appear to be related to the problem. Please continue with your solution."
 
     ];
 
@@ -1924,21 +1922,6 @@ export const getInterviewByIdService = async ({
 /*
 =========================================================
 REALTIME CODE UPDATE SERVICE
-=========================================================
-
-This service is completely separate from
-normal candidate-message processing.
-
-Responsibilities:
-
-1. Observe editor changes.
-2. Save latest code.
-3. Detect meaningful implementation progress.
-4. Move UNDERSTANDING / APPROACH -> CODING.
-5. Interrupt candidate when decision engine says so.
-6. Ask interviewer about the code change.
-7. Never run Judge0 on every keystroke.
-8. Never move CODING backwards.
 =========================================================
 */
 

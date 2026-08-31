@@ -212,24 +212,7 @@ export const analyzeCodeProgress = ({
         text and has no programming structure, flag it.
         */
 
-        const letters =
-            (line.match(/[a-zA-Z]/g) || []).length;
-
-        const programmingSymbols =
-            (line.match(/[{}()[\];=<>+\-*/%]/g) || []).length;
-
-        const words =
-            line
-                .split(/\s+/)
-                .filter(Boolean);
-
-        if (
-            letters >= 5 &&
-            programmingSymbols === 0 &&
-            words.length >= 1
-        ) {
-            return true;
-        }
+ 
 
         return false;
     };
