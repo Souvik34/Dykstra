@@ -14,7 +14,8 @@ import {
   Github,
   Linkedin 
 } from "lucide-react";
-
+import { AboutLinkPreview } from "@/components/ui/about-link-preview";
+import dp from "../../assets/images/dp.jpg";
 import banner from "@/assets/images/Banner.png";
 import img1 from "@/assets/images/img1.png";
 import img2 from "@/assets/images/img2.png";
@@ -1206,6 +1207,53 @@ via-[#030408]/42
   </div>
 
 </section>
+{/* =========================================================
+    WHY I BUILT DYKSTRA
+========================================================= */}
+
+<section className="border-t border-white/[0.07] px-6 py-24 sm:py-32">
+  <div className="mx-auto max-w-5xl text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{
+        duration: 0.7,
+        ease: "easeOut",
+      }}
+    >
+      <h2 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+        <span className="text-white">
+          <AboutLinkPreview>
+            Solving
+          </AboutLinkPreview>{" "}
+          <AboutLinkPreview>
+            DSA
+          </AboutLinkPreview>{" "}
+          is one thing.
+        </span>
+
+        <br />
+
+        <span className="text-white">
+          Keeping what you learned{" "}
+          <AboutLinkPreview>
+            fresh
+          </AboutLinkPreview>{" "}
+          is another.
+        </span>
+      </h2>
+
+      <p className="mt-8 text-sm text-white/40">
+        Built by{" "}
+        <AboutLinkPreview>
+          Souvik Sural
+        </AboutLinkPreview>
+      </p>
+    </motion.div>
+  </div>
+</section>
+
 
       {/* =====================================================
           FAQ
@@ -1670,6 +1718,19 @@ via-[#030408]/42
           >
             FAQ
           </Link> */}
+
+          <Link
+  to="/about"
+  className="
+    block
+    text-sm
+    text-white/40
+    transition
+    hover:text-white
+  "
+>
+  About Dykstra
+</Link>
 
           {/* TERMS */}
           <Link
