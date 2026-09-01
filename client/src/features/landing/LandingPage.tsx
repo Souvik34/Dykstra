@@ -1804,7 +1804,7 @@ via-[#030408]/42
       </span>
 
       <span>
-    Made with <span className="text-red-400/70">♥</span> by Souvik
+    Made with <span className="text-red-400/70">♥</span> by Souvik Sural
   </span>
 
     </div>

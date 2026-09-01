@@ -946,25 +946,7 @@ Could you briefly introduce yourself?
         );
 
 
-    /*
-    =====================================================
-    IMPORTANT:
-    CODE DETECTION MUST NOT DEPEND ONLY ON EDITOR CODE.
-    
-    If the candidate says:
-    
-        "Hi I am Souvik"
-    
-    while starter code exists, that is CHAT,
-    NOT CODE.
-    
-    Code is considered submitted only when:
-    
-        isSubmission === true
-    AND
-        actual code is detected.
-    =====================================================
-    */
+ 
 
     const submittedCode =
         typeof code === "string"
