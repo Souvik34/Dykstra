@@ -2,7 +2,9 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.resend.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -13,58 +15,217 @@ const transporter = nodemailer.createTransport({
  * Password reset email
  */
 export const sendPasswordResetEmail = async (to, token) => {
- const resetLink = `https://dykstra.in/reset-password?token=${token}`;
+  const resetLink = `https://dykstra.in/reset-password?token=${token}`;
 
   await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+    from: `Dykstra <${process.env.EMAIL_FROM}>`,
     to,
-    subject: "Password Reset Request",
+    subject: "Reset your Dykstra password",
     html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2>Password Reset Request</h2>
+      <div style="
+        margin: 0;
+        padding: 40px 16px;
+        background: #0a0a0f;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #e5e7eb;
+      ">
+        <div style="
+          max-width: 560px;
+          margin: 0 auto;
+          background: #111118;
+          border: 1px solid #272733;
+          border-radius: 14px;
+          overflow: hidden;
+        ">
 
-        <p>
-          You requested a password reset for your Dykstra account.
-        </p>
-
-        <p>
-          Click the button below to create a new password:
-        </p>
-
-        <p>
-          <a
-            href="${resetLink}"
-            style="
-              display: inline-block;
-              padding: 10px 18px;
-              background: #2563eb;
+          <!-- Header -->
+          <div style="
+            padding: 28px 32px;
+            border-bottom: 1px solid #272733;
+          ">
+            <div style="
+              font-size: 22px;
+              font-weight: 700;
               color: #ffffff;
-              text-decoration: none;
-              border-radius: 6px;
-            "
-          >
-            Reset Password
-          </a>
-        </p>
+            ">
+              Dykstra
+            </div>
 
-        <p>
-          This link expires in 15 minutes.
-        </p>
+            <div style="
+              margin-top: 5px;
+              font-size: 12px;
+              color: #71717a;
+            ">
+              Track. Revise. Prepare.
+            </div>
+          </div>
 
-        <p>
-          If you did not request this, you can safely ignore this email.
-        </p>
+          <!-- Content -->
+          <div style="padding: 32px;">
 
-        <hr />
+            <h1 style="
+              margin: 0 0 16px;
+              font-size: 24px;
+              line-height: 1.3;
+              color: #ffffff;
+            ">
+              Reset your password
+            </h1>
 
-        <p style="color: #777;">
-          Dykstra Account Security
-        </p>
+            <p style="
+              margin: 0 0 16px;
+              font-size: 15px;
+              line-height: 1.7;
+              color: #a1a1aa;
+            ">
+              We received a request to reset the password for your
+              Dykstra account.
+            </p>
+
+            <p style="
+              margin: 0 0 24px;
+              font-size: 15px;
+              line-height: 1.7;
+              color: #a1a1aa;
+            ">
+              Click the button below to choose a new password and
+              regain access to your account.
+            </p>
+
+            <!-- Button -->
+            <div style="margin: 28px 0;">
+              <a
+                href="${resetLink}"
+                style="
+                  display: inline-block;
+                  padding: 13px 22px;
+                  background: linear-gradient(
+                    135deg,
+                    #06b6d4,
+                    #3b82f6,
+                    #8b5cf6
+                  );
+                  color: #ffffff;
+                  text-decoration: none;
+                  font-size: 14px;
+                  font-weight: 600;
+                  border-radius: 8px;
+                "
+              >
+                Reset Password
+              </a>
+            </div>
+
+            <!-- Expiry -->
+            <div style="
+              margin: 24px 0;
+              padding: 14px 16px;
+              background: #18181f;
+              border: 1px solid #272733;
+              border-radius: 8px;
+            ">
+              <p style="
+                margin: 0;
+                font-size: 13px;
+                line-height: 1.6;
+                color: #a1a1aa;
+              ">
+                <strong style="color: #e5e7eb;">
+                  This link expires in 15 minutes.
+                </strong>
+                For your security, the link can only be used once.
+              </p>
+            </div>
+
+            <!-- Fallback link -->
+            <p style="
+              margin: 24px 0 8px;
+              font-size: 13px;
+              color: #71717a;
+            ">
+              If the button doesn't work, copy and paste this link
+              into your browser:
+            </p>
+
+            <p style="
+              margin: 0;
+              font-size: 12px;
+              line-height: 1.6;
+              word-break: break-all;
+            ">
+              <a
+                href="${resetLink}"
+                style="color: #60a5fa; text-decoration: none;"
+              >
+                ${resetLink}
+              </a>
+            </p>
+
+            <!-- Security notice -->
+            <div style="
+              margin-top: 28px;
+              padding-top: 24px;
+              border-top: 1px solid #272733;
+            ">
+              <p style="
+                margin: 0;
+                font-size: 13px;
+                line-height: 1.7;
+                color: #71717a;
+              ">
+                If you didn't request a password reset, you can safely
+                ignore this email. Your password will remain unchanged.
+              </p>
+
+              <p style="
+                margin: 14px 0 0;
+                font-size: 13px;
+                line-height: 1.7;
+                color: #71717a;
+              ">
+                Having trouble with your account or the reset link?
+                Contact us at
+                <a
+                  href="mailto:contact@dykstra.in"
+                  style="color: #60a5fa; text-decoration: none;"
+                >
+                  contact@dykstra.in
+                </a>.
+              </p>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div style="
+            padding: 20px 32px;
+            background: #0d0d13;
+            border-top: 1px solid #272733;
+          ">
+            <p style="
+              margin: 0;
+              font-size: 12px;
+              line-height: 1.6;
+              color: #52525b;
+            ">
+              This is an automated security email from Dykstra.
+              Please do not reply directly to this message.
+            </p>
+
+            <p style="
+              margin: 8px 0 0;
+              font-size: 12px;
+              color: #52525b;
+            ">
+              © ${new Date().getFullYear()} Dykstra
+            </p>
+          </div>
+
+        </div>
       </div>
     `,
   });
 };
-
 
 /**
  * Bug report email
@@ -74,7 +235,7 @@ export const sendBugReportEmail = async ({
   page,
 }) => {
   await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+    from: `Dykstra <${process.env.EMAIL_FROM}>`,
     to: "souviksural22@gmail.com",
     subject: `Dykstra Bug Report — ${page}`,
     html: `
@@ -124,7 +285,7 @@ export const sendFeedbackEmail = async ({
   page,
 }) => {
   await transporter.sendMail({
-    from: process.env.EMAIL_USER,
+    from: `Dykstra <${process.env.EMAIL_FROM}>`,
     to: "souviksural22@gmail.com",
     subject: `Dykstra Feedback — ${rating}/5`,
     html: `
