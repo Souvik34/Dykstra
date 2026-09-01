@@ -165,29 +165,30 @@ export const Route =
           content: "width=device-width, initial-scale=1",
         },
 
-        {
-          title: "Dykstra",
-        },
+     {
+  title: "Dykstra — DSA Tracking, Focused Revision & AI Interviews",
+},
 
-        {
-          name: "description",
-          content: "Dykstra - A modern interview platform",
-        },
-
+{
+  name: "description",
+  content:
+    "Dykstra is a DSA tracker with focused revision and AI-powered technical interview preparation.",
+},
         {
           name: "author",
           content: "Dykstra",
         },
 
-        {
-          property: "og:title",
-          content: "Dykstra",
-        },
+       {
+  property: "og:title",
+  content: "Dykstra",
+},
 
-        {
-          property: "og:description",
-          content: "Dykstra - A modern interview platform",
-        },
+{
+  property: "og:description",
+  content:
+    "Dykstra is a DSA tracker with focused revision and AI-powered technical interview preparation.",
+},
 
         {
           property: "og:type",
@@ -211,6 +212,19 @@ export const Route =
     href: "/favicon.svg",
   },
 ],
+
+  scripts: [
+    {
+      type: "application/ld+json",
+      children: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "Dykstra",
+        alternateName: "dykstra.in",
+        url: "https://dykstra.in/",
+      }),
+    },
+  ],
     }),
 
     shellComponent: RootShell,
