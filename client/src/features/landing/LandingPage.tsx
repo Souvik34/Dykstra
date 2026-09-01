@@ -12,6 +12,7 @@ import {
   Video,
   Target,
   Github,
+  Linkedin 
 } from "lucide-react";
 
 import banner from "@/assets/images/Banner.png";
@@ -1703,67 +1704,75 @@ via-[#030408]/42
       </div>
 
 
-      {/* CONNECT */}
-      <div>
+     {/* CONNECT */}
+<div>
 
-        <p
-          className="
-            text-xs
-            font-bold
-            uppercase
-            tracking-[0.18em]
-            text-white/55
-          "
-        >
-          Connect
-        </p>
+  <p
+    className="
+      text-xs
+      font-bold
+      uppercase
+      tracking-[0.18em]
+      text-white/55
+    "
+  >
+    Connect
+  </p>
 
-        <div className="mt-4 space-y-3">
+  <div className="mt-4 space-y-3">
 
-          <a
-            href="https://github.com/Souvik34/Dykstra"
-            target="_blank"
-            rel="noreferrer"
-            className="
-              block
-              text-sm
-              text-white/40
-              transition
-              hover:text-white
-            "
-          >
-            GitHub
-          </a>
+    <a
+      href="https://github.com/Souvik34/Dykstra"
+      target="_blank"
+      rel="noreferrer"
+      className="
+        flex
+        items-center
+        gap-2
+        text-sm
+        text-white/40
+        transition
+        hover:text-white
+      "
+    >
+      <Github className="h-4 w-4" />
+      GitHub
+    </a>
 
-          <Link
-            to="/feedback"
-            className="
-              block
-              text-sm
-              text-white/40
-              transition
-              hover:text-white
-            "
-          >
-            Feedback
-          </Link>
+    <a
+      href="https://www.linkedin.com/company/dykstra-ai/"
+      target="_blank"
+      rel="noreferrer"
+      className="
+        flex
+        items-center
+        gap-2
+        text-sm
+        text-white/40
+        transition
+        hover:text-white
+      "
+    >
+      <Linkedin className="h-4 w-4" />
+      LinkedIn
+    </a>
 
-          {/* <a
-            href="mailto:support@dykstra.dev"
-            className="
-              block
-              text-sm
-              text-white/40
-              transition
-              hover:text-white
-            "
-          >
-            Contact
-          </a> */}
+    <Link
+      to="/feedback"
+      className="
+        block
+        text-sm
+        text-white/40
+        transition
+        hover:text-white
+      "
+    >
+      Feedback
+    </Link>
 
-        </div>
+  </div>
 
-      </div>
+</div>
 
     </div>
 
