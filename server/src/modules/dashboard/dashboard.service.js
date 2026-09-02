@@ -24,9 +24,9 @@ const calculateStreak = (dailyData) => {
     .map((d) => String(d.date).slice(0, 10))
     .sort();
 
-  // Calculate longest streak
-  let longestStreak = 1;
+  // Longest streak
   let run = 1;
+  let longestStreak = 1;
 
   for (let i = 1; i < dates.length; i++) {
     const prev = new Date(`${dates[i - 1]}T00:00:00Z`);
@@ -44,12 +44,12 @@ const calculateStreak = (dailyData) => {
     }
   }
 
-  // Calculate current streak from the most recent day
+  // Current streak
   let streak = 1;
 
   for (let i = dates.length - 1; i > 0; i--) {
-    const curr = new Date(`${dates[i]}T00:00:00Z`);
     const prev = new Date(`${dates[i - 1]}T00:00:00Z`);
+    const curr = new Date(`${dates[i]}T00:00:00Z`);
 
     const diffDays = Math.round(
       (curr - prev) / 86400000
