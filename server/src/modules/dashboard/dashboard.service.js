@@ -106,7 +106,7 @@ const weakTopic = focusTopic?.topic || null;
 
 const recommendedProblems =
     await getRecommendedProblemsRepo(weakTopic);
-console.log("DAILY SOLVE DATA:", dailyData);
+console.log("DAILY SOLVE DATA:", dailySolve);
   const { streak, longestStreak } = calculateStreak(dailySolve);
 
  
