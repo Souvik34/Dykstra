@@ -13,6 +13,8 @@ import {
 import { getMentorRecommendation } from "../mentor/mentor.service.js";
 
 const calculateStreak = (dailyData) => {
+   console.log("🔥 NEW STREAK FUNCTION CALLED");
+  console.log("STREAK INPUT:", dailyData);
   if (!dailyData.length) {
     return {
       streak: 0,
@@ -61,7 +63,10 @@ const calculateStreak = (dailyData) => {
       break;
     }
   }
-
+console.log("🔥 STREAK RESULT:", {
+  streak,
+  longestStreak,
+});
   return {
     streak,
     longestStreak,
