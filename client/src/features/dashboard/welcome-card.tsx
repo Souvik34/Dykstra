@@ -397,14 +397,14 @@ export function WelcomeCard({ dashboard }: Props) {
                                 iconClass="text-emerald-400"
                             />
 
-                            {streak > 0 && (
+                            {/* {streak > 0 && (
                                 <QuickMetric
                                     icon={Flame}
                                     label="Day streak"
                                     value={streak}
                                     iconClass="text-orange-400"
                                 />
-                            )}
+                            )} */}
 
                             {focusTopic && (
                                 <QuickMetric

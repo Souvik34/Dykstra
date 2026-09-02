@@ -52,4 +52,7 @@ app.use("/api/v1/interview", interviewRoutes);
 
 import feedbackRoutes from "./modules/auth/feedback/feedback.routes.js";
 app.use("/api/v1/feedback", feedbackRoutes);
+
+import notificationRoutes from "./modules/notification/notification.routes.js";
+app.use("/api/v1/notifications", notificationRoutes);
 export default app;

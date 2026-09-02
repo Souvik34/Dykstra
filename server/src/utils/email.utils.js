@@ -326,3 +326,146 @@ export const sendFeedbackEmail = async ({
     `,
   });
 };
+export const sendRevisionReminderEmail = async ({
+  to,
+  name,
+  pendingCount,
+}) => {
+  await transporter.sendMail({
+    from: `Dykstra <${process.env.EMAIL_FROM}>`,
+    to,
+    subject: `You have ${pendingCount} revision${pendingCount > 1 ? "s" : ""} waiting on Dykstra`,
+    html: `
+      <div style="
+        margin: 0;
+        padding: 40px 16px;
+        background: #0a0a0f;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #e5e7eb;
+      ">
+        <div style="
+          max-width: 560px;
+          margin: 0 auto;
+          background: #111118;
+          border: 1px solid #272733;
+          border-radius: 14px;
+          overflow: hidden;
+        ">
+
+          <div style="
+            padding: 28px 32px;
+            border-bottom: 1px solid #272733;
+          ">
+            <div style="
+              font-size: 22px;
+              font-weight: 700;
+              color: #ffffff;
+            ">
+              Dykstra
+            </div>
+
+            <div style="
+              margin-top: 5px;
+              font-size: 12px;
+              color: #71717a;
+            ">
+              Track. Revise. Prepare.
+            </div>
+          </div>
+
+          <div style="padding: 32px;">
+
+            <h1 style="
+              margin: 0 0 16px;
+              font-size: 24px;
+              line-height: 1.3;
+              color: #ffffff;
+            ">
+              Your revisions are waiting
+            </h1>
+
+            <p style="
+              margin: 0 0 16px;
+              font-size: 15px;
+              line-height: 1.7;
+              color: #a1a1aa;
+            ">
+              Hi ${name || "there"},
+            </p>
+
+            <p style="
+              margin: 0 0 24px;
+              font-size: 15px;
+              line-height: 1.7;
+              color: #a1a1aa;
+            ">
+              You have
+              <strong style="color: #ffffff;">
+                ${pendingCount} pending revision${pendingCount > 1 ? "s" : ""}
+              </strong>
+              waiting for you on Dykstra.
+            </p>
+
+            <div style="margin: 28px 0;">
+              <a
+                href="https://dykstra.in"
+                style="
+                  display: inline-block;
+                  padding: 13px 22px;
+                  background: linear-gradient(
+                    135deg,
+                    #06b6d4,
+                    #3b82f6,
+                    #8b5cf6
+                  );
+                  color: #ffffff;
+                  text-decoration: none;
+                  font-size: 14px;
+                  font-weight: 600;
+                  border-radius: 8px;
+                "
+              >
+                Complete Revisions
+              </a>
+            </div>
+
+            <p style="
+              margin: 24px 0 0;
+              font-size: 13px;
+              line-height: 1.7;
+              color: #71717a;
+            ">
+              Revisions are an important part of retaining what you've
+              learned. Complete them before continuing with Dykstra.
+            </p>
+
+          </div>
+
+          <div style="
+            padding: 20px 32px;
+            background: #0d0d13;
+            border-top: 1px solid #272733;
+          ">
+            <p style="
+              margin: 0;
+              font-size: 12px;
+              color: #52525b;
+            ">
+              You're receiving this email because you have pending
+              revisions on Dykstra.
+            </p>
+
+            <p style="
+              margin: 8px 0 0;
+              font-size: 12px;
+              color: #52525b;
+            ">
+              © ${new Date().getFullYear()} Dykstra
+            </p>
+          </div>
+
+        </div>
+      </div>
+    `,
+  });
+};

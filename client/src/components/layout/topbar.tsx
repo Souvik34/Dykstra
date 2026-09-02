@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import {
+    Bell,
     Check,
     ChevronDown,
     Copy,
@@ -37,7 +38,7 @@ export function Topbar() {
     const navigate = useNavigate();
 
     const [copied, setCopied] = useState(false);
-
+const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
     /*
     ============================================================
     USER INITIALS
@@ -195,453 +196,367 @@ export function Topbar() {
                     "
                 />
 
-                {/* =================================================
-                    RIGHT ACTIONS
-                ================================================= */}
+              {/* =================================================
+    RIGHT ACTIONS
+================================================= */}
 
-                <div
+<div
+    className="
+        ml-auto
+        flex
+        items-center
+        gap-2
+    "
+>
+    {/* =================================================
+        NOTIFICATIONS
+    ================================================= */}
+
+    <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <button
+                type="button"
+                aria-label="Notifications"
+                className="
+                    group
+                    relative
+
+                    flex
+                    h-9
+                    w-9
+                    items-center
+                    justify-center
+
+                    rounded-xl
+
+                    border
+                    border-transparent
+
+                    text-zinc-400
+
+                    outline-none
+
+                    transition-all
+                    duration-200
+
+                    hover:border-white/[0.08]
+                    hover:bg-white/[0.06]
+                    hover:text-white
+
+                    focus-visible:ring-2
+                    focus-visible:ring-white/[0.18]
+
+                    active:scale-95
+                "
+            >
+                <Bell
                     className="
-                        ml-auto
-                        flex
-                        items-center
-                        gap-3
-                    "
-                >
-                    {/* =================================================
-                        SEPARATOR
-                    ================================================= */}
+                        h-[18px]
+                        w-[18px]
 
-                    <div
+                        transition-transform
+                        duration-200
+
+                        group-hover:scale-105
+                    "
+                />
+
+                {/* Unread indicator */}
+                {hasUnreadNotifications && (
+                    <span
                         className="
-                            hidden
-                            h-6
-                            w-px
-                            bg-white/[0.14]
-                            sm:block
+                            absolute
+                            right-2
+                            top-1.5
+
+                            h-1.5
+                            w-1.5
+
+                            rounded-full
+
+                            bg-violet-400
+
+                            ring-2
+                            ring-background
                         "
                     />
+                )}
+            </button>
+        </DropdownMenuTrigger>
 
-                    {/* =================================================
-                        PROFILE
-                    ================================================= */}
+        <DropdownMenuContent
+            align="end"
+            sideOffset={10}
+            className="
+                w-80
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                type="button"
+                overflow-hidden
+
+                rounded-2xl
+
+                border
+                border-white/[0.11]
+
+                bg-zinc-950/[0.97]
+
+                p-1.5
+
+                shadow-[0_24px_70px_rgba(0,0,0,0.60)]
+
+                backdrop-blur-2xl
+
+                data-[state=open]:animate-in
+                data-[state=open]:fade-in-0
+                data-[state=open]:zoom-in-95
+
+                data-[state=closed]:animate-out
+                data-[state=closed]:fade-out-0
+                data-[state=closed]:zoom-out-95
+            "
+        >
+            {/* =================================================
+                HEADER
+            ================================================= */}
+
+            <div
+                className="
+                    flex
+                    items-center
+                    justify-between
+
+                    px-3
+                    py-3
+                "
+            >
+                <div>
+                    <p
+                        className="
+                            text-sm
+                            font-semibold
+                            text-white
+                        "
+                    >
+                        Notifications
+                    </p>
+
+                    <p
+                        className="
+                            mt-0.5
+                            text-xs
+                            text-zinc-500
+                        "
+                    >
+                        Updates from Dykstra
+                    </p>
+                </div>
+
+                {hasUnreadNotifications && (
+                    <button
+                        type="button"
+                        onClick={() => setHasUnreadNotifications(false)}
+                        className="
+                            text-xs
+                            font-medium
+                            text-violet-400
+
+                            transition-colors
+
+                            hover:text-violet-300
+                        "
+                    >
+                        Mark all read
+                    </button>
+                )}
+            </div>
+
+            <DropdownMenuSeparator
+                className="
+                    mx-1
+                    bg-white/[0.09]
+                "
+            />
+
+            {/* =================================================
+                NOTIFICATION ITEM
+            ================================================= */}
+
+            <div
+                className="
+                    relative
+
+                    rounded-xl
+
+                    px-3
+                    py-3
+
+                    transition-colors
+
+                    hover:bg-white/[0.045]
+                "
+            >
+                <div className="flex gap-3">
+                    <div
+                        className="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
+
+                            rounded-xl
+
+                            bg-violet-500/[0.10]
+
+                            text-violet-400
+                        "
+                    >
+                        <Bell className="h-4 w-4" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                            <p
                                 className="
-                                    group
-
-                                    flex
-                                    items-center
-                                    gap-2
-
-                                    rounded-full
-
-                                    border
-                                    border-white/[0.10]
-
-                                    bg-white/[0.035]
-
-                                    py-1
-                                    pl-1
-                                    pr-2.5
-
-                                    shadow-[0_4px_20px_rgba(0,0,0,0.18)]
-
-                                    backdrop-blur-xl
-
-                                    outline-none
-
-                                    transition-all
-                                    duration-300
-
-                                    hover:border-white/[0.18]
-                                    hover:bg-white/[0.065]
-
-                                    focus-visible:ring-2
-                                    focus-visible:ring-white/[0.18]
-
-                                    active:scale-[0.98]
+                                    text-sm
+                                    font-medium
+                                    text-zinc-200
                                 "
                             >
-                                {/* =====================================
-                                    LEETCODE AVATAR
-                                ===================================== */}
+                                Welcome to Dykstra
+                            </p>
 
-                                <Avatar
+                            {hasUnreadNotifications && (
+                                <span
                                     className="
-                                        h-8
-                                        w-8
-
-                                        overflow-hidden
-
+                                        mt-1.5
+                                        h-1.5
+                                        w-1.5
+                                        shrink-0
                                         rounded-full
-
-                                        border
-                                        border-white/[0.14]
-
-                                        bg-zinc-900
-
-                                        shadow-[0_0_18px_rgba(255,255,255,0.06)]
-
-                                        transition-all
-                                        duration-300
-
-                                        group-hover:border-white/[0.24]
-                                        group-hover:shadow-[0_0_22px_rgba(255,255,255,0.10)]
-                                    "
-                                >
-                                    {leetcodeAvatar && (
-                                        <AvatarImage
-                                            src={leetcodeAvatar}
-                                            alt={
-                                                user?.name
-                                                    ? `${user.name} profile`
-                                                    : "Profile"
-                                            }
-                                            className="
-                                                object-cover
-
-                                                transition-transform
-                                                duration-500
-
-                                                group-hover:scale-105
-                                            "
-                                        />
-                                    )}
-
-                                    <AvatarFallback
-                                        className="
-                                            bg-white/[0.07]
-
-                                            text-xs
-                                            font-semibold
-
-                                            text-white
-                                        "
-                                    >
-                                        {initials}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                {/* =====================================
-                                    CHEVRON
-                                ===================================== */}
-
-                                <ChevronDown
-                                    className="
-                                        h-3.5
-                                        w-3.5
-
-                                        text-zinc-400
-
-                                        transition-all
-                                        duration-300
-
-                                        group-hover:text-white
-
-                                        group-data-[state=open]:rotate-180
-                                        group-data-[state=open]:text-white
+                                        bg-violet-400
                                     "
                                 />
-                            </button>
-                        </DropdownMenuTrigger>
+                            )}
+                        </div>
 
-                        {/* =================================================
-                            DROPDOWN
-                        ================================================= */}
-
-                        <DropdownMenuContent
-                            align="end"
-                            sideOffset={10}
+                        <p
                             className="
-                                w-72
+                                mt-1
 
-                                overflow-hidden
+                                text-xs
+                                leading-5
 
-                                rounded-2xl
-
-                                border
-                                border-white/[0.11]
-
-                                bg-zinc-950/[0.97]
-
-                                p-1.5
-
-                                shadow-[0_24px_70px_rgba(0,0,0,0.60)]
-
-                                backdrop-blur-2xl
-
-                                data-[state=open]:animate-in
-                                data-[state=open]:fade-in-0
-                                data-[state=open]:zoom-in-95
-
-                                data-[state=closed]:animate-out
-                                data-[state=closed]:fade-out-0
-                                data-[state=closed]:zoom-out-95
+                                text-zinc-500
                             "
                         >
-                            {/* =============================================
-                                PROFILE HEADER
-                            ============================================= */}
+                            Stay consistent with your interview
+                            preparation and revision schedule.
+                        </p>
 
-                            <div
-                                className="
-                                    rounded-xl
-                                    px-3
-                                    py-3.5
+                        <p
+                            className="
+                                mt-2
 
-                                    transition-colors
+                                text-[11px]
 
-                                    hover:bg-white/[0.025]
-                                "
-                            >
-                                <div
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-3
-                                    "
-                                >
-                                    {/* Avatar */}
-
-                                    <Avatar
-                                        className="
-                                            h-11
-                                            w-11
-
-                                            shrink-0
-
-                                            border
-                                            border-white/[0.13]
-
-                                            bg-zinc-900
-
-                                            shadow-[0_0_22px_rgba(255,255,255,0.06)]
-                                        "
-                                    >
-                                        {leetcodeAvatar && (
-                                            <AvatarImage
-                                                src={leetcodeAvatar}
-                                                alt={
-                                                    user?.name
-                                                        ? `${user.name} profile`
-                                                        : "Profile"
-                                                }
-                                                className="object-cover"
-                                            />
-                                        )}
-
-                                        <AvatarFallback
-                                            className="
-                                                bg-white/[0.07]
-
-                                                font-semibold
-                                                text-white
-                                            "
-                                        >
-                                            {initials}
-                                        </AvatarFallback>
-                                    </Avatar>
-
-                                    {/* User information */}
-
-                                    <div className="min-w-0 flex-1">
-                                        <p
-                                            className="
-                                                truncate
-
-                                                text-sm
-                                                font-semibold
-                                                tracking-tight
-
-                                                text-white
-                                            "
-                                        >
-                                            {user?.name}
-                                        </p>
-
-                                        <p
-                                            className="
-                                                mt-1
-
-                                                truncate
-
-                                                text-xs
-
-                                                text-zinc-400
-                                            "
-                                        >
-                                            {user?.email}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <DropdownMenuSeparator
-                                className="
-                                    mx-1
-                                    bg-white/[0.09]
-                                "
-                            />
-
-                            {/* =============================================
-                                VIEW PROFILE
-                            ============================================= */}
-
-                            <DropdownMenuItem
-                                onClick={() => {
-                                    navigate({
-                                        to: "/profile",
-                                    });
-                                }}
-                                className="
-                                    mt-1
-
-                                    cursor-pointer
-
-                                    rounded-xl
-
-                                    px-3
-                                    py-2.5
-
-                                    text-sm
-                                    font-medium
-
-                                    text-zinc-300
-
-                                    outline-none
-
-                                    transition-all
-                                    duration-200
-
-                                    hover:bg-white/[0.06]
-                                    hover:text-white
-
-                                    focus:bg-white/[0.06]
-                                    focus:text-white
-                                "
-                            >
-                                <UserRound
-                                    className="
-                                        mr-2.5
-                                        h-4
-                                        w-4
-                                    "
-                                />
-
-                                View Profile
-                            </DropdownMenuItem>
-
-                            {/* =============================================
-                                COPY EMAIL
-                            ============================================= */}
-
-                            <DropdownMenuItem
-                                onClick={copyEmail}
-                                className="
-                                    mt-0.5
-
-                                    cursor-pointer
-
-                                    rounded-xl
-
-                                    px-3
-                                    py-2.5
-
-                                    text-sm
-                                    font-medium
-
-                                    text-zinc-300
-
-                                    outline-none
-
-                                    transition-all
-                                    duration-200
-
-                                    hover:bg-white/[0.06]
-                                    hover:text-white
-
-                                    focus:bg-white/[0.06]
-                                    focus:text-white
-                                "
-                            >
-                                {copied ? (
-                                    <Check
-                                        className="
-                                            mr-2.5
-                                            h-4
-                                            w-4
-
-                                            text-emerald-400
-                                        "
-                                    />
-                                ) : (
-                                    <Copy
-                                        className="
-                                            mr-2.5
-                                            h-4
-                                            w-4
-                                        "
-                                    />
-                                )}
-
-                                {copied ? "Email copied" : "Copy email"}
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator
-                                className="
-                                    mx-1
-                                    my-1
-                                    bg-white/[0.09]
-                                "
-                            />
-
-                            {/* =============================================
-                                LOGOUT
-                            ============================================= */}
-
-                            <DropdownMenuItem
-                                onClick={handleLogout}
-                                className="
-                                    cursor-pointer
-
-                                    rounded-xl
-
-                                    px-3
-                                    py-2.5
-
-                                    text-sm
-                                    font-medium
-
-                                    text-red-400
-
-                                    outline-none
-
-                                    transition-all
-                                    duration-200
-
-                                    hover:bg-red-500/[0.08]
-                                    hover:text-red-300
-
-                                    focus:bg-red-500/[0.08]
-                                    focus:text-red-300
-                                "
-                            >
-                                <LogOut
-                                    className="
-                                        mr-2.5
-                                        h-4
-                                        w-4
-                                    "
-                                />
-
-                                Log out
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                text-zinc-600
+                            "
+                        >
+                            Just now
+                        </p>
+                    </div>
                 </div>
+            </div>
+
+            {/* =================================================
+                EMPTY STATE
+            ================================================= */}
+
+            {!hasUnreadNotifications && (
+                <div
+                    className="
+                        flex
+                        flex-col
+                        items-center
+                        justify-center
+
+                        px-4
+                        py-10
+
+                        text-center
+                    "
+                >
+                    <div
+                        className="
+                            flex
+                            h-10
+                            w-10
+                            items-center
+                            justify-center
+
+                            rounded-full
+
+                            bg-white/[0.04]
+
+                            text-zinc-500
+                        "
+                    >
+                        <Bell className="h-4 w-4" />
+                    </div>
+
+                    <p
+                        className="
+                            mt-3
+
+                            text-sm
+                            font-medium
+
+                            text-zinc-300
+                        "
+                    >
+                        You&apos;re all caught up
+                    </p>
+
+                    <p
+                        className="
+                            mt-1
+
+                            text-xs
+
+                            text-zinc-600
+                        "
+                    >
+                        No new notifications
+                    </p>
+                </div>
+            )}
+        </DropdownMenuContent>
+    </DropdownMenu>
+
+    {/* =================================================
+        SEPARATOR
+    ================================================= */}
+
+    <div
+        className="
+            mx-1
+
+            hidden
+            h-6
+            w-px
+
+            bg-white/[0.14]
+
+            sm:block
+        "
+    />
+
+    {/* =================================================
+        PROFILE
+    ================================================= */}
+
+    {/* KEEP YOUR EXISTING PROFILE DROPDOWN HERE */}
             </div>
 
             {/* =========================================================
