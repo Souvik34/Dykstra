@@ -61,4 +61,13 @@ app.use("/api/v1/notifications", notificationRoutes);
 import broadcastRoutes from "./modules/broadcast/broadcast.routes.js";
 app.use("/api/v1/broadcast", broadcastRoutes);
 
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  res.status(400).json({
+    success: false,
+    message: err.message || "Something went wrong. Please try again.",
+  });
+});
+
 export default app;
