@@ -5,7 +5,7 @@ import {
 } from "./broadcast.controller.js";
 
 import { protect } from "../../middlewares/auth.middleware.js";
-import { requireAdmin } from "../../middlewares/admin.middleware.js";
+import { requireAdmin } from "../../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
