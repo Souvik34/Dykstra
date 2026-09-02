@@ -8,17 +8,20 @@ import {
   Brain,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Clock3,
+  ExternalLink,
   Flame,
   Gauge,
   History,
-  ExternalLink,
   Layers3,
   RefreshCw,
+  Search,
   Sparkles,
   Target,
   Trophy,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -40,19 +43,34 @@ function RevisionsPage() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+
   const [revisions, setRevisions] = useState<RevisionItem[]>([]);
-  const [completingId, setCompletingId] = useState<number | null>(null);
+  const [allRevisions, setAllRevisions] = useState<RevisionItem[]>([]);
+
+  const [completingId, setCompletingId] =
+    useState<number | null>(null);
+
+  const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] =
+    useState<"ALL" | "ACTIVE" | "COMPLETED">("ALL");
 
   const loadRevisions = async () => {
     try {
       setLoading(true);
 
-      const res = await revisionService.getDueRevisions();
+      const [dueRes, allRes] = await Promise.all([
+        revisionService.getDueRevisions(),
+        revisionService.getAllRevisions(),
+      ]);
 
-      setRevisions(res?.revisions ?? []);
+      setRevisions(dueRes?.revisions ?? []);
+      setAllRevisions(allRes?.revisions ?? []);
     } catch (err) {
       console.error("Failed to load revisions:", err);
+
       setRevisions([]);
+      setAllRevisions([]);
     } finally {
       setLoading(false);
     }
@@ -64,7 +82,7 @@ function RevisionsPage() {
 
   const handleComplete = async (
     problemId: number,
-    timeTaken: number
+    timeTaken: number = 0
   ) => {
     try {
       setCompletingId(problemId);
@@ -84,6 +102,11 @@ function RevisionsPage() {
 
       const res =
         await revisionService.getDueRevisions();
+
+      const allRes =
+        await revisionService.getAllRevisions();
+
+      setAllRevisions(allRes?.revisions ?? []);
 
       if (!res.blocked) {
         setTimeout(() => {
@@ -105,7 +128,7 @@ function RevisionsPage() {
   };
 
   const stats = useMemo(() => {
-    const total = revisions.length;
+    const totalDue = revisions.length;
 
     const high = revisions.filter(
       (r) => r.priorityLabel === "HIGH"
@@ -116,24 +139,88 @@ function RevisionsPage() {
     ).length;
 
     const averageConfidence =
-      total > 0
+      totalDue > 0
         ? Math.round(
             revisions.reduce(
               (sum, r) =>
                 sum +
                 (Number(r.confidence_rating) || 0),
               0
-            ) / total
+            ) / totalDue
           )
         : 0;
 
+    const active = allRevisions.filter(
+      (r) => !r.is_completed
+    );
+
+    const completed = allRevisions.filter(
+      (r) => r.is_completed
+    );
+
     return {
-      total,
+      totalDue,
       high,
       medium,
       averageConfidence,
+      activeCount: active.length,
+      completedCount: completed.length,
+      totalTracked: allRevisions.length,
     };
-  }, [revisions]);
+  }, [revisions, allRevisions]);
+
+  const visibleProgress = useMemo(() => {
+    let result = [...allRevisions];
+
+    if (filter === "ACTIVE") {
+      result = result.filter(
+        (revision) => !revision.is_completed
+      );
+    }
+
+    if (filter === "COMPLETED") {
+      result = result.filter(
+        (revision) => revision.is_completed
+      );
+    }
+
+    if (search.trim()) {
+      const query = search.toLowerCase();
+
+      result = result.filter((revision) =>
+        [
+          revision.title,
+          revision.topic,
+          revision.felt_difficulty,
+        ]
+          .filter(Boolean)
+          .some((value) =>
+            String(value)
+              .toLowerCase()
+              .includes(query)
+          )
+      );
+    }
+
+    return result;
+  }, [allRevisions, filter, search]);
+
+  const progressPreview = useMemo(() => {
+    return allRevisions
+      .filter((revision) => !revision.is_completed)
+      .sort((a, b) => {
+        const aDate = new Date(
+          a.next_revision_date
+        ).getTime();
+
+        const bDate = new Date(
+          b.next_revision_date
+        ).getTime();
+
+        return aDate - bDate;
+      })
+      .slice(0, 5);
+  }, [allRevisions]);
 
   if (loading) {
     return (
@@ -155,6 +242,8 @@ function RevisionsPage() {
         </div>
 
         <div className="relative mx-auto max-w-6xl space-y-8 px-1 pb-10">
+
+          {/* HERO */}
           <section className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.025] p-6 shadow-2xl shadow-black/20 backdrop-blur-xl md:p-8">
             <div
               className="pointer-events-none absolute inset-0 opacity-[0.035]"
@@ -186,10 +275,9 @@ function RevisionsPage() {
                   </h1>
 
                   <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400 md:text-base">
-                    Your memory is due for a workout. Revisit
-                    these problems before they fade and
-                    strengthen the patterns you've already
-                    learned.
+                    Revisit problems at the right time,
+                    strengthen the patterns you've learned,
+                    and keep them interview-ready.
                   </p>
                 </div>
 
@@ -202,11 +290,12 @@ function RevisionsPage() {
                 </div>
               </div>
 
+              {/* STATS */}
               <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
                 <StatCard
                   icon={<Clock3 />}
                   label="Due today"
-                  value={stats.total}
+                  value={stats.totalDue}
                   accent="blue"
                 />
 
@@ -232,6 +321,7 @@ function RevisionsPage() {
                 />
               </div>
 
+              {/* TODAY QUEUE PROGRESS */}
               <div className="mt-6 rounded-2xl border border-white/[0.06] bg-black/20 p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -243,9 +333,9 @@ function RevisionsPage() {
                   </div>
 
                   <span className="text-xs text-zinc-500">
-                    {stats.total === 0
+                    {stats.totalDue === 0
                       ? "All clear"
-                      : `${stats.total} remaining`}
+                      : `${stats.totalDue} remaining`}
                   </span>
                 </div>
 
@@ -254,7 +344,7 @@ function RevisionsPage() {
                     className="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-violet-500 transition-all duration-700"
                     style={{
                       width:
-                        stats.total === 0
+                        stats.totalDue === 0
                           ? "100%"
                           : "8%",
                     }}
@@ -264,6 +354,7 @@ function RevisionsPage() {
             </div>
           </section>
 
+          {/* TODAY'S REVISIONS */}
           {revisions.length > 0 && (
             <div className="flex flex-col justify-between gap-3 px-1 sm:flex-row sm:items-end">
               <div>
@@ -288,9 +379,7 @@ function RevisionsPage() {
             </div>
           )}
 
-          {revisions.length === 0 ? (
-            <EmptyRevisionState />
-          ) : (
+          {revisions.length > 0 ? (
             <div className="space-y-4">
               {revisions.map((rev, index) => (
                 <RevisionCard
@@ -304,12 +393,473 @@ function RevisionsPage() {
                 />
               ))}
             </div>
+          ) : (
+            <EmptyRevisionState />
+          )}
+
+          {/* REVISION PROGRESS */}
+          {allRevisions.length > 0 && (
+            <RevisionProgressSection
+              stats={stats}
+              progressPreview={progressPreview}
+              showAll={showAll}
+              setShowAll={setShowAll}
+              search={search}
+              setSearch={setSearch}
+              filter={filter}
+              setFilter={setFilter}
+              visibleProgress={visibleProgress}
+            />
           )}
         </div>
       </div>
     </DashboardShell>
   );
 }
+
+/* ───────────────────────────────────────────── */
+/* REVISION PROGRESS */
+/* ───────────────────────────────────────────── */
+
+function RevisionProgressSection({
+  stats,
+  progressPreview,
+  showAll,
+  setShowAll,
+  search,
+  setSearch,
+  filter,
+  setFilter,
+  visibleProgress,
+}: {
+  stats: {
+    activeCount: number;
+    completedCount: number;
+    totalTracked: number;
+  };
+
+  progressPreview: RevisionItem[];
+
+  showAll: boolean;
+  setShowAll: React.Dispatch<React.SetStateAction<boolean>>;
+
+  search: string;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
+
+  filter: "ALL" | "ACTIVE" | "COMPLETED";
+  setFilter: React.Dispatch<
+    React.SetStateAction<
+      "ALL" | "ACTIVE" | "COMPLETED"
+    >
+  >;
+
+  visibleProgress: RevisionItem[];
+}) {
+  return (
+    <section className="space-y-4">
+
+      {/* SECTION HEADER */}
+      <div className="flex flex-col justify-between gap-3 px-1 sm:flex-row sm:items-end">
+        <div>
+          <div className="flex items-center gap-2">
+            <History className="h-5 w-5 text-violet-400" />
+
+            <h2 className="text-xl font-semibold tracking-tight text-white">
+              Your revision progress
+            </h2>
+          </div>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            Keep track of the problems you're reinforcing.
+          </p>
+        </div>
+
+        <div className="text-xs text-zinc-500">
+          {stats.totalTracked} problems tracked
+        </div>
+      </div>
+
+      {/* OVERVIEW */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <ProgressStat
+          label="In progress"
+          value={stats.activeCount}
+          icon={<RefreshCw />}
+        />
+
+        <ProgressStat
+          label="Completed"
+          value={stats.completedCount}
+          icon={<CheckCircle2 />}
+        />
+
+        <div className="col-span-2 md:col-span-1">
+          <ProgressStat
+            label="Total tracked"
+            value={stats.totalTracked}
+            icon={<Layers3 />}
+          />
+        </div>
+      </div>
+
+      {!showAll ? (
+        <>
+          {/* PREVIEW */}
+          {progressPreview.length > 0 ? (
+            <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-xl">
+              <div className="border-b border-white/[0.06] px-5 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      Active revision progress
+                    </h3>
+
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Your next five scheduled reviews.
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border border-blue-400/10 bg-blue-400/[0.06] px-2.5 py-1 text-[10px] font-medium text-blue-300">
+                    {stats.activeCount} active
+                  </span>
+                </div>
+              </div>
+
+              <div className="divide-y divide-white/[0.05]">
+                {progressPreview.map((revision) => (
+                  <ProgressRow
+                    key={revision.problem_id}
+                    revision={revision}
+                  />
+                ))}
+              </div>
+
+              <div className="border-t border-white/[0.06] p-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowAll(true)}
+                  className="h-10 w-full text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                >
+                  View all revision progress
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-8 text-center">
+              <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-300" />
+
+              <p className="mt-3 text-sm font-medium text-white">
+                No active revisions
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                Your revision queue is clear.
+              </p>
+            </div>
+          )}
+        </>
+      ) : (
+        /* FULL LIST */
+        <div className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] backdrop-blur-xl">
+
+          {/* TOOLBAR */}
+          <div className="space-y-3 border-b border-white/[0.06] p-4">
+
+            <div className="flex flex-col gap-3 md:flex-row">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
+
+                <input
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(e.target.value)
+                  }
+                  placeholder="Search problems..."
+                  className="h-10 w-full rounded-xl border border-white/[0.07] bg-black/20 pl-9 pr-9 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-blue-400/20"
+                />
+
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 transition-colors hover:text-zinc-300"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex rounded-xl border border-white/[0.07] bg-black/20 p-1">
+                <FilterButton
+                  active={filter === "ALL"}
+                  onClick={() => setFilter("ALL")}
+                >
+                  All
+                </FilterButton>
+
+                <FilterButton
+                  active={filter === "ACTIVE"}
+                  onClick={() => setFilter("ACTIVE")}
+                >
+                  Active
+                </FilterButton>
+
+                <FilterButton
+                  active={filter === "COMPLETED"}
+                  onClick={() =>
+                    setFilter("COMPLETED")
+                  }
+                >
+                  Completed
+                </FilterButton>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-zinc-500">
+                {visibleProgress.length}{" "}
+                {visibleProgress.length === 1
+                  ? "problem"
+                  : "problems"}
+              </span>
+
+              <button
+                onClick={() => {
+                  setShowAll(false);
+                  setSearch("");
+                  setFilter("ALL");
+                }}
+                className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                Collapse
+              </button>
+            </div>
+          </div>
+
+          {/* RESULTS */}
+          {visibleProgress.length > 0 ? (
+            <div className="divide-y divide-white/[0.05]">
+              {visibleProgress.map((revision) => (
+                <ProgressRow
+                  key={revision.problem_id}
+                  revision={revision}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-12 text-center">
+              <Search className="mx-auto h-7 w-7 text-zinc-700" />
+
+              <p className="mt-3 text-sm font-medium text-zinc-300">
+                No matching revisions
+              </p>
+
+              <p className="mt-1 text-xs text-zinc-600">
+                Try a different problem or filter.
+              </p>
+            </div>
+          )}
+
+          <div className="border-t border-white/[0.06] p-3">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowAll(false);
+                setSearch("");
+                setFilter("ALL");
+              }}
+              className="h-10 w-full text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+            >
+              <ChevronDown className="mr-2 h-4 w-4 rotate-180" />
+              Show less
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ───────────────────────────────────────────── */
+/* PROGRESS ROW */
+/* ───────────────────────────────────────────── */
+
+function ProgressRow({
+  revision,
+}: {
+  revision: RevisionItem;
+}) {
+  const count = Math.min(
+    revision.revision_count ?? 0,
+    8
+  );
+
+  const progressPercent = Math.min(
+    100,
+    Math.round((count / 8) * 100)
+  );
+
+  const nextDate = revision.next_revision_date
+    ? new Date(
+        revision.next_revision_date
+      ).toLocaleDateString("en-IN", {
+        month: "short",
+        day: "numeric",
+      })
+    : "—";
+
+  return (
+    <div className="group flex flex-col gap-4 px-5 py-4 transition-colors hover:bg-white/[0.02] sm:flex-row sm:items-center">
+
+      {/* TITLE */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-3">
+          <div
+            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
+              revision.is_completed
+                ? "border-emerald-400/10 bg-emerald-400/[0.06]"
+                : "border-blue-400/10 bg-blue-400/[0.06]"
+            }`}
+          >
+            {revision.is_completed ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+            ) : (
+              <RefreshCw className="h-4 w-4 text-blue-300" />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-medium text-zinc-200 transition-colors group-hover:text-white">
+              {revision.title}
+            </h4>
+
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600">
+              {revision.topic && (
+                <span>{revision.topic}</span>
+              )}
+
+              {revision.topic && (
+                <span className="h-1 w-1 rounded-full bg-zinc-700" />
+              )}
+
+              <span>
+                {revision.is_completed
+                  ? "Sequence completed"
+                  : `Next review ${nextDate}`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PROGRESS */}
+      <div className="w-full sm:w-44">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-600">
+            Progress
+          </span>
+
+          <span className="text-[11px] font-medium text-zinc-400">
+            {revision.is_completed
+              ? "8 / 8"
+              : `${count} / 8`}
+          </span>
+        </div>
+
+        <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+          <div
+            className={`h-full rounded-full transition-all ${
+              revision.is_completed
+                ? "bg-emerald-400"
+                : "bg-gradient-to-r from-blue-500 to-cyan-400"
+            }`}
+            style={{
+              width: `${
+                revision.is_completed
+                  ? 100
+                  : progressPercent
+              }%`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* STATUS */}
+      <div className="hidden w-24 justify-end sm:flex">
+        {revision.is_completed ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/10 bg-emerald-400/[0.05] px-2.5 py-1 text-[10px] font-medium text-emerald-300">
+            <Check className="h-3 w-3" />
+            Completed
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-400/10 bg-blue-400/[0.05] px-2.5 py-1 text-[10px] font-medium text-blue-300">
+            Active
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────── */
+/* PROGRESS STAT */
+/* ───────────────────────────────────────────── */
+
+function ProgressStat({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
+      <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.035] text-zinc-400">
+        <span className="h-4 w-4 [&>svg]:h-4 [&>svg]:w-4">
+          {icon}
+        </span>
+      </div>
+
+      <div className="text-xl font-bold text-white">
+        {value}
+      </div>
+
+      <div className="mt-1 text-xs text-zinc-500">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────── */
+/* FILTER BUTTON */
+/* ───────────────────────────────────────────── */
+
+function FilterButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+        active
+          ? "bg-white/[0.08] text-white"
+          : "text-zinc-600 hover:text-zinc-300"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 /* ───────────────────────────────────────────── */
 /* STAT CARD */
 /* ───────────────────────────────────────────── */
@@ -343,9 +893,13 @@ function StatCard({
         </span>
       </div>
 
-      <div className="text-xl font-bold text-white">{value}</div>
+      <div className="text-xl font-bold text-white">
+        {value}
+      </div>
 
-      <div className="mt-1 text-xs text-zinc-500">{label}</div>
+      <div className="mt-1 text-xs text-zinc-500">
+        {label}
+      </div>
     </div>
   );
 }
@@ -363,7 +917,10 @@ function RevisionCard({
   revision: RevisionItem;
   index: number;
   completing: boolean;
-  onComplete: (problemId: number) => void;
+  onComplete: (
+    problemId: number,
+    timeTaken?: number
+  ) => void;
 }) {
   const priority = revision.priorityLabel ?? "LOW";
 
@@ -377,6 +934,7 @@ function RevisionCard({
       glow: "group-hover:shadow-red-500/[0.05]",
       dot: "bg-red-400",
     },
+
     MEDIUM: {
       label: "MEDIUM PRIORITY",
       icon: Zap,
@@ -386,6 +944,7 @@ function RevisionCard({
       glow: "group-hover:shadow-amber-500/[0.05]",
       dot: "bg-amber-400",
     },
+
     LOW: {
       label: "LOW PRIORITY",
       icon: Target,
@@ -395,7 +954,9 @@ function RevisionCard({
       glow: "group-hover:shadow-emerald-500/[0.05]",
       dot: "bg-emerald-400",
     },
-  }[priority as "HIGH" | "MEDIUM" | "LOW"] ?? {
+  }[
+    priority as "HIGH" | "MEDIUM" | "LOW"
+  ] ?? {
     label: "LOW PRIORITY",
     icon: Target,
     text: "text-emerald-300",
@@ -409,11 +970,15 @@ function RevisionCard({
 
   const confidence = Math.min(
     100,
-    Math.max(0, Number(revision.confidence_rating) || 0)
+    Math.max(
+      0,
+      Number(revision.confidence_rating) || 0
+    )
   );
 
   const difficulty =
-    revision.felt_difficulty?.toUpperCase() || "MEDIUM";
+    revision.felt_difficulty?.toUpperCase() ||
+    "MEDIUM";
 
   const difficultyClass =
     difficulty === "EASY"
@@ -440,18 +1005,17 @@ function RevisionCard({
         animationDelay: `${index * 80}ms`,
       }}
     >
-      {/* Left priority glow */}
       <div
         className={`absolute bottom-0 left-0 top-0 w-[2px] ${priorityConfig.dot} opacity-70`}
       />
 
-      {/* Background glow */}
       <div className="pointer-events-none absolute -right-24 -top-24 h-48 w-48 rounded-full bg-blue-500/[0.035] blur-3xl transition-all duration-500 group-hover:bg-blue-500/[0.07]" />
 
       <div className="relative">
-        {/* Top row */}
+
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
+
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wider ${priorityConfig.bg} ${priorityConfig.border} ${priorityConfig.text}`}
@@ -480,7 +1044,13 @@ function RevisionCard({
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
               <span className="flex items-center gap-1.5">
                 <History className="h-3.5 w-3.5" />
-                Revision {Math.min((revision.revision_count ?? 0) + 1, 8)} of 8
+
+                Revision{" "}
+                {Math.min(
+                  (revision.revision_count ?? 0) + 1,
+                  8
+                )}{" "}
+                of 8
               </span>
 
               {revision.priorityScore !== undefined && (
@@ -490,7 +1060,9 @@ function RevisionCard({
                   <span>
                     Priority score{" "}
                     <span className="font-medium text-zinc-400">
-                      {Math.round(revision.priorityScore)}
+                      {Math.round(
+                        revision.priorityScore
+                      )}
                     </span>
                   </span>
                 </>
@@ -498,7 +1070,6 @@ function RevisionCard({
             </div>
           </div>
 
-          {/* Priority icon */}
           <div
             className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border md:flex ${priorityConfig.bg} ${priorityConfig.border}`}
           >
@@ -508,9 +1079,9 @@ function RevisionCard({
           </div>
         </div>
 
-        {/* Metrics */}
+        {/* METRICS */}
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {/* Confidence */}
+
           <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <span className="flex items-center gap-2 text-xs text-zinc-500">
@@ -526,12 +1097,13 @@ function RevisionCard({
             <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-1000"
-                style={{ width: `${confidence}%` }}
+                style={{
+                  width: `${confidence}%`,
+                }}
               />
             </div>
           </div>
 
-          {/* Revision progression */}
           <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3.5">
             <div className="mb-2 flex items-center justify-between">
               <span className="flex items-center gap-2 text-xs text-zinc-500">
@@ -549,9 +1121,11 @@ function RevisionCard({
                 <div
                   key={i}
                   className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                    i < (revision.revision_count ?? 0)
+                    i <
+                    (revision.revision_count ?? 0)
                       ? "bg-blue-400"
-                      : i === (revision.revision_count ?? 0)
+                      : i ===
+                          (revision.revision_count ?? 0)
                         ? "bg-blue-400/40"
                         : "bg-white/[0.06]"
                   }`}
@@ -561,7 +1135,7 @@ function RevisionCard({
           </div>
         </div>
 
-        {/* Actions */}
+        {/* ACTIONS */}
         <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:justify-end">
           <Button
             variant="outline"
@@ -576,7 +1150,9 @@ function RevisionCard({
 
           <Button
             disabled={completing}
-            onClick={() => onComplete(revision.problem_id)}
+            onClick={() =>
+              onComplete(revision.problem_id)
+            }
             className="group/complete h-10 border-0 bg-gradient-to-r from-blue-600 to-blue-500 px-5 font-medium text-white shadow-lg shadow-blue-500/10 transition-all duration-300 hover:from-blue-500 hover:to-cyan-500 hover:shadow-blue-500/20"
           >
             {completing ? (
@@ -588,7 +1164,7 @@ function RevisionCard({
               <>
                 <Check className="mr-2 h-4 w-4 transition-transform group-hover/complete:scale-125" />
                 Mark as Revised
-                <ChevronRight className="ml-1 h-3.5 w-3.5 opacity-60 transition-transform group-hover/complete:translate-x-0.5" />
+                <ChevronRight className="ml-1.5 h-3.5 w-3.5 opacity-60 transition-transform group-hover/complete:translate-x-0.5" />
               </>
             )}
           </Button>
@@ -627,8 +1203,9 @@ function EmptyRevisionState() {
         </div>
 
         <p className="text-sm leading-6 text-zinc-500">
-          No revisions are due right now. Your spaced repetition schedule
-          is working quietly in the background.
+          No revisions are due right now. Your spaced
+          repetition schedule is working quietly in the
+          background.
         </p>
 
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.025] px-4 py-2 text-xs text-zinc-500">
@@ -675,6 +1252,7 @@ function RevisionSkeleton() {
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <div className="h-16 rounded-xl bg-white/[0.035]" />
+
             <div className="h-16 rounded-xl bg-white/[0.035]" />
           </div>
         </div>

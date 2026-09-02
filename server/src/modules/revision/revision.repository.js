@@ -74,10 +74,31 @@ export const getAllRevisionsRepo = async (userId) => {
   console.log("CACHE MISS (all revisions)");
 
   const result = await pool.query(
-    `SELECT *
-     FROM revision_queue
-     WHERE user_id = $1
-     ORDER BY next_revision_date ASC`,
+    `
+    SELECT
+      rq.*,
+      sp.felt_difficulty,
+      sp.confidence_rating,
+      sp.time_taken_minutes,
+      p.title,
+      p.topic,
+      p.question_link
+
+    FROM revision_queue rq
+
+    JOIN problems p
+      ON rq.problem_id = p.id
+
+    LEFT JOIN solved_problems sp
+      ON rq.user_id = sp.user_id
+      AND rq.problem_id = sp.problem_id
+
+    WHERE rq.user_id = $1
+
+    ORDER BY
+      rq.is_completed ASC,
+      rq.next_revision_date ASC
+    `,
     [userId]
   );
 
@@ -89,7 +110,6 @@ export const getAllRevisionsRepo = async (userId) => {
 
   return result.rows;
 };
-
 export const getRevisionByProblemRepo = async (
   userId,
   problemId

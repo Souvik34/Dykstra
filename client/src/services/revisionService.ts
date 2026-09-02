@@ -12,10 +12,9 @@ export interface RevisionItem {
 
   user_id: string;
 
-  felt_difficulty: string;
-  confidence_rating: number;
-
-  time_taken_minutes: number;
+  felt_difficulty?: string;
+  confidence_rating?: number;
+  time_taken_minutes?: number;
 
   title: string;
   topic?: string;
@@ -32,6 +31,11 @@ export interface DueRevisionResponse {
   revisions: RevisionItem[];
 }
 
+export interface AllRevisionResponse {
+  success: boolean;
+  revisions: RevisionItem[];
+}
+
 const revisionService = {
   async getDueRevisions(): Promise<DueRevisionResponse> {
     const res = await api.get("/revision/due");
@@ -41,7 +45,7 @@ const revisionService = {
 
   async completeRevision(
     problemId: number | string,
-    timeTaken: number
+    timeTaken: number = 0
   ) {
     const res = await api.post(
       `/revision/complete/${problemId}`,
@@ -53,7 +57,7 @@ const revisionService = {
     return res.data;
   },
 
-  async getAllRevisions() {
+  async getAllRevisions(): Promise<AllRevisionResponse> {
     const res = await api.get("/revision/all");
 
     return res.data;
