@@ -10,6 +10,15 @@ export const createUser = async(name, email, password) => {
     return res.rows[0];
 };
 
+export const findUserById = async (userId) => {
+  const res = await pool.query(
+    'SELECT * FROM users WHERE id = $1',
+    [userId]
+  );
+
+  return res.rows[0];
+};
+
 export const storeRefreshToken = async (userId, token) => {
   await pool.query(
     "INSERT INTO refresh_tokens (user_id, token) VALUES ($1, $2)",
