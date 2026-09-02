@@ -10,7 +10,8 @@ const Reminder = ({ onContinue }: ReminderProps) => {
   const [enabled, setEnabled] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+  <div className="fixed left-0 top-0 z-[9999] flex h-[100dvh] w-[100vw] items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    {/* <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d0d12] p-6 shadow-2xl"></div */}
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d0d12] p-6 shadow-2xl">
         <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10">
           <BellRing className="h-5 w-5 text-violet-400" />
