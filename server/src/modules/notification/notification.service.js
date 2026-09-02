@@ -8,6 +8,8 @@ import {
   getPendingRevisionUsersRepo,
   hasRevisionReminderTodayRepo,
   logRevisionReminderRepo,
+  getRevisionReminderPreferenceRepo,
+  updateRevisionReminderPreferenceRepo,
 } from "./notification.repository.js";
 
 import {
@@ -90,4 +92,15 @@ export const sendRevisionRemindersService = async () => {
     candidates: users.length,
     sent,
   };
+};
+
+export const getRevisionReminderPreferenceService = async (userId) => {
+  return await getRevisionReminderPreferenceRepo(userId);
+};
+
+export const updateRevisionReminderPreferenceService = async (
+  userId,
+  enabled
+) => {
+  return await updateRevisionReminderPreferenceRepo(userId, enabled);
 };

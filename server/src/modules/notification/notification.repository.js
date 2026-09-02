@@ -188,3 +188,39 @@ export const logRevisionReminderRepo = async ({
     [userId, pendingCount]
   );
 };
+
+export const getRevisionReminderPreferenceRepo = async (userId) => {
+  const result = await pool.query(
+    `
+    SELECT
+      revision_reminder_enabled,
+      revision_reminder_preference_set
+    FROM users
+    WHERE id = $1
+    `,
+    [userId]
+  );
+
+  return result.rows[0] || null;
+};
+
+export const updateRevisionReminderPreferenceRepo = async (
+  userId,
+  enabled
+) => {
+  const result = await pool.query(
+    `
+    UPDATE users
+    SET
+      revision_reminder_enabled = $2,
+      revision_reminder_preference_set = TRUE
+    WHERE id = $1
+    RETURNING
+      revision_reminder_enabled,
+      revision_reminder_preference_set
+    `,
+    [userId, enabled]
+  );
+
+  return result.rows[0] || null;
+};

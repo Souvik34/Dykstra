@@ -2,6 +2,8 @@ import {
     getNotificationsService,
     markNotificationReadService,
     markAllNotificationsReadService,
+    getRevisionReminderPreferenceService,
+    updateRevisionReminderPreferenceService,
 } from "./notification.service.js";
 
 export const getNotificationsController = async (req, res) => {
@@ -59,6 +61,55 @@ export const markAllNotificationsReadController = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Failed to mark notifications as read",
+        });
+    }
+};
+
+export const getRevisionReminderPreferenceController = async (req, res) => {
+    try {
+        const result =
+            await getRevisionReminderPreferenceService(req.user.id);
+
+        return res.status(200).json({
+            success: true,
+            data: result,
+        });
+    } catch (error) {
+        console.error(
+            "Get revision reminder preference error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch revision reminder preference",
+        });
+    }
+};
+
+export const updateRevisionReminderPreferenceController = async (req, res) => {
+    try {
+        const { enabled } = req.body;
+
+        const result =
+            await updateRevisionReminderPreferenceService(
+                req.user.id,
+                enabled
+            );
+
+        return res.status(200).json({
+            success: true,
+            data: result,
+        });
+    } catch (error) {
+        console.error(
+            "Update revision reminder preference error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update revision reminder preference",
         });
     }
 };

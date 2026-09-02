@@ -4,6 +4,8 @@ import {
     getNotificationsController,
     markNotificationReadController,
     markAllNotificationsReadController,
+    getRevisionReminderPreferenceController,
+    updateRevisionReminderPreferenceController,
 } from "./notification.controller.js";
 
 import { protect } from "../../middlewares/auth.middleware.js";
@@ -17,7 +19,17 @@ router.patch(
   protect,
   markAllNotificationsReadController
 );
+router.get(
+    "/revision-reminder-preference",
+    protect,
+    getRevisionReminderPreferenceController
+);
 
+router.patch(
+    "/revision-reminder-preference",
+    protect,
+    updateRevisionReminderPreferenceController
+);
 router.patch(
   "/:id/read",
   protect,
