@@ -31,7 +31,9 @@ export const getRecommendedProblemsRepo = async (topic) => {
 
 export const getDailySolveRepo = async (userId) => {
   const result = await pool.query(
-    `SELECT DATE(solved_at) as date, COUNT(*) as count
+    `SELECT
+       (solved_at AT TIME ZONE 'Asia/Kolkata')::date AS date,
+       COUNT(*) AS count
      FROM solved_problems
      WHERE user_id = $1
      GROUP BY date

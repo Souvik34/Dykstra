@@ -13,35 +13,58 @@ import {
 import { getMentorRecommendation } from "../mentor/mentor.service.js";
 
 const calculateStreak = (dailyData) => {
-  if (!dailyData.length) return { streak: 0, longestStreak: 0 };
+  if (!dailyData.length) {
+    return {
+      streak: 0,
+      longestStreak: 0,
+    };
+  }
 
-  const dates = dailyData.map(d =>
-    new Date(d.date).toISOString().split("T")[0]
-  );
+  const dates = dailyData
+    .map((d) => String(d.date).slice(0, 10))
+    .sort();
 
-  let current = 1;
-  let longest = 1;
+  let longestStreak = 1;
+  let currentRun = 1;
 
-  for (let i = dates.length - 1; i > 0; i--) {
-    const curr = new Date(dates[i]);
-    const prev = new Date(dates[i - 1]);
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(`${dates[i - 1]}T00:00:00`);
+    const curr = new Date(`${dates[i]}T00:00:00`);
 
-    const diff = Math.floor((curr - prev) / (1000 * 60 * 60 * 24));
+    const diffDays =
+      Math.round(
+        (curr - prev) / (1000 * 60 * 60 * 24)
+      );
 
-    if (diff === 1) {
-      current++;
-      longest = Math.max(longest, current);
-    } else {
-      current = 1;
+    if (diffDays === 1) {
+      currentRun++;
+      longestStreak = Math.max(
+        longestStreak,
+        currentRun
+      );
+    } else if (diffDays > 1) {
+      currentRun = 1;
     }
   }
 
+  // Get today's date using the server's local calendar date.
+  const today = new Date();
+  const todayString =
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const lastDate = dates[dates.length - 1];
+
+  
+  const streak =
+    lastDate === todayString
+      ? currentRun
+      : 0;
+
   return {
-    streak: current,
-    longestStreak: longest,
+    streak,
+    longestStreak,
   };
 };
-
 
 export const getDashboardService = async (userId) => {
  if (!userId) {
@@ -83,7 +106,7 @@ const weakTopic = focusTopic?.topic || null;
 
 const recommendedProblems =
     await getRecommendedProblemsRepo(weakTopic);
-
+console.log("DAILY SOLVE DATA:", dailyData);
   const { streak, longestStreak } = calculateStreak(dailySolve);
 
  
