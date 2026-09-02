@@ -408,7 +408,7 @@ export const sendRevisionReminderEmail = async ({
 
             <div style="margin: 28px 0;">
               <a
-                href="https://dykstra.in"
+                href="https://dykstra.in/revisions"
                 style="
                   display: inline-block;
                   padding: 13px 22px;

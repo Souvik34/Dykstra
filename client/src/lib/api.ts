@@ -72,14 +72,13 @@ api.interceptors.response.use(
       }
     }
 
-    if (!silent && typeof window !== "undefined") {
-      const msg =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Something went wrong. Please try again.";
+   if (!silent && typeof window !== "undefined") {
+  const msg =
+    error?.response?.data?.message ||
+    "Something went wrong. Please try again.";
 
-      toast.error(msg);
-    }
+  toast.error(msg);
+}
 
     return Promise.reject(error);
   }
