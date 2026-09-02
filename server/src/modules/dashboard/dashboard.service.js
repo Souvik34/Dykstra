@@ -24,8 +24,9 @@ const calculateStreak = (dailyData) => {
     .map((d) => String(d.date).slice(0, 10))
     .sort();
 
-  let current = 1;
-  let longest = 1;
+  // Calculate longest streak
+  let longestStreak = 1;
+  let run = 1;
 
   for (let i = 1; i < dates.length; i++) {
     const prev = new Date(`${dates[i - 1]}T00:00:00Z`);
@@ -36,19 +37,36 @@ const calculateStreak = (dailyData) => {
     );
 
     if (diffDays === 1) {
-      current++;
-      longest = Math.max(longest, current);
+      run++;
+      longestStreak = Math.max(longestStreak, run);
     } else {
-      current = 1;
+      run = 1;
+    }
+  }
+
+  // Calculate current streak from the most recent day
+  let streak = 1;
+
+  for (let i = dates.length - 1; i > 0; i--) {
+    const curr = new Date(`${dates[i]}T00:00:00Z`);
+    const prev = new Date(`${dates[i - 1]}T00:00:00Z`);
+
+    const diffDays = Math.round(
+      (curr - prev) / 86400000
+    );
+
+    if (diffDays === 1) {
+      streak++;
+    } else {
+      break;
     }
   }
 
   return {
-    streak: current,
-    longestStreak: longest,
+    streak,
+    longestStreak,
   };
 };
-
 export const getDashboardService = async (userId) => {
  if (!userId) {
     throw new Error("Valid userId is required");
