@@ -55,4 +55,8 @@ app.use("/api/v1/feedback", feedbackRoutes);
 
 import notificationRoutes from "./modules/notification/notification.routes.js";
 app.use("/api/v1/notifications", notificationRoutes);
+
+import broadcastRoutes from "./modules/broadcast/broadcast.routes.js";
+app.use("/api/v1/broadcast", broadcastRoutes);
+
 export default app;
