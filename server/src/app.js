@@ -3,6 +3,8 @@ import cors from "cors";
 import { connectRedis } from "./config/redis.js";
 const app = express();
 import "./workers/solve.worker.js";
+import "./workers/revisionReminder.worker.js";
+import "./schedulers/revisionReminder.scheduler.js";
 await connectRedis();
 app.use(
   cors({
