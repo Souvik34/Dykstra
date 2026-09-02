@@ -1,4 +1,8 @@
 import {
+  getNotificationsRepo,
+  markNotificationReadRepo,
+  markAllNotificationsReadRepo,
+  getUnreadNotificationCountRepo,
   createNotificationRepo,
   getAllUsersForBroadcastRepo,
   getPendingRevisionUsersRepo,
@@ -30,7 +34,29 @@ export const createBroadcastNotificationsService = async ({
     usersNotified: users.length,
   };
 };
+export const getNotificationsService = async (userId) => {
+  const notifications = await getNotificationsRepo(userId);
+  const unreadCount = await getUnreadNotificationCountRepo(userId);
 
+  return {
+    notifications,
+    unreadCount,
+  };
+};
+
+export const markNotificationReadService = async (
+  userId,
+  notificationId
+) => {
+  return await markNotificationReadRepo(
+    userId,
+    notificationId
+  );
+};
+
+export const markAllNotificationsReadService = async (userId) => {
+  return await markAllNotificationsReadRepo(userId);
+};
 
 export const sendRevisionRemindersService = async () => {
   const users =
