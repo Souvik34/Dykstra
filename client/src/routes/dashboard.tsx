@@ -4,7 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/route-guard";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-
+import Reminder from  "@/components/ui/reminder";
+import notificationService from "@/services/notificationService";
 import { WelcomeCard } from "@/features/dashboard/welcome-card";
 import { ProgressCards } from "@/features/dashboard/progress-cards";
 import { RecentActivity } from "@/features/dashboard/recent-activity";
@@ -77,6 +78,28 @@ function DashboardPage() {
 
     const [loading, setLoading] =
         useState(true);
+const [showReminder, setShowReminder] = useState(false);
+useEffect(() => {
+    if (!user?.id) return;
+
+    const checkReminderPreference = async () => {
+        try {
+            const preference =
+                await notificationService.getRevisionReminderPreference();
+
+            if (!preference.revision_reminder_preference_set) {
+                setShowReminder(true);
+            }
+        } catch (error) {
+            console.error(
+                "Failed to check revision reminder preference:",
+                error
+            );
+        }
+    };
+
+    checkReminderPreference();
+}, [user?.id]);
 
     useEffect(() => {
         if (!user?.id) return;
@@ -115,6 +138,18 @@ function DashboardPage() {
             setLoading(false);
         }
     };
+   const handleReminderContinue = async (enabled: boolean) => {
+    try {
+        await notificationService.setRevisionReminderPreference(enabled);
+
+        setShowReminder(false);
+    } catch (error) {
+        console.error(
+            "Failed to save revision reminder preference:",
+            error
+        );
+    }
+};
 
     /* =========================================================
        LOADING
@@ -442,6 +477,9 @@ function DashboardPage() {
     open={isTourOpen}
     onClose={closeTour}
 />
+{showReminder && (
+    <Reminder onContinue={handleReminderContinue} />
+)}
     </DashboardShell>
 );
 }
