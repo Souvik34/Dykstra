@@ -39,9 +39,12 @@ export const Route = createFileRoute("/revisions")({
   component: RevisionsPage,
 });
 
+const ITEMS_PER_PAGE = 10;
+
 function RevisionsPage() {
   const navigate = useNavigate();
 
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   const [revisions, setRevisions] = useState<RevisionItem[]>([]);
@@ -204,6 +207,40 @@ function RevisionsPage() {
 
     return result;
   }, [allRevisions, filter, search]);
+
+  const totalPages = Math.ceil(
+    visibleProgress.length / ITEMS_PER_PAGE
+  );
+
+  const paginatedProgress = useMemo(() => {
+    const start =
+      (currentPage - 1) * ITEMS_PER_PAGE;
+
+    return visibleProgress.slice(
+      start,
+      start + ITEMS_PER_PAGE
+    );
+  }, [visibleProgress, currentPage]);
+
+  // Reset pagination whenever search/filter changes.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter]);
+
+  // Prevent being stuck on an empty page after
+  // completing/removing revisions.
+  useEffect(() => {
+    const pages = Math.max(
+      1,
+      Math.ceil(
+        visibleProgress.length / ITEMS_PER_PAGE
+      )
+    );
+
+    setCurrentPage((page) =>
+      Math.min(page, pages)
+    );
+  }, [visibleProgress.length]);
 
   const progressPreview = useMemo(() => {
     return allRevisions
@@ -408,7 +445,11 @@ function RevisionsPage() {
               setSearch={setSearch}
               filter={filter}
               setFilter={setFilter}
-              visibleProgress={visibleProgress}
+              visibleProgress={paginatedProgress}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              totalPages={totalPages}
+              totalResults={visibleProgress.length}
             />
           )}
         </div>
@@ -431,6 +472,10 @@ function RevisionProgressSection({
   filter,
   setFilter,
   visibleProgress,
+  currentPage,
+  setCurrentPage,
+  totalPages,
+  totalResults,
 }: {
   stats: {
     activeCount: number;
@@ -454,6 +499,14 @@ function RevisionProgressSection({
   >;
 
   visibleProgress: RevisionItem[];
+
+  currentPage: number;
+  setCurrentPage: React.Dispatch<
+    React.SetStateAction<number>
+  >;
+
+  totalPages: number;
+  totalResults: number;
 }) {
   return (
     <section className="space-y-4">
@@ -537,7 +590,10 @@ function RevisionProgressSection({
               <div className="border-t border-white/[0.06] p-3">
                 <Button
                   variant="ghost"
-                  onClick={() => setShowAll(true)}
+                  onClick={() => {
+                    setShowAll(true);
+                    setCurrentPage(1);
+                  }}
                   className="h-10 w-full text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                 >
                   View all revision progress
@@ -617,8 +673,8 @@ function RevisionProgressSection({
 
             <div className="flex items-center justify-between">
               <span className="text-xs text-zinc-500">
-                {visibleProgress.length}{" "}
-                {visibleProgress.length === 1
+                {totalResults}{" "}
+                {totalResults === 1
                   ? "problem"
                   : "problems"}
               </span>
@@ -628,6 +684,7 @@ function RevisionProgressSection({
                   setShowAll(false);
                   setSearch("");
                   setFilter("ALL");
+                  setCurrentPage(1);
                 }}
                 className="text-xs text-zinc-500 transition-colors hover:text-zinc-300"
               >
@@ -660,6 +717,120 @@ function RevisionProgressSection({
             </div>
           )}
 
+          {/* PAGINATION */}
+          {totalPages > 1 && (
+            <div className="flex flex-col gap-3 border-t border-white/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+
+              {/* RANGE */}
+              <span className="text-xs text-zinc-600">
+                Showing{" "}
+                {(currentPage - 1) *
+                  ITEMS_PER_PAGE +
+                  1}
+                –
+                {Math.min(
+                  currentPage * ITEMS_PER_PAGE,
+                  totalResults
+                )}{" "}
+                of {totalResults}
+              </span>
+
+              {/* CONTROLS */}
+              <div className="flex items-center justify-between gap-1 sm:justify-end">
+
+                <Button
+                  variant="ghost"
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.max(1, page - 1)
+                    )
+                  }
+                  className="h-8 px-3 text-xs text-zinc-500 hover:bg-white/[0.04] hover:text-white disabled:opacity-30"
+                >
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-0.5">
+                  {Array.from(
+                    { length: totalPages },
+                    (_, index) => index + 1
+                  )
+                    .filter(
+                      (page) =>
+                        page === 1 ||
+                        page === totalPages ||
+                        Math.abs(
+                          page - currentPage
+                        ) <= 1
+                    )
+                    .map(
+                      (
+                        page,
+                        index,
+                        pages
+                      ) => {
+                        const previous =
+                          pages[index - 1];
+
+                        return (
+                          <div
+                            key={page}
+                            className="flex items-center"
+                          >
+                            {previous &&
+                              page -
+                                previous >
+                                1 && (
+                                <span className="px-1 text-xs text-zinc-700">
+                                  ...
+                                </span>
+                              )}
+
+                            <button
+                              onClick={() =>
+                                setCurrentPage(
+                                  page
+                                )
+                              }
+                              className={`h-8 min-w-8 rounded-lg px-2 text-xs font-medium transition-all ${
+                                currentPage ===
+                                page
+                                  ? "bg-blue-500/10 text-blue-300"
+                                  : "text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-300"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </div>
+                        );
+                      }
+                    )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  disabled={
+                    currentPage ===
+                    totalPages
+                  }
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.min(
+                        totalPages,
+                        page + 1
+                      )
+                    )
+                  }
+                  className="h-8 px-3 text-xs text-zinc-500 hover:bg-white/[0.04] hover:text-white disabled:opacity-30"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* SHOW LESS */}
           <div className="border-t border-white/[0.06] p-3">
             <Button
               variant="ghost"
@@ -667,6 +838,7 @@ function RevisionProgressSection({
                 setShowAll(false);
                 setSearch("");
                 setFilter("ALL");
+                setCurrentPage(1);
               }}
               className="h-10 w-full text-zinc-400 hover:bg-white/[0.04] hover:text-white"
             >
