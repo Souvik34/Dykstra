@@ -24,45 +24,28 @@ const calculateStreak = (dailyData) => {
     .map((d) => String(d.date).slice(0, 10))
     .sort();
 
-  let longestStreak = 1;
-  let currentRun = 1;
+  let current = 1;
+  let longest = 1;
 
   for (let i = 1; i < dates.length; i++) {
-    const prev = new Date(`${dates[i - 1]}T00:00:00`);
-    const curr = new Date(`${dates[i]}T00:00:00`);
+    const prev = new Date(`${dates[i - 1]}T00:00:00Z`);
+    const curr = new Date(`${dates[i]}T00:00:00Z`);
 
-    const diffDays =
-      Math.round(
-        (curr - prev) / (1000 * 60 * 60 * 24)
-      );
+    const diffDays = Math.round(
+      (curr - prev) / 86400000
+    );
 
     if (diffDays === 1) {
-      currentRun++;
-      longestStreak = Math.max(
-        longestStreak,
-        currentRun
-      );
-    } else if (diffDays > 1) {
-      currentRun = 1;
+      current++;
+      longest = Math.max(longest, current);
+    } else {
+      current = 1;
     }
   }
 
-  // Get today's date using the server's local calendar date.
-  const today = new Date();
-  const todayString =
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
-  const lastDate = dates[dates.length - 1];
-
-  
-  const streak =
-    lastDate === todayString
-      ? currentRun
-      : 0;
-
   return {
-    streak,
-    longestStreak,
+    streak: current,
+    longestStreak: longest,
   };
 };
 

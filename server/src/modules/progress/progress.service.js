@@ -3,6 +3,7 @@ import {
   insertSolvedProblemRepo,
   updateConfidenceRepo,
 } from "./progress.repository.js";
+import redisClient from "../../config/redis.js";
 
 import { calculateConfidenceScore } from "../../utils/confidenceScore.js";
 
@@ -41,4 +42,5 @@ export const addSolvedProblemService = async (
     problemId,
     confidence
   );
+  await redisClient.del(`dashboard:${userId}`);
 };
