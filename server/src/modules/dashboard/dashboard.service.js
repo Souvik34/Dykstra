@@ -13,8 +13,6 @@ import {
 import { getMentorRecommendation } from "../mentor/mentor.service.js";
 
 const calculateStreak = (dailyData) => {
-   console.log("🔥 NEW STREAK FUNCTION CALLED");
-  console.log("STREAK INPUT:", dailyData);
   if (!dailyData.length) {
     return {
       streak: 0,
@@ -23,10 +21,10 @@ const calculateStreak = (dailyData) => {
   }
 
   const dates = dailyData
-    .map((d) => String(d.date).slice(0, 10))
+    .map((d) => new Date(d.date).toISOString().slice(0, 10))
     .sort();
 
-  // Longest streak
+  // Calculate longest streak
   let run = 1;
   let longestStreak = 1;
 
@@ -46,7 +44,7 @@ const calculateStreak = (dailyData) => {
     }
   }
 
-  // Current streak
+  // Calculate current streak from the latest day backwards
   let streak = 1;
 
   for (let i = dates.length - 1; i > 0; i--) {
@@ -63,10 +61,12 @@ const calculateStreak = (dailyData) => {
       break;
     }
   }
-console.log("🔥 STREAK RESULT:", {
-  streak,
-  longestStreak,
-});
+
+  console.log("🔥 STREAK RESULT:", {
+    streak,
+    longestStreak,
+  });
+
   return {
     streak,
     longestStreak,
