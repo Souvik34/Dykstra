@@ -6,22 +6,22 @@ import {
     markAllNotificationsReadController,
 } from "./notification.controller.js";
 
-import { requireAuth } from "../../middlewares/auth.middleware.js";
+import { protect } from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.get("/", requireAuth, getNotificationsController);
+router.get("/", protect, getNotificationsController);
 
 router.patch(
-    "/read-all",
-    requireAuth,
-    markAllNotificationsReadController
+  "/read-all",
+  protect,
+  markAllNotificationsReadController
 );
 
 router.patch(
-    "/:id/read",
-    requireAuth,
-    markNotificationReadController
+  "/:id/read",
+  protect,
+  markNotificationReadController
 );
 
 export default router;
