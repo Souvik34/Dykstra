@@ -1965,29 +1965,95 @@ console.log("REALTIME SESSION RESULT:", session ? "FOUND" : "NOT FOUND");
         );
 
 
-        const interviewPackage =
-            JSON.parse(
-                session.current_question
-            );
+    const interviewPackage =
+    JSON.parse(
+        session.current_question
+    );
 
 
-        /*
-        Analyze code evolution.
-        */
+/*
+=====================================================
+IGNORE INITIAL STARTER CODE
+=====================================================
 
-        const codeAnalysis =
-            analyzeCodeProgress({
+Monaco sends the complete starter code when the
+editor is initialized.
 
-                previousCode:
-                    session.last_code || "",
+That is not candidate progress, so save it as the
+baseline and do not trigger phase changes,
+interruptions, or AI calls.
+=====================================================
+*/
 
-                currentCode:
-                    code,
+const normalizeCode = (value) =>
+    typeof value === "string"
+        ? value
+            .replace(/\r\n/g, "\n")
+            .trim()
+        : "";
 
-                interviewGuide:
-                    interviewPackage.interviewGuide
-            });
 
+const starterCode =
+    interviewPackage.starterCode?.[
+        session.language
+    ] || "";
+
+
+const normalizedCurrentCode =
+    normalizeCode(code);
+
+
+const normalizedStarterCode =
+    normalizeCode(starterCode);
+
+
+const isStarterCode =
+    normalizedStarterCode &&
+    normalizedCurrentCode ===
+        normalizedStarterCode;
+
+
+console.log(
+    "REALTIME starter code detected:",
+    isStarterCode
+);
+
+
+if (isStarterCode) {
+
+    await updateCodeSnapshotRepo({
+
+        sessionId,
+
+        code
+    });
+
+    console.log(
+        "Realtime: initial starter code ignored."
+    );
+
+    return;
+}
+
+
+/*
+=====================================================
+ANALYZE CODE EVOLUTION
+=====================================================
+*/
+
+const codeAnalysis =
+    analyzeCodeProgress({
+
+        previousCode:
+            session.last_code || "",
+
+        currentCode:
+            code,
+
+        interviewGuide:
+            interviewPackage.interviewGuide
+    });
 
         console.log(
             "Current phase:",
@@ -2097,33 +2163,26 @@ console.log("REALTIME SESSION RESULT:", session ? "FOUND" : "NOT FOUND");
         ) {
 
             try {
+const previousPhase =
+    session.phase;
 
-                const updated =
-                    await updateInterviewPhaseRepo(
-                        sessionId,
-                        InterviewPhase.CODING
-                    );
+const updated =
+    await updateInterviewPhaseRepo(
+        sessionId,
+        InterviewPhase.CODING
+    );
 
+session.phase =
+    updated?.phase ||
+    InterviewPhase.CODING;
 
-                session.phase =
-                    updated?.phase ||
-                    InterviewPhase.CODING;
+await resetInterruptRepo(
+    sessionId
+);
 
-
-                /*
-                Phase changed, therefore
-                old interrupt state should not
-                carry over.
-                */
-
-                await resetInterruptRepo(
-                    sessionId
-                );
-
-
-                console.log(
-                    `REALTIME PHASE CHANGE: ${session.phase} -> CODING`
-                );
+console.log(
+    `REALTIME PHASE CHANGE: ${previousPhase} -> ${session.phase}`
+);
 
             } catch (phaseError) {
 

@@ -142,6 +142,8 @@ export const initSocket = (server) => {
 
                             sessionId,
 
+        userId:
+            socket.userId,
                             message:
                                 "__INTERVIEW_START__",
 
