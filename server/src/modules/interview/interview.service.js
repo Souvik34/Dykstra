@@ -1969,7 +1969,20 @@ console.log("REALTIME SESSION RESULT:", session ? "FOUND" : "NOT FOUND");
     JSON.parse(
         session.current_question
     );
+console.log(
+    "REALTIME PACKAGE KEYS:",
+    Object.keys(interviewPackage)
+);
 
+console.log(
+    "REALTIME LANGUAGE:",
+    session.language
+);
+
+console.log(
+    "REALTIME STARTER CODE RAW:",
+    interviewPackage.starterCode
+);
 
 /*
 =====================================================
