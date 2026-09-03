@@ -1704,27 +1704,29 @@ export const endInterviewService = async ({
 
 
     try {
+const finalCode =
+    typeof session.last_code === "string"
+        ? session.last_code.trim()
+        : "";
 
-        rawFeedback =
-            await generateInterviewFeedback({
+const codeWritten =
+    finalCode.length > 0;
 
-                type:
-                    session.type,
-
-                difficulty:
-                    session.difficulty,
-
-                conversation,
-
-                expectedConcepts:
-                    interviewPackage.expectedConcepts || [],
-
-                expectedComplexity:
-                    interviewPackage.expectedComplexity || {},
-
-                interviewGuide:
-                    interviewPackage.interviewGuide || {}
-            });
+rawFeedback =
+    await generateInterviewFeedback({
+        type: session.type,
+        difficulty: session.difficulty,
+        conversation,
+        expectedConcepts:
+            interviewPackage.expectedConcepts || [],
+        expectedComplexity:
+            interviewPackage.expectedComplexity || {},
+        interviewGuide:
+            interviewPackage.interviewGuide || {},
+        code: finalCode,
+        codeWritten,
+        codeSubmitted: false
+    });
 
     } catch (feedbackError) {
 

@@ -179,28 +179,32 @@
     };
 
     export const updateInterviewPhaseRepo = async (
-        sessionId,
-        phase
-    ) => {
+    sessionId,
+    phase
+) => {
 
-        const { rows } = await pool.query(
-            `
-            UPDATE interview_sessions
-            SET
-                phase = $2,
-                interruption_count = 0,
-                last_interrupt_at_version = NULL
-            WHERE id = $1
-            RETURNING phase
-            `,
-            [sessionId, phase]
-        );
+    const { rows } = await pool.query(
+        `
+        UPDATE interview_sessions
+        SET
+            phase = $2,
+            interruption_count = 0,
+            last_interrupt_at_version = NULL,
+            coding_started =
+                CASE
+                    WHEN $2 = 'CODING' THEN TRUE
+                    ELSE coding_started
+                END
+        WHERE id = $1
+        RETURNING phase, coding_started
+        `,
+        [sessionId, phase]
+    );
 
-        console.log("DB Phase:", rows[0]?.phase);
+    console.log("DB Phase:", rows[0]?.phase);
 
-        return rows[0];
-    };
-
+    return rows[0];
+};
 
     export const updateCodeSnapshotRepo = async ({
         sessionId,
