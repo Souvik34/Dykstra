@@ -503,12 +503,15 @@ export function Topbar() {
                                     rounded-xl
                                     border
                                     border-transparent
-                                    text-zinc-400
+                                    text-white/80
                                     outline-none
                                     transition-all
                                     duration-200
-                                    hover:border-white/[0.08]
-                                    hover:bg-white/[0.06]
+                                    border-white/[0.06]
+                                    bg-white/[0.025]
+                                    shadow-[0_0_18px_rgba(139,92,246,0.06)]
+                                    hover:border-violet-400/20
+                                    hover:bg-violet-500/[0.08]
                                     hover:text-white
                                     focus-visible:ring-2
                                     focus-visible:ring-white/[0.18]
@@ -610,7 +613,7 @@ export function Topbar() {
                                         className="
                                             mt-0.5
                                             text-xs
-                                            text-zinc-500
+                                            text-white/65
                                         "
                                     >
                                         Updates from Dykstra
@@ -652,7 +655,7 @@ export function Topbar() {
                                         py-10
                                         text-center
                                         text-xs
-                                        text-zinc-500
+                                        text-white/60
                                     "
                                 >
                                     Loading notifications...
@@ -684,7 +687,7 @@ export function Topbar() {
                                                 justify-center
                                                 rounded-full
                                                 bg-white/[0.04]
-                                                text-zinc-500
+                                                text-white/65
                                             "
                                         >
                                             <Bell className="h-4 w-4" />
@@ -695,7 +698,7 @@ export function Topbar() {
                                                 mt-3
                                                 text-sm
                                                 font-medium
-                                                text-zinc-300
+                                                text-white/90
                                             "
                                         >
                                             You&apos;re all
@@ -706,7 +709,7 @@ export function Topbar() {
                                             className="
                                                 mt-1
                                                 text-xs
-                                                text-zinc-600
+                                                text-white/55
                                             "
                                         >
                                             No new
@@ -820,7 +823,7 @@ export function Topbar() {
                                                                         mt-1
                                                                         text-xs
                                                                         leading-5
-                                                                        text-zinc-500
+                                                                        text-white/65
                                                                     "
                                                                 >
                                                                     {
@@ -832,7 +835,7 @@ export function Topbar() {
                                                                     className="
                                                                         mt-2
                                                                         text-[11px]
-                                                                        text-zinc-600
+                                                                        text-white/55
                                                                     "
                                                                 >
                                                                     {formatNotificationTime(
@@ -882,6 +885,8 @@ export function Topbar() {
                                     py-1
                                     outline-none
                                     transition-all
+                                    border border-transparent
+                                    hover:border-white/[0.08]
                                     hover:bg-white/[0.06]
                                     focus-visible:ring-2
                                     focus-visible:ring-white/[0.18]
@@ -935,7 +940,7 @@ export function Topbar() {
                                             truncate
                                             text-xs
                                             font-medium
-                                            text-zinc-200
+                                            text-white
                                         "
                                     >
                                         {user?.name || "User"}
@@ -946,7 +951,7 @@ export function Topbar() {
                                             max-w-full
                                             truncate
                                             text-[10px]
-                                            text-zinc-500
+                                            text-white/65
                                         "
                                     >
                                         {user?.email || ""}
@@ -958,7 +963,7 @@ export function Topbar() {
                                         hidden
                                         h-3.5
                                         w-3.5
-                                        text-zinc-500
+                                        text-white/65
                                         sm:block
                                     "
                                 />
@@ -1039,7 +1044,7 @@ export function Topbar() {
                                         className="
                                             truncate
                                             text-xs
-                                            text-zinc-500
+                                            text-white/65
                                         "
                                     >
                                         {user?.email || ""}
@@ -1060,8 +1065,8 @@ export function Topbar() {
                                 className="
                                     cursor-pointer
                                     rounded-xl
-                                    text-zinc-300
-                                    focus:bg-white/[0.06]
+                                    text-white/85
+                                    focus:bg-white/[0.07]
                                     focus:text-white
                                 "
                             >
@@ -1092,7 +1097,7 @@ export function Topbar() {
                                             h-4
                                             w-4
                                             shrink-0
-                                            text-zinc-400
+                                            text-violet-300
                                         "
                                     />
 
@@ -1101,7 +1106,7 @@ export function Topbar() {
                                             className="
                                                 text-sm
                                                 font-medium
-                                                text-zinc-300
+                                                text-white/90
                                             "
                                         >
                                             Email notifications
@@ -1111,7 +1116,7 @@ export function Topbar() {
                                             className="
                                                 mt-0.5
                                                 text-[10px]
-                                                text-zinc-600
+                                                text-white/55
                                             "
                                         >
                                             Revision reminders
@@ -1134,19 +1139,24 @@ export function Topbar() {
                                     }
                                     className={`
                                         relative
-                                        h-5
-                                        w-9
+                                        h-6
+                                        w-11
                                         shrink-0
                                         rounded-full
+                                        border
+                                        border-white/[0.10]
+                                        p-0.5
                                         outline-none
                                         transition-all
                                         duration-200
                                         focus-visible:ring-2
-                                        focus-visible:ring-violet-500/50
+                                        focus-visible:ring-violet-400/50
+                                        focus-visible:ring-offset-2
+                                        focus-visible:ring-offset-zinc-950
                                         ${
                                             emailNotificationsEnabled
-                                                ? "bg-violet-500"
-                                                : "bg-white/[0.12]"
+                                                ? "border-violet-300/30 bg-gradient-to-r from-violet-600 to-indigo-500 shadow-[0_0_14px_rgba(139,92,246,0.40)]"
+                                                : "bg-white/[0.10] hover:bg-white/[0.14]"
                                         }
                                         ${
                                             emailNotificationsLoading
@@ -1158,13 +1168,14 @@ export function Topbar() {
                                     <span
                                         className={`
                                             absolute
+                                            left-0.5
                                             top-0.5
-                                            h-4
-                                            w-4
+                                            h-5
+                                            w-5
                                             rounded-full
                                             bg-white
-                                            shadow-sm
-                                            transition-transform
+                                            shadow-[0_2px_8px_rgba(0,0,0,0.35)]
+                                            transition-all
                                             duration-200
                                             ${
                                                 emailNotificationsEnabled
@@ -1183,8 +1194,8 @@ export function Topbar() {
                                 className="
                                     cursor-pointer
                                     rounded-xl
-                                    text-zinc-300
-                                    focus:bg-white/[0.06]
+                                    text-white/85
+                                    focus:bg-white/[0.07]
                                     focus:text-white
                                 "
                             >
