@@ -2007,10 +2007,9 @@ const normalizeCode = (value) =>
 
 
 const starterCode =
-    interviewPackage.starterCode?.[
-        session.language
-    ] || "";
-
+    typeof interviewPackage.starterCode === "string"
+        ? interviewPackage.starterCode
+        : "";
 
 const normalizedCurrentCode =
     normalizeCode(code);
