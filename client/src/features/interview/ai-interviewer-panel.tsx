@@ -46,7 +46,7 @@ export default function AIInterviewerPanel({
   const [phase, setPhase] =
     useState<InterviewPhase>("INTRODUCTION");
 
-  const [time, setTime] = useState(45 * 60);
+const [time, setTime] = useState(0);
 
   const [messages, setMessages] =
     useState<Message[]>([]);
@@ -111,7 +111,18 @@ export default function AIInterviewerPanel({
         if (data.session?.phase) {
           setPhase(data.session.phase);
         }
+if (data.session?.expiresAt) {
+    const remaining = Math.max(
+        0,
+        Math.floor(
+            (new Date(data.session.expiresAt).getTime() -
+                Date.now()) /
+                1000
+        )
+    );
 
+    setTime(remaining);
+}
         if (data?.aiReply) {
           await addAIMessageSafely(data.aiReply);
         }
@@ -286,19 +297,20 @@ export default function AIInterviewerPanel({
   /*
    * Interview timer
    */
-  useEffect(() => {
+ useEffect(() => {
     const timer = setInterval(() => {
-      setTime((prev) => {
-        if (prev <= 0) {
-          return 0;
-        }
+        setTime((prev) => {
+            if (prev <= 1) {
+                clearInterval(timer);
+                return 0;
+            }
 
-        return prev - 1;
-      });
+            return prev - 1;
+        });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+}, []);
 
   /*
    * Auto scroll

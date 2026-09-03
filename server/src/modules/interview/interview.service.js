@@ -53,7 +53,16 @@ IDLE TIMER
 const idleTimers = new Map();
 
 const IDLE_TIMEOUT = 2 * 60 * 1000;
+const INTERVIEW_DURATION = 45 * 60 * 1000;
+const isInterviewExpired = (session) => {
+    if (!session?.created_at) {
+        return false;
+    }
 
+    const startedAt = new Date(session.created_at).getTime();
+
+    return Date.now() >= startedAt + INTERVIEW_DURATION;
+};
 const resetInterviewIdleTimer = (sessionId) => {
 
     if (idleTimers.has(sessionId)) {
@@ -723,27 +732,46 @@ export const sendInterviewMessageService = async ({
     );
 
 
-    const session =
-        await getInterviewSessionRepo({
+ const session =
+    await getInterviewSessionRepo({
+        sessionId,
+        userId
+    });
 
-            sessionId,
+if (!session) {
+    throw new Error(
+        "Interview session not found."
+    );
+}
 
-            userId
-        });
-
-
-    if (!session) {
-
-        throw new Error(
-            "Interview session not found."
-        );
-    }
-
-
-    resetInterviewIdleTimer(
-        sessionId
+if (isInterviewExpired(session)) {
+    console.log(
+        `Interview time limit reached: ${sessionId}`
     );
 
+    await endInterviewService({
+        sessionId,
+        userId
+    });
+
+    getIO()
+        .to(`interview-${sessionId}`)
+        .emit("interview-ended", {
+            sessionId,
+            reason: "TIME_LIMIT"
+        });
+
+    return {
+        interviewEnded: true,
+        phase: InterviewPhase.FINISHED,
+        aiReply: null,
+        evaluation: null,
+        codeAnalysis: null,
+        interrupted: false
+    };
+}
+
+resetInterviewIdleTimer(sessionId);
 
     /*
     =====================================================
@@ -1876,24 +1904,19 @@ export const getInterviewByIdService = async ({
 
 
     return {
-
-        session: {
-
-            id:
-                session.id,
-
-            language:
-                session.language,
-
-            difficulty:
-                session.difficulty,
-
-            phase:
-                session.phase,
-
-            status:
-                session.status
-        },
+session: {
+    id: session.id,
+    language: session.language,
+    difficulty: session.difficulty,
+    phase: session.phase,
+    status: session.status,
+    startedAt: session.created_at,
+    expiresAt:
+        new Date(
+            new Date(session.created_at).getTime() +
+            INTERVIEW_DURATION
+        ).toISOString()
+},
 
         firstQuestion:
             question
@@ -1937,27 +1960,33 @@ console.log("REALTIME userId:", userId);
             }
             );
 console.log("REALTIME SESSION RESULT:", session ? "FOUND" : "NOT FOUND");
+if (isInterviewExpired(session)) {
+    console.log(
+        `Realtime: interview time limit reached: ${sessionId}`
+    );
 
-        if (!session) {
+    try {
+        await endInterviewService({
+            sessionId,
+            userId
+        });
 
-            console.warn(
-                "Realtime update: session not found",
+        getIO()
+            .to(`interview-${sessionId}`)
+            .emit("interview-ended", {
                 sessionId,
-                userId
-            );
+                reason: "TIME_LIMIT"
+            });
 
-            return;
-        }
+    } catch (err) {
+        console.error(
+            "Realtime interview expiry handling failed:",
+            err
+        );
+    }
 
-
-        if (
-            session.phase ===
-                InterviewPhase.FINISHED ||
-            session.status === "completed"
-        ) {
-
-            return;
-        }
+    return;
+}
 
 
         resetInterviewIdleTimer(
@@ -2201,69 +2230,56 @@ const meaningfulCodingActivity =
     codeAnalysis.returnAdded === true ||
     codeAnalysis.criticalLogicAdded === true;
 
-//         if (
-//             meaningfulCodingActivity &&
-//             (
-//                 session.phase ===
-//                     InterviewPhase.UNDERSTANDING ||
-//                 session.phase ===
-//                     InterviewPhase.APPROACH
-//             )
-//         ) {
+if (
+    meaningfulCodingActivity &&
+    !codeAnalysis.garbageDetected &&
+    (
+        session.phase === InterviewPhase.UNDERSTANDING ||
+        session.phase === InterviewPhase.APPROACH
+    )
+) {
+    try {
+        const previousPhase = session.phase;
 
-//             try {
-// const previousPhase =
-//     session.phase;
+        const updated = await updateInterviewPhaseRepo(
+            sessionId,
+            InterviewPhase.CODING
+        );
 
-// const updated =
-//     await updateInterviewPhaseRepo(
-//         sessionId,
-//         InterviewPhase.CODING
-//     );
+        session.phase =
+            updated?.phase || InterviewPhase.CODING;
 
-// session.phase =
-//     updated?.phase ||
-//     InterviewPhase.CODING;
+        await resetInterruptRepo(sessionId);
 
-// await resetInterruptRepo(
-//     sessionId
-// );
+        console.log(
+            `REALTIME PHASE CHANGE: ${previousPhase} -> ${session.phase}`
+        );
+    } catch (phaseError) {
+        console.error(
+            "Realtime phase update failed:",
+            phaseError
+        );
 
-// console.log(
-//     `REALTIME PHASE CHANGE: ${previousPhase} -> ${session.phase}`
-// );
+        return;
+    }
+}
 
-//             } catch (phaseError) {
+/*
+=====================================================
+DO NOT INTERRUPT OUTSIDE CODING
+=====================================================
+*/
 
-//                 console.error(
-//                     "Realtime phase update failed:",
-//                     phaseError
-//                 );
+if (
+    session.phase !==
+        InterviewPhase.CODING
+) {
+    console.log(
+        "Realtime: waiting for CODING phase."
+    );
 
-//                 return;
-//             }
-//         }
-
-
-        /*
-        =====================================================
-        DO NOT INTERRUPT OUTSIDE CODING
-        =====================================================
-        */
-
-        if (
-            session.phase !==
-                InterviewPhase.CODING
-        ) {
-
-            console.log(
-                "Realtime: waiting for CODING phase."
-            );
-
-            return;
-        }
-
-
+    return;
+}
         /*
         =====================================================
         IGNORE SMALL / INSIGNIFICANT EDITS
