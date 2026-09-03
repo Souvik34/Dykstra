@@ -16,70 +16,50 @@ export const shouldInterrupt = ({
         return false;
     }
 
-    switch (phase) {
+ switch (phase) {
+    case InterviewPhase.UNDERSTANDING:
+        return codeAnalysis?.garbageDetected === true;
 
-        case InterviewPhase.UNDERSTANDING:
+    case InterviewPhase.APPROACH:
+        return codeAnalysis?.garbageDetected === true;
+
+    case InterviewPhase.CODING:
+        if (lastInterruptAtVersion === currentCodeVersion) {
             return false;
+        }
 
-        case InterviewPhase.APPROACH:
-            return false;
-
- case InterviewPhase.CODING:
-
-    /*
-    Already interrupted for this code version.
-    */
-
-    if (
-        lastInterruptAtVersion === currentCodeVersion
-    ) {
-        return false;
-    }
-
-    /*
-    Obvious garbage should interrupt immediately.
-    Do not require 3 added lines.
-    */
-
-    if (
-        codeAnalysis?.garbageDetected
-    ) {
-        return true;
-    }
-
-    /*
-    Normal coding activity.
-    */
-
-    if (
-        codeAnalysis.addedLines < 3 &&
-        !codeAnalysis.returnAdded &&
-        !codeAnalysis.criticalLogicAdded &&
-        !(evaluation && evaluation.failed > 0)
-    ) {
-        return false;
-    }
-
-    return true;
-
-        case InterviewPhase.DEBUGGING:
+        if (codeAnalysis?.garbageDetected) {
             return true;
+        }
 
-        case InterviewPhase.OPTIMIZATION:
-
-            if (
-                evaluation &&
-                evaluation.total > 0 &&
-                evaluation.passed === evaluation.total
-            ) {
-                return true;
-            }
-
+        if (
+            codeAnalysis.addedLines < 3 &&
+            !codeAnalysis.returnAdded &&
+            !codeAnalysis.criticalLogicAdded &&
+            !(evaluation && evaluation.failed > 0)
+        ) {
             return false;
+        }
 
-        default:
-            return false;
-    }
+        return true;
+
+    case InterviewPhase.DEBUGGING:
+        return true;
+
+    case InterviewPhase.OPTIMIZATION:
+        if (
+            evaluation &&
+            evaluation.total > 0 &&
+            evaluation.passed === evaluation.total
+        ) {
+            return true;
+        }
+
+        return false;
+
+    default:
+        return false;
+}
 };
 
 export const getInterruptReason = ({

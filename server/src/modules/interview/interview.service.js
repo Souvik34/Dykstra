@@ -2115,97 +2115,134 @@ const codeAnalysis =
         =====================================================
         */
 
-        if (
-            !codeAnalysis.changed
-        ) {
+    if (!codeAnalysis.changed) return;
 
-            return;
-        }
+await saveSnapshot();
 
+/*
+ * ---------------------------------------------------------
+ * GARBAGE / NON-CODE ACTIVITY
+ * ---------------------------------------------------------
+ * Obvious garbage is handled locally.
+ * No AI call.
+ * No phase change.
+ */
+if (codeAnalysis.garbageDetected) {
+    const currentCodeVersion =
+        Number(session.code_version || 0) + 1;
 
-        /*
-        =====================================================
-        ALWAYS SAVE THE LATEST CODE
-        =====================================================
-        
-        This is important.
-        
-        The realtime service should keep
-        session.last_code current even when
-        no interruption happens.
-        */
+    const interrupt = shouldInterrupt({
+        phase: session.phase,
+        evaluation: null,
+        interruptionCount: Number(session.interruption_count || 0),
+        codeAnalysis,
+        lastInterruptAtVersion: session.last_interrupt_at_version,
+        currentCodeVersion
+    });
 
-        await saveSnapshot();
+    if (!interrupt) {
+        console.log("Realtime: garbage detected but interruption limit reached.");
+        return;
+    }
 
+    const interruptReason = "NON_CODE_ACTIVITY";
 
-        /*
-        =====================================================
-        PHASE TRANSITION -> CODING
-        =====================================================
-        
-        Meaningful implementation activity means
-        the candidate has started coding.
-        
-        We allow:
-        
-        UNDERSTANDING -> CODING
-        APPROACH -> CODING
-        
-        We NEVER move:
-        
-        CODING -> UNDERSTANDING
-        CODING -> APPROACH
-        =====================================================
-        */
-
-        const meaningfulCodingActivity =
-            codeAnalysis.addedLines >= 3 ||
-            codeAnalysis.returnAdded === true ||
-            codeAnalysis.criticalLogicAdded === true;
-
-
-        if (
-            meaningfulCodingActivity &&
-            (
-                session.phase ===
-                    InterviewPhase.UNDERSTANDING ||
-                session.phase ===
-                    InterviewPhase.APPROACH
-            )
-        ) {
-
-            try {
-const previousPhase =
-    session.phase;
-
-const updated =
-    await updateInterviewPhaseRepo(
+    await recordInterruptRepo({
         sessionId,
-        InterviewPhase.CODING
-    );
+        codeVersion: currentCodeVersion
+    });
 
-session.phase =
-    updated?.phase ||
-    InterviewPhase.CODING;
+    const aiReply = getFallbackReply({
+        message: "",
+        phase: session.phase,
+        evaluation: null,
+        interrupt: true,
+        interruptReason,
+        codeAnalysis
+    });
 
-await resetInterruptRepo(
-    sessionId
-);
+    try {
+        await insertInterviewMessageRepo({
+            sessionId,
+            sender: "ai",
+            message: aiReply
+        });
+    } catch (saveError) {
+        console.error(
+            "Realtime garbage message save failed:",
+            saveError
+        );
+    }
 
-console.log(
-    `REALTIME PHASE CHANGE: ${previousPhase} -> ${session.phase}`
-);
+    try {
+        getIO()
+            .to(`interview-${sessionId}`)
+            .emit("interviewer-message", {
+                message: aiReply,
+                phase: session.phase,
+                evaluation: null,
+                codeAnalysis,
+                interrupted: true
+            });
+    } catch (socketError) {
+        console.error(
+            "Realtime garbage socket emit failed:",
+            socketError
+        );
+    }
 
-            } catch (phaseError) {
+    console.log("Realtime garbage interruption sent.");
 
-                console.error(
-                    "Realtime phase update failed:",
-                    phaseError
-                );
+    return;
+}
 
-                return;
-            }
-        }
+const meaningfulCodingActivity =
+    codeAnalysis.addedLines >= 3 ||
+    codeAnalysis.returnAdded === true ||
+    codeAnalysis.criticalLogicAdded === true;
+
+//         if (
+//             meaningfulCodingActivity &&
+//             (
+//                 session.phase ===
+//                     InterviewPhase.UNDERSTANDING ||
+//                 session.phase ===
+//                     InterviewPhase.APPROACH
+//             )
+//         ) {
+
+//             try {
+// const previousPhase =
+//     session.phase;
+
+// const updated =
+//     await updateInterviewPhaseRepo(
+//         sessionId,
+//         InterviewPhase.CODING
+//     );
+
+// session.phase =
+//     updated?.phase ||
+//     InterviewPhase.CODING;
+
+// await resetInterruptRepo(
+//     sessionId
+// );
+
+// console.log(
+//     `REALTIME PHASE CHANGE: ${previousPhase} -> ${session.phase}`
+// );
+
+//             } catch (phaseError) {
+
+//                 console.error(
+//                     "Realtime phase update failed:",
+//                     phaseError
+//                 );
+
+//                 return;
+//             }
+//         }
 
 
         /*
