@@ -1890,16 +1890,13 @@ function ProfilePage() {
                                             />
                                         </div>
 
-                                        <p className="mt-3 text-sm leading-5 text-white/65">
-                                            Your medium exposure is{" "}
-                                            <span className="font-semibold text-white">
-                                                {
-                                                    mediumPercentage
-                                                }
-                                                %
-                                            }
-                                            . Keep increasing difficulty as your topic confidence improves.
-                                        </p>
+                             <p className="mt-3 text-sm leading-5 text-white/65">
+    Your medium exposure is{" "}
+    <span className="font-semibold text-white">
+        {mediumPercentage}%
+    </span>
+    . Keep increasing difficulty as your topic confidence improves.
+</p>
                                     </div>
                                 </>
                             ) : (
