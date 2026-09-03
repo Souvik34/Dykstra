@@ -3,44 +3,64 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  Activity,
-  ArrowLeft,
-  Award,
-  CalendarDays,
-  Check,
-  ChevronRight,
-  Code2,
-  ExternalLink,
-  Flame,
-  Link2,
-  Loader2,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  Target,
-  TrendingUp,
-  Trophy,
-  Unlink,
-  User,
-  Zap,
+    Activity,
+    ArrowLeft,
+    Award,
+    BarChart3,
+    Check,
+    ChevronRight,
+    Code2,
+    ExternalLink,
+    Flame,
+    Link2,
+    Loader2,
+    RefreshCw,
+    ShieldCheck,
+    Sparkles,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    Unlink,
+    User,
+    Zap,
 } from "lucide-react";
 
 import {
-  createFileRoute,
-  useNavigate,
+    createFileRoute,
+    useNavigate,
 } from "@tanstack/react-router";
+
+import {
+    Area,
+    AreaChart,
+    CartesianGrid,
+    Cell,
+    Pie,
+    PieChart,
+    PolarAngleAxis,
+    PolarGrid,
+    PolarRadiusAxis,
+    Radar,
+    RadarChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
 import { toast } from "sonner";
 
 import leetcodeService from "@/services/leetcodeService";
+import { dashboardService } from "@/services/dashboardService";
 import { useAuthStore } from "@/store/auth-store";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+import type { DashboardData } from "@/types/dashboard";
+
 export const Route = createFileRoute("/profile")({
-  component: ProfilePage,
+    component: ProfilePage,
 });
 
 /* ============================================================
@@ -48,211 +68,320 @@ export const Route = createFileRoute("/profile")({
 ============================================================ */
 
 interface LeetCodeProfile {
-  valid: boolean;
-  username: string;
-  profileUrl: string;
-  avatar?: string;
-  realName?: string;
-  ranking?: number;
-  reputation?: number;
-  starRating?: number | string;
+    valid: boolean;
+    username: string;
+    profileUrl: string;
+    avatar?: string;
+    realName?: string;
+    ranking?: number;
+    reputation?: number;
+    starRating?: number | string;
 }
 
 interface LeetCodeStats {
-  totalSolved: number;
-  easySolved: number;
-  mediumSolved: number;
-  hardSolved: number;
-  totalSubmissions?: number;
-  acceptanceRate?: number | string;
-  contestRating?: number | string | null;
+    totalSolved: number;
+    easySolved: number;
+    mediumSolved: number;
+    hardSolved: number;
+    totalSubmissions?: number;
+    acceptanceRate?: number | string;
+    contestRating?: number | string | null;
 }
 
 interface LeetCodeBadge {
-  name: string;
-  icon?: string;
-  earned_at?: string;
-}
-
-interface LeetCodeCalendarEntry {
-  activity_date: string;
-  submission_count: number;
+    name: string;
+    icon?: string;
+    earned_at?: string;
 }
 
 interface LeetCodeData {
-  connection?: {
-    username: string;
-    connected_at?: string;
-    last_synced_at?: string;
-  };
+    connection?: {
+        username: string;
+        connected_at?: string;
+        last_synced_at?: string;
+    };
 
-  profile?: {
-    username?: string;
-    avatar?: string;
-    real_name?: string;
-    ranking?: number;
-    reputation?: number;
-    star_rating?: number | string;
-    profile_url?: string;
-  };
+    profile?: {
+        username?: string;
+        avatar?: string;
+        real_name?: string;
+        ranking?: number;
+        reputation?: number;
+        star_rating?: number | string;
+        profile_url?: string;
+    };
 
-  stats?: {
-    total_solved?: number;
-    easy_solved?: number;
-    medium_solved?: number;
-    hard_solved?: number;
-    total_submissions?: number;
-    acceptance_rate?: number | string;
-    contest_rating?: number | string | null;
-  };
+    stats?: {
+        total_solved?: number;
+        easy_solved?: number;
+        medium_solved?: number;
+        hard_solved?: number;
+        total_submissions?: number;
+        acceptance_rate?: number | string;
+        contest_rating?: number | string | null;
+    };
 
-  badges?: LeetCodeBadge[];
+    badges?: LeetCodeBadge[];
 
-  calendar?: LeetCodeCalendarEntry[];
+    calendar?: {
+        activity_date: string;
+        submission_count: number;
+    }[];
+}
+
+interface DailySolve {
+    date: string;
+    count: number | string;
+}
+
+interface TopicDistribution {
+    topic: string;
+    count: number | string;
+}
+
+interface DifficultyDistribution {
+    difficulty: string;
+    count: number | string;
+}
+
+interface RecentActivityItem {
+    solved_at: string;
+    title: string;
+    difficulty: string;
+    topic: string;
+}
+
+interface DashboardProfileData {
+    stats?: {
+        solved?: number;
+        easy?: number;
+        medium?: number;
+        hard?: number;
+        revisionPending?: number;
+        streak?: number;
+        longestStreak?: number;
+    };
+
+    readiness?: {
+        score?: number;
+        level?: string;
+    };
+
+    revision?: {
+        dueCount?: number;
+        items?: unknown[];
+    };
+
+    focusTopic?: {
+        topic?: string;
+        solved?: number;
+        last_solved?: string;
+        hard?: number;
+        medium?: number;
+        score?: number;
+        confidence?: number;
+        type?: string;
+    } | null;
+
+    strongTopics?: {
+        topic: string;
+        solved: number;
+    }[];
+
+    analytics?: {
+        dailySolve?: DailySolve[];
+        topicDistribution?: TopicDistribution[];
+        difficultyDistribution?: DifficultyDistribution[];
+    };
+
+    recentActivity?: RecentActivityItem[];
+}
+
+interface DashboardResponse {
+    stats?: DashboardProfileData["stats"];
+    readiness?: DashboardProfileData["readiness"];
+    revision?: DashboardProfileData["revision"];
+    focusTopic?: DashboardProfileData["focusTopic"];
+    strongTopics?: DashboardProfileData["strongTopics"];
+    analytics?: DashboardProfileData["analytics"];
+    recentActivity?: RecentActivityItem[];
 }
 
 /* ============================================================
    HELPERS
 ============================================================ */
 
-function extractData(response: any): LeetCodeData {
-  return response?.data?.data || response?.data || {};
+function extractLeetCodeData(response: any): LeetCodeData {
+    return response?.data?.data || response?.data || {};
 }
 
-/**
- * Keeps YYYY-MM-DD dates as dates instead of converting them
- * through UTC with toISOString().
- *
- * This avoids the old heatmap shifting dates depending on
- * the user's timezone.
- */
-function normalizeDateKey(value: string | Date) {
-  if (typeof value === "string") {
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+function extractDashboardData(response: any): DashboardResponse {
+    return (
+        response?.data?.data ||
+        response?.data ||
+        response ||
+        {}
+    );
+}
 
-    if (match) {
-      return `${match[1]}-${match[2]}-${match[3]}`;
+function normalizeTopic(topic: string) {
+    return topic
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+}
+
+function formatTopic(topic: string) {
+    return topic
+        .split(" ")
+        .map(
+            (word) =>
+                word.charAt(0).toUpperCase() +
+                word.slice(1),
+        )
+        .join(" ");
+}
+
+function formatDifficulty(difficulty: string) {
+    return (
+        difficulty.charAt(0).toUpperCase() +
+        difficulty.slice(1).toLowerCase()
+    );
+}
+
+function formatDate(dateString: string) {
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Unknown date";
     }
-  }
 
-  const date = value instanceof Date ? value : new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+    return date.toLocaleDateString(undefined, {
+        day: "numeric",
+        month: "short",
+    });
 }
 
-function parseDateKey(key: string) {
-  const [year, month, day] = key.split("-").map(Number);
+function formatRelativeDate(dateString: string) {
+    const date = new Date(dateString);
 
-  return new Date(year, month - 1, day);
-}
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
 
-function shiftDate(key: string, amount: number) {
-  const date = parseDateKey(key);
-  date.setDate(date.getDate() + amount);
+    const diff =
+        Date.now() - date.getTime();
 
-  return normalizeDateKey(date);
-}
+    const minutes = Math.floor(
+        diff / (1000 * 60),
+    );
 
-function formatDate(key: string) {
-  return parseDateKey(key).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
+    if (minutes < 1) {
+        return "Just now";
+    }
 
-function formatMonth(key: string) {
-  return parseDateKey(key).toLocaleDateString(undefined, {
-    month: "short",
-  });
+    if (minutes < 60) {
+        return `${minutes}m ago`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+
+    if (hours < 24) {
+        return `${hours}h ago`;
+    }
+
+    const days = Math.floor(hours / 24);
+
+    if (days < 7) {
+        return `${days}d ago`;
+    }
+
+    return formatDate(dateString);
 }
 
 /* ============================================================
-   APPLY BACKEND DATA
+   LEETCODE DATA
 ============================================================ */
 
 function applyLeetCodeData(
-  data: LeetCodeData,
-  setters: {
-    setLeetcode: React.Dispatch<
-      React.SetStateAction<LeetCodeProfile | null>
-    >;
+    data: LeetCodeData,
+    setters: {
+        setLeetcode: React.Dispatch<
+            React.SetStateAction<LeetCodeProfile | null>
+        >;
 
-    setStats: React.Dispatch<
-      React.SetStateAction<LeetCodeStats | null>
-    >;
+        setStats: React.Dispatch<
+            React.SetStateAction<LeetCodeStats | null>
+        >;
 
-    setBadges: React.Dispatch<
-      React.SetStateAction<LeetCodeBadge[]>
-    >;
+        setBadges: React.Dispatch<
+            React.SetStateAction<LeetCodeBadge[]>
+        >;
 
-    setCalendar: React.Dispatch<
-      React.SetStateAction<LeetCodeCalendarEntry[]>
-    >;
-
-    setConnection: React.Dispatch<
-      React.SetStateAction<LeetCodeData["connection"] | null>
-    >;
-  },
+        setConnection: React.Dispatch<
+            React.SetStateAction<
+                LeetCodeData["connection"] | null
+            >
+        >;
+    },
 ) {
-  const {
-    setLeetcode,
-    setStats,
-    setBadges,
-    setCalendar,
-    setConnection,
-  } = setters;
+    const {
+        setLeetcode,
+        setStats,
+        setBadges,
+        setConnection,
+    } = setters;
 
-  if (data.connection) {
-    setConnection(data.connection);
-  }
+    if (data.connection) {
+        setConnection(data.connection);
+    }
 
-  const username =
-    data.connection?.username || data.profile?.username;
+    const username =
+        data.connection?.username ||
+        data.profile?.username;
 
-  if (username) {
-    setLeetcode({
-      valid: true,
-      username,
-      profileUrl:
-        data.profile?.profile_url ||
-        `https://leetcode.com/u/${username}`,
-      avatar: data.profile?.avatar,
-      realName: data.profile?.real_name,
-      ranking: data.profile?.ranking,
-      reputation: data.profile?.reputation,
-      starRating: data.profile?.star_rating,
-    });
-  }
+    if (username) {
+        setLeetcode({
+            valid: true,
+            username,
+            profileUrl:
+                data.profile?.profile_url ||
+                `https://leetcode.com/u/${username}`,
+            avatar: data.profile?.avatar,
+            realName: data.profile?.real_name,
+            ranking: data.profile?.ranking,
+            reputation: data.profile?.reputation,
+            starRating: data.profile?.star_rating,
+        });
+    }
 
-  if (data.stats) {
-    setStats({
-      totalSolved: Number(data.stats.total_solved ?? 0),
-      easySolved: Number(data.stats.easy_solved ?? 0),
-      mediumSolved: Number(data.stats.medium_solved ?? 0),
-      hardSolved: Number(data.stats.hard_solved ?? 0),
-      totalSubmissions: Number(
-        data.stats.total_submissions ?? 0,
-      ),
-      acceptanceRate: data.stats.acceptance_rate ?? 0,
-      contestRating: data.stats.contest_rating ?? null,
-    });
-  }
+    if (data.stats) {
+        setStats({
+            totalSolved: Number(
+                data.stats.total_solved ?? 0,
+            ),
+            easySolved: Number(
+                data.stats.easy_solved ?? 0,
+            ),
+            mediumSolved: Number(
+                data.stats.medium_solved ?? 0,
+            ),
+            hardSolved: Number(
+                data.stats.hard_solved ?? 0,
+            ),
+            totalSubmissions: Number(
+                data.stats.total_submissions ?? 0,
+            ),
+            acceptanceRate:
+                data.stats.acceptance_rate ?? 0,
+            contestRating:
+                data.stats.contest_rating ?? null,
+        });
+    }
 
-  if (Array.isArray(data.badges)) {
-    setBadges(data.badges);
-  }
-
-  if (Array.isArray(data.calendar)) {
-    setCalendar(data.calendar);
-  }
+    if (Array.isArray(data.badges)) {
+        setBadges(data.badges);
+    }
 }
 
 /* ============================================================
@@ -260,1672 +389,2185 @@ function applyLeetCodeData(
 ============================================================ */
 
 function ProfilePage() {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  const user = useAuthStore((state) => state.user);
+    const user = useAuthStore(
+        (state) => state.user,
+    );
 
-  const [leetcode, setLeetcode] =
-    useState<LeetCodeProfile | null>(null);
+    const [dashboard, setDashboard] =
+        useState<DashboardResponse | null>(null);
 
-  const [stats, setStats] =
-    useState<LeetCodeStats | null>(null);
+    const [dashboardLoading, setDashboardLoading] =
+        useState(true);
 
-  const [badges, setBadges] =
-    useState<LeetCodeBadge[]>([]);
+    const [dashboardError, setDashboardError] =
+        useState(false);
 
-  const [calendar, setCalendar] =
-    useState<LeetCodeCalendarEntry[]>([]);
+    const [leetcode, setLeetcode] =
+        useState<LeetCodeProfile | null>(null);
 
-  const [connection, setConnection] =
-    useState<LeetCodeData["connection"] | null>(null);
+    const [leetcodeStats, setLeetcodeStats] =
+        useState<LeetCodeStats | null>(null);
 
-  const [username, setUsername] = useState("");
+    const [badges, setBadges] =
+        useState<LeetCodeBadge[]>([]);
 
-  const [checkingUsername, setCheckingUsername] =
-    useState(false);
+    const [connection, setConnection] =
+        useState<LeetCodeData["connection"] | null>(
+            null,
+        );
 
-  const [connecting, setConnecting] =
-    useState(false);
+    const [username, setUsername] =
+        useState("");
 
-  const [disconnecting, setDisconnecting] =
-    useState(false);
+    const [checkingUsername, setCheckingUsername] =
+        useState(false);
 
-  const [loaded, setLoaded] = useState(false);
+    const [connecting, setConnecting] =
+        useState(false);
 
-  /* ============================================================
-     LOAD
-  ============================================================ */
+    const [disconnecting, setDisconnecting] =
+        useState(false);
 
-  useEffect(() => {
-    let mounted = true;
+    const [showLeetCodeDetails, setShowLeetCodeDetails] =
+        useState(false);
+
+    /* ============================================================
+       LOAD DYKSTRA PROFILE
+    ============================================================ */
+
+    const loadDashboard = async () => {
+        if (!user?.id) return;
+
+        setDashboardLoading(true);
+        setDashboardError(false);
+
+        try {
+            const response =
+                await dashboardService.getDashboard(
+                    user.id,
+                );
+
+            setDashboard(
+                extractDashboardData(response),
+            );
+        } catch (error) {
+            console.error(
+                "Profile analytics loading error:",
+                error,
+            );
+
+            setDashboardError(true);
+        } finally {
+            setDashboardLoading(false);
+        }
+    };
+
+    /* ============================================================
+       LOAD LEETCODE
+    ============================================================ */
 
     const loadLeetCode = async () => {
-      try {
-        const response =
-          await leetcodeService.getProfile();
+        try {
+            const response =
+                await leetcodeService.getProfile();
 
-        if (!mounted) return;
+            const data =
+                extractLeetCodeData(response);
 
-        const data = extractData(response);
+            applyLeetCodeData(data, {
+                setLeetcode,
+                setStats: setLeetcodeStats,
+                setBadges,
+                setConnection,
+            });
 
-        applyLeetCodeData(data, {
-          setLeetcode,
-          setStats,
-          setBadges,
-          setCalendar,
-          setConnection,
+            if (data.connection?.username) {
+                setUsername(
+                    data.connection.username,
+                );
+            }
+        } catch (error) {
+            console.error(
+                "LeetCode profile loading error:",
+                error,
+            );
+
+            setLeetcode(null);
+            setLeetcodeStats(null);
+            setBadges([]);
+            setConnection(null);
+        }
+    };
+
+    useEffect(() => {
+        if (!user?.id) return;
+
+        loadDashboard();
+        loadLeetCode();
+    }, [user?.id]);
+
+    /* ============================================================
+       LEETCODE CONNECT
+    ============================================================ */
+
+    const validateLeetCodeUsername = async (
+        value: string,
+    ) => {
+        const cleanUsername = value.trim();
+
+        if (!cleanUsername) return;
+
+        setCheckingUsername(true);
+
+        try {
+            const response =
+                await leetcodeService.validateProfile(
+                    cleanUsername,
+                );
+
+            if (!response.data?.success) {
+                setLeetcode(null);
+
+                toast.error(
+                    response.data?.message ||
+                        "LeetCode username not found.",
+                );
+
+                return;
+            }
+
+            const profile =
+                response.data.data;
+
+            setLeetcode({
+                valid: true,
+                username:
+                    profile.username ||
+                    cleanUsername,
+                profileUrl:
+                    profile.profileUrl ||
+                    `https://leetcode.com/u/${
+                        profile.username ||
+                        cleanUsername
+                    }`,
+                avatar: profile.avatar,
+                realName: profile.realName,
+                ranking: profile.ranking,
+                reputation: profile.reputation,
+                starRating: profile.starRating,
+            });
+        } catch (error: any) {
+            console.error(
+                "LeetCode validation failed:",
+                error,
+            );
+
+            setLeetcode(null);
+
+            toast.error(
+                error?.response?.data?.message ||
+                    "Unable to verify LeetCode profile.",
+            );
+        } finally {
+            setCheckingUsername(false);
+        }
+    };
+
+    const handleConnect = async () => {
+        const cleanUsername = username.trim();
+
+        if (!cleanUsername) {
+            toast.error(
+                "Enter your LeetCode username.",
+            );
+            return;
+        }
+
+        setConnecting(true);
+
+        try {
+            const validation =
+                await leetcodeService.validateProfile(
+                    cleanUsername,
+                );
+
+            if (!validation.data?.success) {
+                throw new Error(
+                    validation.data?.message ||
+                        "Invalid LeetCode profile.",
+                );
+            }
+
+            await leetcodeService.connectProfile(
+                cleanUsername,
+            );
+
+            const profileResponse =
+                await leetcodeService.getProfile();
+
+            const data =
+                extractLeetCodeData(
+                    profileResponse,
+                );
+
+            applyLeetCodeData(data, {
+                setLeetcode,
+                setStats: setLeetcodeStats,
+                setBadges,
+                setConnection,
+            });
+
+            setUsername(
+                data.connection?.username ||
+                    data.profile?.username ||
+                    cleanUsername,
+            );
+
+            toast.success(
+                `@${cleanUsername} connected successfully`,
+            );
+        } catch (error: any) {
+            toast.error(
+                error?.response?.data?.message ||
+                    error?.message ||
+                    "Unable to connect LeetCode.",
+            );
+        } finally {
+            setConnecting(false);
+        }
+    };
+
+    const handleDisconnect = async () => {
+        setDisconnecting(true);
+
+        try {
+            await leetcodeService.disconnectProfile();
+
+            setLeetcode(null);
+            setLeetcodeStats(null);
+            setBadges([]);
+            setConnection(null);
+            setUsername("");
+
+            toast.success(
+                "LeetCode profile disconnected.",
+            );
+        } catch (error: any) {
+            toast.error(
+                error?.response?.data?.message ||
+                    "Unable to disconnect LeetCode.",
+            );
+        } finally {
+            setDisconnecting(false);
+        }
+    };
+
+    const handleSync = async () => {
+        setCheckingUsername(true);
+
+        try {
+            const response =
+                await leetcodeService.getProfile();
+
+            const data =
+                extractLeetCodeData(response);
+
+            applyLeetCodeData(data, {
+                setLeetcode,
+                setStats: setLeetcodeStats,
+                setBadges,
+                setConnection,
+            });
+
+            toast.success(
+                "LeetCode data refreshed.",
+            );
+        } catch (error: any) {
+            toast.error(
+                error?.response?.data?.message ||
+                    "Unable to refresh LeetCode data.",
+            );
+        } finally {
+            setCheckingUsername(false);
+        }
+    };
+
+    /* ============================================================
+       DYKSTRA DATA
+    ============================================================ */
+
+    const stats = dashboard?.stats;
+
+    const solved =
+        Number(stats?.solved ?? 0);
+
+    const easy =
+        Number(stats?.easy ?? 0);
+
+    const medium =
+        Number(stats?.medium ?? 0);
+
+    const hard =
+        Number(stats?.hard ?? 0);
+
+    const streak =
+        Number(stats?.streak ?? 0);
+
+    const longestStreak =
+        Number(stats?.longestStreak ?? 0);
+
+    const revisionPending =
+        Number(stats?.revisionPending ?? 0);
+
+    const readinessScore =
+        Number(
+            dashboard?.readiness?.score ?? 0,
+        );
+
+    const readinessLevel =
+        dashboard?.readiness?.level ||
+        "Getting Started";
+
+    const dailySolve =
+        dashboard?.analytics?.dailySolve ?? [];
+
+    const topicDistribution =
+        dashboard?.analytics
+            ?.topicDistribution ?? [];
+
+    const difficultyDistribution =
+        dashboard?.analytics
+            ?.difficultyDistribution ?? [];
+
+    const recentActivity =
+        dashboard?.recentActivity ?? [];
+
+    /* ============================================================
+       TOPIC ANALYSIS
+    ============================================================ */
+
+    const topicAnalysis = useMemo(() => {
+        if (!topicDistribution.length) {
+            return [];
+        }
+
+        const topicMap = new Map<
+            string,
+            number
+        >();
+
+        topicDistribution.forEach((item) => {
+            const topic =
+                normalizeTopic(item.topic);
+
+            const count =
+                Number(item.count ?? 0);
+
+            if (!topic) return;
+
+            topicMap.set(
+                topic,
+                (topicMap.get(topic) || 0) +
+                    count,
+            );
         });
 
-        if (data.connection?.username) {
-          setUsername(data.connection.username);
+        const maxCount =
+            Math.max(
+                ...Array.from(
+                    topicMap.values(),
+                ),
+                1,
+            );
+
+        const recentTopicMap =
+            new Map<string, number>();
+
+        recentActivity.forEach((item) => {
+            const topic =
+                normalizeTopic(
+                    item.topic || "",
+                );
+
+            if (!topic) return;
+
+            recentTopicMap.set(
+                topic,
+                (recentTopicMap.get(topic) ||
+                    0) + 1,
+            );
+        });
+
+        const difficultyWeight: Record<
+            string,
+            number
+        > = {
+            easy: 1,
+            medium: 2,
+            hard: 3,
+        };
+
+        return Array.from(
+            topicMap.entries(),
+        )
+            .map(([topic, count]) => {
+                const recent =
+                    recentTopicMap.get(topic) ||
+                    0;
+
+                const difficultyForTopic =
+                    recentActivity
+                        .filter(
+                            (item) =>
+                                normalizeTopic(
+                                    item.topic ||
+                                        "",
+                                ) === topic,
+                        )
+                        .reduce(
+                            (
+                                total,
+                                item,
+                            ) =>
+                                total +
+                                (difficultyWeight[
+                                    item.difficulty?.toLowerCase()
+                                ] || 1),
+                            0,
+                        );
+
+                const recentAverage =
+                    recent > 0
+                        ? difficultyForTopic /
+                          recent
+                        : 1;
+
+                /*
+                 * This is not fake data.
+                 *
+                 * The score is derived from:
+                 * - actual topic coverage
+                 * - actual recent practice
+                 * - actual recent difficulty
+                 *
+                 * It is intentionally called a
+                 * "strength signal", not mastery.
+                 */
+
+                const coverageScore =
+                    (count / maxCount) *
+                    60;
+
+                const recentScore =
+                    Math.min(
+                        recent * 8,
+                        20,
+                    );
+
+                const difficultyScore =
+                    Math.min(
+                        recentAverage * 7,
+                        20,
+                    );
+
+                const signal = Math.round(
+                    Math.min(
+                        100,
+                        coverageScore +
+                            recentScore +
+                            difficultyScore,
+                    ),
+                );
+
+                return {
+                    topic,
+                    count,
+                    recent,
+                    signal,
+                };
+            })
+            .sort(
+                (a, b) =>
+                    b.signal - a.signal,
+            );
+    }, [
+        topicDistribution,
+        recentActivity,
+    ]);
+
+    const strongestTopics =
+        topicAnalysis.slice(0, 4);
+
+    const weakestTopics =
+        [...topicAnalysis]
+            .sort(
+                (a, b) =>
+                    a.signal - b.signal,
+            )
+            .slice(0, 4);
+
+    /* ============================================================
+       RADAR
+    ============================================================ */
+
+    const radarData = useMemo(() => {
+        const selected =
+            topicAnalysis.slice(0, 7);
+
+        return selected.map((item) => ({
+            topic: formatTopic(
+                item.topic,
+            ),
+            score: item.signal,
+        }));
+    }, [topicAnalysis]);
+
+    /* ============================================================
+       DIFFICULTY ANALYSIS
+    ============================================================ */
+
+    const difficultyData = useMemo(() => {
+        const source =
+            difficultyDistribution;
+
+        if (!source.length) {
+            return [];
         }
-      } catch (error) {
-        if (!mounted) return;
 
-        setLeetcode(null);
-        setStats(null);
-        setBadges([]);
-        setCalendar([]);
-        setConnection(null);
-      } finally {
-        if (mounted) {
-          setLoaded(true);
-        }
-      }
-    };
+        return source.map((item) => ({
+            name: formatDifficulty(
+                item.difficulty,
+            ),
+            value: Number(
+                item.count ?? 0,
+            ),
+        }));
+    }, [difficultyDistribution]);
 
-    loadLeetCode();
+    const hardPercentage =
+        solved > 0
+            ? Math.round(
+                  (hard / solved) * 100,
+              )
+            : 0;
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    const mediumPercentage =
+        solved > 0
+            ? Math.round(
+                  (medium / solved) * 100,
+              )
+            : 0;
 
-  /* ============================================================
-     AVATAR
-  ============================================================ */
+    /* ============================================================
+       ACTIVITY
+    ============================================================ */
 
-  const userAvatar =
-    (user as any)?.avatar ||
-    (user as any)?.image ||
-    (user as any)?.profileImage ||
-    leetcode?.avatar;
+    const activityMap = useMemo(() => {
+        const map = new Map<
+            string,
+            number
+        >();
 
-  const initials = (user?.name || "User")
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+        dailySolve.forEach((item) => {
+            const date = new Date(
+                item.date,
+            );
 
-  /* ============================================================
-     VALIDATE
-  ============================================================ */
+            if (
+                Number.isNaN(
+                    date.getTime(),
+                )
+            ) {
+                return;
+            }
 
-  const validateLeetCodeUsername = async (
-    value: string,
-  ) => {
-    const cleanUsername = value.trim();
+            const key =
+                date
+                    .toISOString()
+                    .split("T")[0];
 
-    if (!cleanUsername) return;
+            map.set(
+                key,
+                Number(item.count ?? 0),
+            );
+        });
 
-    setCheckingUsername(true);
+        return map;
+    }, [dailySolve]);
 
-    try {
-      const response =
-        await leetcodeService.validateProfile(
-          cleanUsername,
-        );
+    const activityDays = useMemo(() => {
+        const today = new Date();
 
-      if (!response.data?.success) {
-        setLeetcode(null);
+        const end = new Date(today);
 
-        toast.error(
-          response.data?.message ||
-            "LeetCode username not found.",
-        );
-
-        return;
-      }
-
-      const profile = response.data.data;
-
-      setLeetcode({
-        valid: true,
-        username:
-          profile.username || cleanUsername,
-        profileUrl:
-          profile.profileUrl ||
-          `https://leetcode.com/u/${
-            profile.username || cleanUsername
-          }`,
-        avatar: profile.avatar,
-        realName: profile.realName,
-        ranking: profile.ranking,
-        reputation: profile.reputation,
-        starRating: profile.starRating,
-      });
-
-      toast.success(
-        `@${profile.username || cleanUsername} verified`,
-      );
-    } catch (error: any) {
-      console.error(
-        "LeetCode validation failed:",
-        error,
-      );
-
-      setLeetcode(null);
-
-      toast.error(
-        error?.response?.data?.message ||
-          "Unable to verify LeetCode profile.",
-      );
-    } finally {
-      setCheckingUsername(false);
-    }
-  };
-
-  /* ============================================================
-     CONNECT
-  ============================================================ */
-
-  const handleConnect = async () => {
-    const cleanUsername = username.trim();
-
-    if (!cleanUsername) {
-      toast.error("Enter your LeetCode username.");
-      return;
-    }
-
-    setConnecting(true);
-
-    try {
-      const validation =
-        await leetcodeService.validateProfile(
-          cleanUsername,
-        );
-
-      if (!validation.data?.success) {
-        throw new Error(
-          validation.data?.message ||
-            "Invalid LeetCode profile.",
-        );
-      }
-
-      await leetcodeService.connectProfile(
-        cleanUsername,
-      );
-
-      const profileResponse =
-        await leetcodeService.getProfile();
-
-      const data = extractData(profileResponse);
-
-      applyLeetCodeData(data, {
-        setLeetcode,
-        setStats,
-        setBadges,
-        setCalendar,
-        setConnection,
-      });
-
-      setUsername(
-        data.connection?.username ||
-          data.profile?.username ||
-          cleanUsername,
-      );
-
-      toast.success(
-        `@${cleanUsername} connected successfully`,
-      );
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message ||
-          error?.message ||
-          "Unable to connect LeetCode.",
-      );
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  /* ============================================================
-     DISCONNECT
-  ============================================================ */
-
-  const handleDisconnect = async () => {
-    setDisconnecting(true);
-
-    try {
-      await leetcodeService.disconnectProfile();
-
-      setLeetcode(null);
-      setStats(null);
-      setBadges([]);
-      setCalendar([]);
-      setConnection(null);
-      setUsername("");
-
-      toast.success(
-        "LeetCode profile disconnected.",
-      );
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message ||
-          "Unable to disconnect LeetCode.",
-      );
-    } finally {
-      setDisconnecting(false);
-    }
-  };
-
-  /* ============================================================
-     REFRESH
-  ============================================================ */
-
-  const handleSync = async () => {
-    setCheckingUsername(true);
-
-    try {
-      const response =
-        await leetcodeService.getProfile();
-
-      const data = extractData(response);
-
-      applyLeetCodeData(data, {
-        setLeetcode,
-        setStats,
-        setBadges,
-        setCalendar,
-        setConnection,
-      });
-
-      if (data.connection?.username) {
-        setUsername(data.connection.username);
-      }
-
-      toast.success("LeetCode data refreshed.");
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message ||
-          "Unable to refresh LeetCode data.",
-      );
-    } finally {
-      setCheckingUsername(false);
-    }
-  };
-
-  /* ============================================================
-     ANALYTICS
-  ============================================================ */
-
-  const analytics = useMemo(() => {
-    const map = new Map<string, number>();
-
-    calendar.forEach((entry) => {
-      const key = normalizeDateKey(
-        entry.activity_date,
-      );
-
-      if (!key) return;
-
-      map.set(
-        key,
-        Number(entry.submission_count || 0),
-      );
-    });
-
-    const totalSubmissions = Array.from(
-      map.values(),
-    ).reduce((sum, value) => sum + value, 0);
-
-    const activeDays = Array.from(map.values()).filter(
-      (value) => value > 0,
-    ).length;
-
-    const bestDay = Math.max(
-      0,
-      ...Array.from(map.values()),
-    );
-
-    /* ----------------------------------------------------------
-       CURRENT STREAK
-    ---------------------------------------------------------- */
-
-    const today = normalizeDateKey(new Date());
-
-    let streak = 0;
-
-    let cursor = today;
-
-    if ((map.get(cursor) || 0) === 0) {
-      cursor = shiftDate(cursor, -1);
-    }
-
-    while ((map.get(cursor) || 0) > 0) {
-      streak += 1;
-      cursor = shiftDate(cursor, -1);
-    }
-
-    /* ----------------------------------------------------------
-       LAST 12 WEEKS
-    ---------------------------------------------------------- */
-
-    const weekEnd = parseDateKey(today);
-
-    const dayOfWeek = weekEnd.getDay();
-
-    weekEnd.setDate(
-      weekEnd.getDate() - dayOfWeek,
-    );
-
-    const weekly = Array.from(
-      { length: 12 },
-      (_, index) => {
-        const end = new Date(weekEnd);
-
-        end.setDate(
-          end.getDate() -
-            (11 - index) * 7 +
-            6,
+        end.setHours(
+            23,
+            59,
+            59,
+            999,
         );
 
         const start = new Date(end);
 
         start.setDate(
-          start.getDate() - 6,
+            start.getDate() - 364,
         );
 
-        let total = 0;
+        const result: {
+            date: string;
+            count: number;
+        }[] = [];
 
-        for (
-          let day = new Date(start);
-          day <= end;
-          day.setDate(day.getDate() + 1)
-        ) {
-          total +=
-            map.get(normalizeDateKey(day)) || 0;
+        const cursor = new Date(
+            start,
+        );
+
+        while (cursor <= end) {
+            const key =
+                cursor
+                    .toISOString()
+                    .split("T")[0];
+
+            result.push({
+                date: key,
+                count:
+                    activityMap.get(key) ||
+                    0,
+            });
+
+            cursor.setDate(
+                cursor.getDate() + 1,
+            );
         }
 
-        return {
-          label: start.toLocaleDateString(
-            undefined,
-            {
-              month: "short",
-              day: "numeric",
-            },
-          ),
-          value: total,
-        };
-      },
-    );
+        return result;
+    }, [activityMap]);
 
-    /* ----------------------------------------------------------
-       WEEKDAY ANALYSIS
-    ---------------------------------------------------------- */
+    const activityTotal =
+        dailySolve.reduce(
+            (sum, item) =>
+                sum +
+                Number(
+                    item.count ?? 0,
+                ),
+            0,
+        );
 
-    const weekdays = [
-      "Sun",
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-      "Sat",
-    ];
+    const activityActiveDays =
+        dailySolve.filter(
+            (item) =>
+                Number(item.count ?? 0) >
+                0,
+        ).length;
 
-    const weekdayTotals = weekdays.map(
-      (name, index) => {
-        let value = 0;
+    const bestActivityDay =
+        dailySolve.length
+            ? Math.max(
+                  ...dailySolve.map(
+                      (item) =>
+                          Number(
+                              item.count ??
+                                  0,
+                          ),
+                  ),
+              )
+            : 0;
 
-        map.forEach((count, key) => {
-          const date = parseDateKey(key);
+    const activityWeeks =
+        useMemo(() => {
+            const weeks: {
+                date: string;
+                count: number;
+            }[][] = [];
 
-          if (date.getDay() === index) {
-            value += count;
-          }
-        });
-
-        return {
-          name,
-          value,
-        };
-      },
-    );
-
-    const maxWeekday = Math.max(
-      1,
-      ...weekdayTotals.map(
-        (item) => item.value,
-      ),
-    );
-
-    /* ----------------------------------------------------------
-       DIFFICULTY
-    ---------------------------------------------------------- */
-
-    const easy = stats?.easySolved ?? 0;
-    const medium = stats?.mediumSolved ?? 0;
-    const hard = stats?.hardSolved ?? 0;
-
-    const solved = stats?.totalSolved ?? 0;
-
-    const easyPercentage =
-      solved > 0
-        ? (easy / solved) * 100
-        : 0;
-
-    const mediumPercentage =
-      solved > 0
-        ? (medium / solved) * 100
-        : 0;
-
-    const hardPercentage =
-      solved > 0
-        ? (hard / solved) * 100
-        : 0;
-
-    /* ----------------------------------------------------------
-       COMPETITIVE RADAR
-    ---------------------------------------------------------- */
-
-    const acceptance = Number(
-      stats?.acceptanceRate ?? 0,
-    );
-
-    const rating = Number(
-      stats?.contestRating ?? 0,
-    );
-
-    const difficultyScore =
-      solved > 0
-        ? Math.min(
-            100,
-            ((medium * 1.5 + hard * 2.5) /
-              Math.max(1, solved * 2.5)) *
-              100,
-          )
-        : 0;
-
-    const consistencyScore = Math.min(
-      100,
-      activeDays > 0
-        ? (activeDays / 365) * 100
-        : 0,
-    );
-
-    const volumeScore = Math.min(
-      100,
-      (solved / 500) * 100,
-    );
-
-    const ratingScore = Math.min(
-      100,
-      Math.max(
-        0,
-        ((rating - 1000) / 1200) * 100,
-      ),
-    );
-
-    const radar = [
-      {
-        label: "Volume",
-        value: volumeScore,
-      },
-      {
-        label: "Consistency",
-        value: consistencyScore,
-      },
-      {
-        label: "Difficulty",
-        value: difficultyScore,
-      },
-      {
-        label: "Acceptance",
-        value: Math.min(
-          100,
-          Math.max(0, acceptance),
-        ),
-      },
-      {
-        label: "Rating",
-        value: ratingScore,
-      },
-    ];
-
-    /* ----------------------------------------------------------
-       INSIGHTS
-    ---------------------------------------------------------- */
-
-    const strongestDay = [...weekdayTotals].sort(
-      (a, b) => b.value - a.value,
-    )[0];
-
-    const recentWeeks = weekly.slice(-4);
-
-    const previousWeeks = weekly.slice(-8, -4);
-
-    const recentAverage =
-      recentWeeks.reduce(
-        (sum, item) => sum + item.value,
-        0,
-      ) / Math.max(1, recentWeeks.length);
-
-    const previousAverage =
-      previousWeeks.reduce(
-        (sum, item) => sum + item.value,
-        0,
-      ) / Math.max(1, previousWeeks.length);
-
-    const momentum =
-      previousAverage > 0
-        ? ((recentAverage -
-            previousAverage) /
-            previousAverage) *
-          100
-        : recentAverage > 0
-          ? 100
-          : 0;
-
-    let insightTitle =
-      "Your activity is building steadily.";
-
-    let insightText =
-      "Keep the same rhythm and turn consistency into long-term progress.";
-
-    if (momentum >= 20) {
-      insightTitle =
-        "Your solving momentum is accelerating.";
-
-      insightText =
-        "Your recent activity is clearly above your earlier 12-week average.";
-    } else if (momentum <= -20) {
-      insightTitle =
-        "Your recent activity has slowed down.";
-
-      insightText =
-        "A few consistent solving sessions this week can quickly bring your momentum back.";
-    }
-
-    if (hardPercentage >= 20) {
-      insightTitle =
-        "You are taking on meaningful difficulty.";
-
-      insightText =
-        "A strong hard-problem share suggests you're pushing beyond basic pattern recognition.";
-    }
-
-    return {
-      map,
-      totalSubmissions,
-      activeDays,
-      bestDay,
-      streak,
-      weekly,
-      weekdayTotals,
-      maxWeekday,
-      easy,
-      medium,
-      hard,
-      easyPercentage,
-      mediumPercentage,
-      hardPercentage,
-      radar,
-      strongestDay,
-      momentum,
-      insightTitle,
-      insightText,
-    };
-  }, [calendar, stats]);
-
-  /* ============================================================
-     RENDER
-  ============================================================ */
-
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[#030407] text-white">
-
-      {/* ======================================================
-          BACKGROUND
-      ====================================================== */}
-
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-[15%] -top-[18%] h-[650px] w-[650px] rounded-full bg-violet-600/[0.11] blur-[180px]" />
-
-        <div className="absolute -right-[15%] top-[10%] h-[600px] w-[600px] rounded-full bg-blue-600/[0.09] blur-[190px]" />
-
-        <div className="absolute bottom-[-20%] left-[35%] h-[550px] w-[550px] rounded-full bg-fuchsia-500/[0.05] blur-[180px]" />
-
-        <div
-          className="absolute inset-0 opacity-[0.035]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.7) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 mx-auto w-full max-w-[1380px] px-5 py-7 md:px-8 lg:px-10">
-
-        {/* ====================================================
-            TOP BAR
-        ==================================================== */}
-
-        <div className="mb-8 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() =>
-              navigate({
-                to: "/dashboard",
-              })
+            for (
+                let index = 0;
+                index <
+                activityDays.length;
+                index += 7
+            ) {
+                weeks.push(
+                    activityDays.slice(
+                        index,
+                        index + 7,
+                    ),
+                );
             }
-            className="group gap-2 rounded-xl px-3 text-sm font-medium text-white/75 hover:bg-white/[0.06] hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" />
 
-            Dashboard
-          </Button>
+            return weeks;
+        }, [activityDays]);
 
-          <div className="flex items-center gap-2 rounded-full border border-violet-400/15 bg-violet-500/[0.08] px-4 py-2 text-sm font-semibold text-white">
-            <Sparkles className="h-4 w-4 text-violet-300" />
+    const getActivityLevel = (
+        count: number,
+    ) => {
+        if (count === 0) return 0;
+        if (count <= 1) return 1;
+        if (count <= 3) return 2;
+        if (count <= 6) return 3;
+        return 4;
+    };
 
-            Developer Profile
-          </div>
-        </div>
+    /* ============================================================
+       ACTIVITY CURVE
+    ============================================================ */
 
-        {/* ====================================================
-            HERO
-        ==================================================== */}
+    const activityChartData =
+        useMemo(() => {
+            if (!dailySolve.length) {
+                return [];
+            }
 
-        <Card className="group relative mb-6 overflow-hidden border-white/[0.09] bg-gradient-to-br from-white/[0.055] via-white/[0.025] to-violet-500/[0.04] shadow-2xl shadow-black/50 backdrop-blur-2xl">
+            const sorted =
+                [...dailySolve].sort(
+                    (a, b) =>
+                        new Date(
+                            a.date,
+                        ).getTime() -
+                        new Date(
+                            b.date,
+                        ).getTime(),
+                );
 
-          <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full bg-violet-500/[0.12] blur-[100px]" />
+            return sorted.map((item) => ({
+                date: formatDate(
+                    item.date,
+                ),
+                solved: Number(
+                    item.count ?? 0,
+                ),
+            }));
+        }, [dailySolve]);
 
-          <div className="pointer-events-none absolute bottom-[-100px] left-[30%] h-60 w-60 rounded-full bg-blue-500/[0.08] blur-[100px]" />
+    /* ============================================================
+       PROFILE AVATAR
+    ============================================================ */
 
-          <CardContent className="relative p-6 md:p-8">
+    const userAvatar =
+        (user as any)?.avatar ||
+        (user as any)?.image ||
+        (user as any)?.profileImage ||
+        leetcode?.avatar;
 
-            <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+    const initials =
+        (user?.name || "User")
+            .split(/\s+/)
+            .filter(Boolean)
+            .map(
+                (part) =>
+                    part.charAt(0),
+            )
+            .slice(0, 2)
+            .join("")
+            .toUpperCase();
 
-              <div className="flex items-center gap-5">
+    /* ============================================================
+       LOADING
+    ============================================================ */
 
-                {/* AVATAR */}
-
-                <div className="relative shrink-0">
-
-                  <div className="h-[88px] w-[88px] overflow-hidden rounded-[26px] border border-violet-300/20 bg-gradient-to-br from-violet-500/30 via-blue-500/15 to-white/[0.04] p-[2px] shadow-xl shadow-violet-950/30">
-
-                    <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[24px] bg-[#090a0f]">
-
-                      {userAvatar ? (
-                        <img
-                          src={userAvatar}
-                          alt={
-                            user?.name ||
-                            "Profile"
-                          }
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-2xl font-bold text-violet-200">
-                          {initials}
-                        </span>
-                      )}
-
-                    </div>
-                  </div>
-
-                  <div className="absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-[#07080b] bg-emerald-500 shadow-lg shadow-emerald-500/30">
-                    <Check className="h-3.5 w-3.5 text-white" />
-                  </div>
-
+    if (dashboardLoading) {
+        return (
+            <div className="relative min-h-screen overflow-hidden bg-[#040508] text-white">
+                <div className="pointer-events-none fixed inset-0">
+                    <div className="absolute -left-32 -top-32 h-[520px] w-[520px] rounded-full bg-violet-600/10 blur-[150px]" />
+                    <div className="absolute -right-32 top-40 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[160px]" />
                 </div>
 
-                {/* NAME */}
-
-                <div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-
-                    <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
-                      {user?.name ||
-                        "Your Profile"}
-                    </h1>
-
-                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
-
-                  </div>
-
-                  <p className="mt-1 text-base font-medium text-white/70">
-                    {user?.email ||
-                      "Developer profile"}
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-
-                    <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-500/[0.10] px-3 py-1.5 text-sm font-semibold text-violet-200">
-                      <Code2 className="h-3.5 w-3.5" />
-
-                      Software Engineer
-                    </span>
-
-                    {leetcode?.valid && (
-                      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-1.5 text-sm font-semibold text-emerald-200">
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-
-                        LeetCode connected
-                      </span>
-                    )}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* HERO METRICS */}
-
-              {leetcode?.valid && (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-4">
-
-                  <HeroMetric
-                    label="Solved"
-                    value={
-                      stats?.totalSolved ?? 0
-                    }
-                    icon={Code2}
-                  />
-
-                  <HeroMetric
-                    label="Rating"
-                    value={
-                      stats?.contestRating
-                        ? Number(
-                            stats.contestRating,
-                          ).toFixed(0)
-                        : "—"
-                    }
-                    icon={Star}
-                  />
-
-                  <HeroMetric
-                    label="Active Days"
-                    value={
-                      analytics.activeDays
-                    }
-                    icon={Activity}
-                  />
-
-                  <HeroMetric
-                    label="Streak"
-                    value={`${analytics.streak}d`}
-                    icon={Flame}
-                  />
-
-                </div>
-              )}
-
-            </div>
-
-          </CardContent>
-        </Card>
-
-        {/* ====================================================
-            LEETCODE CONNECTION
-        ==================================================== */}
-
-        <Card className="mb-8 overflow-hidden border-yellow-400/[0.12] bg-gradient-to-br from-yellow-500/[0.045] via-white/[0.02] to-transparent shadow-xl shadow-black/30">
-
-          <CardContent className="p-6 md:p-7">
-
-            <div className="flex flex-col gap-5">
-
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-                <div className="flex items-center gap-4">
-
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-yellow-400/15 bg-yellow-500/[0.09]">
-                    <span className="text-xl">
-                      🟨
-                    </span>
-                  </div>
-
-                  <div>
-
-                    <div className="flex items-center gap-2">
-
-                      <h2 className="text-lg font-bold text-white">
-                        LeetCode
-                      </h2>
-
-                      {leetcode?.valid && (
-                        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-200">
-                          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-
-                          Connected
-                        </span>
-                      )}
-
-                    </div>
-
-                    <p className="mt-1 text-sm font-medium text-white/70">
-                      {leetcode?.valid
-                        ? "Your coding data is synced with Dykstra."
-                        : "Connect your profile to import coding progress."}
-                    </p>
-
-                  </div>
-
-                </div>
-
-                {leetcode?.valid && (
-                  <div className="flex items-center gap-2 text-sm font-medium text-white/70">
-
-                    <CalendarDays className="h-4 w-4 text-yellow-300" />
-
-                    {connection?.last_synced_at
-                      ? `Synced ${new Date(
-                          connection.last_synced_at,
-                        ).toLocaleDateString()}`
-                      : "Synced"}
-
-                  </div>
-                )}
-
-              </div>
-
-              {/* INPUT */}
-
-              {!leetcode?.valid && (
-                <div className="rounded-2xl border border-white/[0.08] bg-black/25 p-5">
-
-                  <label className="text-sm font-semibold text-white">
-                    LeetCode username
-                  </label>
-
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-
-                    <div className="relative flex-1">
-
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-white/60">
-                        leetcode.com/u/
-                      </span>
-
-                      <input
-                        value={username}
-                        onChange={(event) => {
-                          setUsername(
-                            event.target.value,
-                          );
-
-                          setLeetcode(null);
-                        }}
-                        onBlur={() =>
-                          validateLeetCodeUsername(
-                            username,
-                          )
-                        }
-                        className="h-12 w-full rounded-xl border border-white/10 bg-black/40 pl-[125px] pr-11 text-base font-medium text-white outline-none transition-all placeholder:text-white/30 focus:border-violet-400/50 focus:ring-2 focus:ring-violet-500/10"
-                        placeholder="username"
-                      />
-
-                      {checkingUsername && (
-                        <Loader2 className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-violet-300" />
-                      )}
-
-                    </div>
-
-                    <Button
-                      onClick={() =>
-                        validateLeetCodeUsername(
-                          username,
-                        )
-                      }
-                      disabled={
-                        checkingUsername ||
-                        !username.trim()
-                      }
-                      className="h-12 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-8 text-sm font-bold shadow-lg shadow-violet-900/20"
-                    >
-                      {checkingUsername ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Link2 className="mr-2 h-4 w-4" />
-                      )}
-
-                      Verify
-                    </Button>
-
-                  </div>
-
-                </div>
-              )}
-
-              {/* CONNECTED */}
-
-              {leetcode?.valid && (
-                <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-black/25 p-5 sm:flex-row sm:items-center sm:justify-between">
-
-                  <div className="flex items-center gap-4">
-
-                    <div className="h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
-
-                      {leetcode.avatar ? (
-                        <img
-                          src={leetcode.avatar}
-                          alt={
-                            leetcode.username
-                          }
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <User className="h-5 w-5 text-violet-300" />
+                <div className="relative z-10 flex min-h-screen items-center justify-center">
+                    <div className="flex flex-col items-center">
+                        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/10">
+                            <Loader2 className="h-6 w-6 animate-spin text-violet-300" />
                         </div>
-                      )}
 
-                    </div>
-
-                    <div>
-
-                      <div className="flex items-center gap-2">
-
-                        <p className="text-base font-bold text-white">
-                          {leetcode.realName ||
-                            leetcode.username}
+                        <p className="text-base font-semibold text-white">
+                            Building your Dykstra profile
                         </p>
 
-                        <Check className="h-4 w-4 text-emerald-400" />
-
-                      </div>
-
-                      <p className="mt-1 text-sm font-medium text-white/65">
-                        @{leetcode.username}
-                      </p>
-
+                        <p className="mt-2 text-sm text-white/65">
+                            Analyzing your preparation data...
+                        </p>
                     </div>
-
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        window.open(
-                          leetcode.profileUrl,
-                          "_blank",
-                          "noopener,noreferrer",
-                        )
-                      }
-                      className="h-10 rounded-xl border-white/10 bg-white/[0.03] px-4 text-sm font-semibold text-white hover:bg-white/[0.08]"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-
-                      Profile
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSync}
-                      disabled={checkingUsername}
-                      className="h-10 rounded-xl border-white/10 bg-white/[0.03] px-4 text-sm font-semibold text-white hover:bg-white/[0.08]"
-                    >
-                      {checkingUsername ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                      )}
-
-                      Refresh
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDisconnect}
-                      disabled={disconnecting}
-                      className="h-10 rounded-xl px-4 text-sm font-semibold text-white/65 hover:bg-red-500/10 hover:text-red-300"
-                    >
-                      {disconnecting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Unlink className="mr-2 h-4 w-4" />
-                      )}
-
-                      Disconnect
-                    </Button>
-
-                  </div>
-
                 </div>
-              )}
+            </div>
+        );
+    }
 
-              {leetcode?.valid && !connection && (
-                <div className="border-t border-white/[0.07] pt-4">
+    /* ============================================================
+       MAIN
+    ============================================================ */
 
-                  <Button
-                    onClick={handleConnect}
-                    disabled={connecting}
-                    className="h-11 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-6 text-sm font-bold"
-                  >
-                    {connecting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Link2 className="mr-2 h-4 w-4" />
-                    )}
+    return (
+        <div className="relative min-h-screen overflow-hidden bg-[#040508] text-white">
+            {/* =====================================================
+                BACKGROUND
+            ===================================================== */}
 
-                    Connect LeetCode
-                  </Button>
+            <div className="pointer-events-none fixed inset-0 overflow-hidden">
+                <div className="absolute -left-[12%] -top-[14%] h-[680px] w-[680px] rounded-full bg-violet-600/[0.09] blur-[180px]" />
 
-                </div>
-              )}
+                <div className="absolute -right-[12%] top-[15%] h-[620px] w-[620px] rounded-full bg-blue-600/[0.075] blur-[190px]" />
 
+                <div className="absolute bottom-[-15%] left-[35%] h-[500px] w-[500px] rounded-full bg-fuchsia-500/[0.035] blur-[170px]" />
+
+                <div
+                    className="absolute inset-0 opacity-[0.025]"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(rgba(255,255,255,.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.7) 1px, transparent 1px)",
+                        backgroundSize:
+                            "64px 64px",
+                    }}
+                />
             </div>
 
-          </CardContent>
-        </Card>
-
-        {/* ====================================================
-            ANALYTICS
-        ==================================================== */}
-
-        {leetcode?.valid && (
-          <div className="animate-in fade-in slide-in-from-bottom-3 duration-700">
-
-            <div className="mb-6">
-
-              <div className="flex items-center gap-3">
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/[0.10]">
-                  <TrendingUp className="h-5 w-5 text-violet-300" />
-                </div>
-
-                <div>
-
-                  <h2 className="text-xl font-bold text-white md:text-2xl">
-                    Performance Analytics
-                  </h2>
-
-                  <p className="mt-1 text-sm font-medium text-white/65 md:text-base">
-                    A visual breakdown of how you are solving, improving and staying consistent.
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* ==================================================
-                ROW 1
-            ================================================== */}
-
-            <div className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-[1.65fr_0.95fr]">
-
-              {/* MOMENTUM */}
-
-              <Card className="overflow-hidden border-white/[0.09] bg-gradient-to-br from-violet-500/[0.055] via-white/[0.025] to-transparent shadow-xl shadow-black/30">
-
-                <CardContent className="p-6 md:p-7">
-
-                  <SectionHeader
-                    icon={TrendingUp}
-                    iconClass="text-violet-300"
-                    iconBg="bg-violet-500/[0.10]"
-                    title="Solving Momentum"
-                    description="Your submission activity across the last 12 weeks"
-                  />
-
-                  <div className="mt-7">
-
-                    <WeeklyMomentumChart
-                      data={analytics.weekly}
-                    />
-
-                  </div>
-
-                  <div className="mt-6 grid grid-cols-3 gap-3">
-
-                    <AnalysisMetric
-                      label="12 week total"
-                      value={analytics.weekly.reduce(
-                        (sum, item) =>
-                          sum + item.value,
-                        0,
-                      )}
-                    />
-
-                    <AnalysisMetric
-                      label="Weekly average"
-                      value={Math.round(
-                        analytics.weekly.reduce(
-                          (sum, item) =>
-                            sum + item.value,
-                          0,
-                        ) / 12,
-                      )}
-                    />
-
-                    <AnalysisMetric
-                      label="Momentum"
-                      value={`${analytics.momentum >= 0 ? "+" : ""}${Math.round(analytics.momentum)}%`}
-                      positive={
-                        analytics.momentum >= 0
-                      }
-                    />
-
-                  </div>
-
-                </CardContent>
-
-              </Card>
-
-              {/* DIFFICULTY DONUT */}
-
-              <Card className="overflow-hidden border-white/[0.09] bg-gradient-to-br from-blue-500/[0.05] via-white/[0.025] to-transparent shadow-xl shadow-black/30">
-
-                <CardContent className="p-6 md:p-7">
-
-                  <SectionHeader
-                    icon={Target}
-                    iconClass="text-blue-300"
-                    iconBg="bg-blue-500/[0.10]"
-                    title="Solving Mix"
-                    description="Where your solved problems are concentrated"
-                  />
-
-                  <div className="mt-7 flex items-center justify-center">
-
-                    <DifficultyDonut
-                      easy={
-                        analytics.easy
-                      }
-                      medium={
-                        analytics.medium
-                      }
-                      hard={
-                        analytics.hard
-                      }
-                      total={
-                        stats?.totalSolved ?? 0
-                      }
-                    />
-
-                  </div>
-
-                  <div className="mt-6 space-y-3">
-
-                    <DifficultyLegend
-                      label="Easy"
-                      value={analytics.easy}
-                      percentage={
-                        analytics.easyPercentage
-                      }
-                      dot="bg-emerald-400"
-                      text="text-emerald-300"
-                    />
-
-                    <DifficultyLegend
-                      label="Medium"
-                      value={analytics.medium}
-                      percentage={
-                        analytics.mediumPercentage
-                      }
-                      dot="bg-orange-400"
-                      text="text-orange-300"
-                    />
-
-                    <DifficultyLegend
-                      label="Hard"
-                      value={analytics.hard}
-                      percentage={
-                        analytics.hardPercentage
-                      }
-                      dot="bg-red-400"
-                      text="text-red-300"
-                    />
-
-                  </div>
-
-                </CardContent>
-
-              </Card>
-
-            </div>
-
-            {/* ==================================================
-                ROW 2
-            ================================================== */}
-
-            <div className="mb-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr]">
-
-              {/* RADAR */}
-
-              <Card className="overflow-hidden border-white/[0.09] bg-gradient-to-br from-fuchsia-500/[0.04] via-white/[0.025] to-transparent shadow-xl shadow-black/30">
-
-                <CardContent className="p-6 md:p-7">
-
-                  <SectionHeader
-                    icon={Sparkles}
-                    iconClass="text-fuchsia-300"
-                    iconBg="bg-fuchsia-500/[0.10]"
-                    title="Competitive Profile"
-                    description="A balanced view of your current coding profile"
-                  />
-
-                  <div className="mt-5">
-
-                    <RadarChart
-                      values={analytics.radar}
-                    />
-
-                  </div>
-
-                </CardContent>
-
-              </Card>
-
-              {/* CONSISTENCY */}
-
-              <Card className="overflow-hidden border-white/[0.09] bg-gradient-to-br from-emerald-500/[0.04] via-white/[0.025] to-transparent shadow-xl shadow-black/30">
-
-                <CardContent className="p-6 md:p-7">
-
-                  <SectionHeader
-                    icon={Activity}
-                    iconClass="text-emerald-300"
-                    iconBg="bg-emerald-500/[0.10]"
-                    title="Consistency Pattern"
-                    description="When you are most active during the week"
-                  />
-
-                  <div className="mt-8">
-
-                    <WeekdayChart
-                      data={
-                        analytics.weekdayTotals
-                      }
-                      max={
-                        analytics.maxWeekday
-                      }
-                    />
-
-                  </div>
-
-                  <div className="mt-6 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-
-                    <p className="text-sm font-semibold text-white">
-                      Strongest day
-                    </p>
-
-                    <div className="mt-2 flex items-end justify-between gap-4">
-
-                      <p className="text-2xl font-bold text-white">
-                        {
-                          analytics
-                            .strongestDay
-                            .name
+            <div className="relative z-10 mx-auto w-full max-w-[1420px] px-5 py-6 md:px-8 lg:px-10">
+                {/* =================================================
+                    TOP BAR
+                ================================================= */}
+
+                <div className="mb-8 flex items-center justify-between">
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            navigate({
+                                to: "/dashboard",
+                            })
                         }
-                      </p>
+                        className="group h-10 gap-2 rounded-xl px-3 text-sm text-white/75 hover:bg-white/[0.06] hover:text-white"
+                    >
+                        <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" />
 
-                      <p className="text-sm font-semibold text-emerald-300">
-                        {
-                          analytics
-                            .strongestDay
-                            .value
-                        }{" "}
-                        submissions
-                      </p>
+                        Dashboard
+                    </Button>
 
+                    <div className="flex items-center gap-2 rounded-full border border-violet-400/15 bg-violet-500/[0.07] px-4 py-2 text-sm font-medium text-violet-200">
+                        <Sparkles className="h-4 w-4 text-violet-300" />
+
+                        Dykstra Profile
                     </div>
-
-                  </div>
-
-                </CardContent>
-
-              </Card>
-
-            </div>
-
-            {/* ==================================================
-                ROW 3 — INSIGHTS
-            ================================================== */}
-
-            <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_0.7fr]">
-
-              {/* INSIGHT */}
-
-              <Card className="relative overflow-hidden border-violet-400/[0.14] bg-gradient-to-br from-violet-500/[0.10] via-blue-500/[0.045] to-transparent shadow-xl shadow-violet-950/20">
-
-                <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-violet-500/[0.10] blur-[90px]" />
-
-                <CardContent className="relative p-6 md:p-7">
-
-                  <div className="flex items-start gap-4">
-
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/[0.12]">
-                      <Sparkles className="h-5 w-5 text-violet-300" />
-                    </div>
-
-                    <div>
-
-                      <p className="text-sm font-bold uppercase tracking-[0.12em] text-violet-200">
-                        Dykstra Insight
-                      </p>
-
-                      <h3 className="mt-3 text-xl font-bold text-white md:text-2xl">
-                        {analytics.insightTitle}
-                      </h3>
-
-                      <p className="mt-3 max-w-2xl text-base font-medium leading-7 text-white/70">
-                        {analytics.insightText}
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-
-                    <InsightStat
-                      icon={Code2}
-                      label="Solved"
-                      value={
-                        stats?.totalSolved ??
-                        0
-                      }
-                    />
-
-                    <InsightStat
-                      icon={Flame}
-                      label="Streak"
-                      value={`${analytics.streak}d`}
-                    />
-
-                    <InsightStat
-                      icon={Zap}
-                      label="Acceptance"
-                      value={
-                        stats?.acceptanceRate !==
-                        undefined
-                          ? `${Number(
-                              stats.acceptanceRate,
-                            ).toFixed(1)}%`
-                          : "—"
-                      }
-                    />
-
-                    <InsightStat
-                      icon={Trophy}
-                      label="Best day"
-                      value={
-                        analytics.bestDay
-                      }
-                    />
-
-                  </div>
-
-                </CardContent>
-              </Card>
-
-              {/* IDENTITY */}
-
-              <Card className="overflow-hidden border-white/[0.09] bg-white/[0.025] shadow-xl shadow-black/30">
-
-                <CardContent className="p-6 md:p-7">
-
-                  <SectionHeader
-                    icon={User}
-                    iconClass="text-blue-300"
-                    iconBg="bg-blue-500/[0.10]"
-                    title="LeetCode Identity"
-                    description="Your public coding profile"
-                  />
-
-                  <div className="mt-6 grid grid-cols-2 gap-3">
-
-                    <IdentityMetric
-                      label="Username"
-                      value={`@${leetcode.username}`}
-                    />
-
-                    <IdentityMetric
-                      label="Ranking"
-                      value={
-                        leetcode.ranking
-                          ? `#${leetcode.ranking.toLocaleString()}`
-                          : "—"
-                      }
-                    />
-
-                    <IdentityMetric
-                      label="Reputation"
-                      value={
-                        leetcode.reputation ??
-                        "—"
-                      }
-                    />
-
-                    <IdentityMetric
-                      label="Stars"
-                      value={
-                        leetcode.starRating ??
-                        "—"
-                      }
-                    />
-
-                  </div>
-
-                </CardContent>
-              </Card>
-
-            </div>
-
-            {/* ==================================================
-                CONTRIBUTION MAP
-            ================================================== */}
-
-            <Card className="mb-6 overflow-hidden border-white/[0.08] bg-white/[0.02] shadow-xl shadow-black/25">
-
-              <CardContent className="p-6 md:p-7">
-
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
-                  <SectionHeader
-                    icon={CalendarDays}
-                    iconClass="text-emerald-300"
-                    iconBg="bg-emerald-500/[0.10]"
-                    title="Contribution Map"
-                    description="Daily solving activity"
-                  />
-
-                  <div className="flex flex-wrap gap-3">
-
-                    <MiniPill
-                      label="Submissions"
-                      value={
-                        analytics.totalSubmissions
-                      }
-                    />
-
-                    <MiniPill
-                      label="Active days"
-                      value={
-                        analytics.activeDays
-                      }
-                    />
-
-                    <MiniPill
-                      label="Best day"
-                      value={
-                        analytics.bestDay
-                      }
-                    />
-
-                  </div>
-
                 </div>
 
-                <div className="mt-7">
+                {/* =================================================
+                    HERO
+                ================================================= */}
 
-                  <LeetCodeHeatmap
-                    calendar={calendar}
-                  />
+                <Card className="group relative mb-6 overflow-hidden border-white/[0.09] bg-gradient-to-br from-white/[0.055] via-white/[0.025] to-violet-500/[0.035] shadow-2xl shadow-black/40 backdrop-blur-2xl">
+                    <div className="pointer-events-none absolute -right-24 -top-28 h-96 w-96 rounded-full bg-violet-500/[0.12] blur-[120px] transition-all duration-700 group-hover:bg-violet-500/[0.17]" />
 
-                </div>
+                    <div className="pointer-events-none absolute bottom-[-130px] left-[35%] h-72 w-72 rounded-full bg-blue-500/[0.07] blur-[100px]" />
 
-              </CardContent>
+                    <CardContent className="relative p-7 md:p-9">
+                        <div className="flex flex-col gap-8 xl:flex-row xl:items-center xl:justify-between">
+                            {/* PROFILE */}
 
-            </Card>
+                            <div className="flex items-center gap-5">
+                                <div className="relative shrink-0">
+                                    <div className="h-[88px] w-[88px] rounded-[27px] border border-violet-300/20 bg-gradient-to-br from-violet-500/25 via-blue-500/10 to-white/[0.03] p-[2px] shadow-2xl shadow-violet-950/30">
+                                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-[25px] bg-[#090a0f]">
+                                            {userAvatar ? (
+                                                <img
+                                                    src={
+                                                        userAvatar
+                                                    }
+                                                    alt={
+                                                        user?.name ||
+                                                        "Profile"
+                                                    }
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="text-2xl font-bold text-violet-200">
+                                                    {
+                                                        initials
+                                                    }
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
 
-            {/* ==================================================
-                ACHIEVEMENTS
-            ================================================== */}
+                                    <div className="absolute -bottom-1.5 -right-1.5 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-[#07080b] bg-emerald-500 shadow-lg shadow-emerald-500/30">
+                                        <Check className="h-3.5 w-3.5 text-white" />
+                                    </div>
+                                </div>
 
-            <Card className="mb-8 overflow-hidden border-yellow-400/[0.09] bg-gradient-to-br from-yellow-500/[0.03] via-white/[0.018] to-transparent shadow-xl shadow-black/25">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                                            {user?.name ||
+                                                "Your Profile"}
+                                        </h1>
 
-              <CardContent className="p-6 md:p-7">
+                                        <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                                    </div>
 
-                <div className="mb-6 flex items-center justify-between">
+                                    <p className="mt-2 text-sm text-white/70 md:text-base">
+                                        {user?.email ||
+                                            "Developer profile"}
+                                    </p>
 
-                  <SectionHeader
-                    icon={Award}
-                    iconClass="text-yellow-300"
-                    iconBg="bg-yellow-500/[0.09]"
-                    title="Achievements"
-                    description="Milestones earned on LeetCode"
-                  />
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        <span className="inline-flex items-center gap-2 rounded-full border border-violet-400/15 bg-violet-500/[0.08] px-3 py-1.5 text-sm font-medium text-violet-200">
+                                            <Code2 className="h-4 w-4" />
 
-                  <span className="rounded-full border border-yellow-400/15 bg-yellow-500/[0.07] px-3 py-1.5 text-sm font-semibold text-yellow-200">
-                    {badges.length} badges
-                  </span>
+                                            DSA Preparation
+                                        </span>
 
-                </div>
+                                        {leetcode?.valid && (
+                                            <span className="inline-flex items-center gap-2 rounded-full border border-yellow-400/15 bg-yellow-500/[0.07] px-3 py-1.5 text-sm font-medium text-yellow-200">
+                                                <span className="h-2 w-2 rounded-full bg-yellow-400" />
 
-                {badges.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                                LeetCode connected
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
 
-                    {badges.map(
-                      (badge, index) => (
-                        <BadgeCard
-                          key={`${badge.name}-${badge.earned_at}-${index}`}
-                          badge={badge}
-                          index={index}
-                        />
-                      ),
-                    )}
+                            {/* CORE DYKSTRA METRICS */}
 
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-white/[0.09] py-12 text-center">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[580px]">
+                                <HeroMetric
+                                    icon={Code2}
+                                    label="Dykstra Solved"
+                                    value={solved}
+                                    accent="violet"
+                                />
 
-                    <Award className="mx-auto mb-3 h-8 w-8 text-white/35" />
+                                <HeroMetric
+                                    icon={Flame}
+                                    label="Current Streak"
+                                    value={`${streak}d`}
+                                    accent="orange"
+                                />
 
-                    <p className="text-base font-semibold text-white">
-                      No badges found.
-                    </p>
+                                <HeroMetric
+                                    icon={Target}
+                                    label="Readiness"
+                                    value={`${readinessScore}%`}
+                                    accent="blue"
+                                />
 
-                  </div>
+                                <HeroMetric
+                                    icon={Zap}
+                                    label="Longest Streak"
+                                    value={`${longestStreak}d`}
+                                    accent="emerald"
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {dashboardError && (
+                    <Card className="mb-6 border-red-400/15 bg-red-500/[0.04]">
+                        <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-base font-semibold text-white">
+                                    Profile analytics could not be loaded
+                                </p>
+
+                                <p className="mt-1 text-sm text-white/65">
+                                    We couldn't retrieve your current Dykstra preparation data.
+                                </p>
+                            </div>
+
+                            <Button
+                                onClick={
+                                    loadDashboard
+                                }
+                                className="h-10 rounded-xl bg-white/[0.08] text-sm text-white hover:bg-white/[0.12]"
+                            >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+
+                                Retry
+                            </Button>
+                        </CardContent>
+                    </Card>
                 )}
 
-              </CardContent>
+                {/* =================================================
+                    MAIN ANALYSIS
+                ================================================= */}
 
-            </Card>
+                <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+                    {/* RADAR */}
 
-            {/* ==================================================
-                FOOTER
-            ================================================== */}
+                    <Card className="overflow-hidden border-white/[0.09] bg-white/[0.025] shadow-2xl shadow-black/25">
+                        <CardContent className="p-7 md:p-8">
+                            <SectionHeading
+                                icon={
+                                    BarChart3
+                                }
+                                title="Your DSA Profile"
+                                subtitle="A view of where your preparation is strongest based on actual Dykstra practice."
+                            />
 
-            <Card className="mb-10 overflow-hidden border-violet-400/[0.10] bg-gradient-to-r from-violet-500/[0.055] via-white/[0.018] to-blue-500/[0.04]">
+                            {radarData.length >
+                            0 ? (
+                                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_0.8fr]">
+                                    <div className="h-[330px] min-h-[330px]">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
+                                            <RadarChart
+                                                data={
+                                                    radarData
+                                                }
+                                            >
+                                                <PolarGrid
+                                                    stroke="rgba(255,255,255,0.10)"
+                                                />
 
-              <CardContent className="p-6">
+                                                <PolarAngleAxis
+                                                    dataKey="topic"
+                                                    tick={{
+                                                        fill: "#F5F5F5",
+                                                        fontSize: 13,
+                                                        fontWeight: 600,
+                                                    }}
+                                                />
 
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                <PolarRadiusAxis
+                                                    angle={
+                                                        90
+                                                    }
+                                                    domain={[
+                                                        0,
+                                                        100,
+                                                    ]}
+                                                    tick={{
+                                                        fill: "rgba(255,255,255,0.55)",
+                                                        fontSize: 11,
+                                                    }}
+                                                />
 
-                  <div className="flex items-start gap-4">
+                                                <Radar
+                                                    name="Strength"
+                                                    dataKey="score"
+                                                    stroke="#8B5CF6"
+                                                    fill="#8B5CF6"
+                                                    fillOpacity={
+                                                        0.22
+                                                    }
+                                                    strokeWidth={
+                                                        2.5
+                                                    }
+                                                />
 
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/[0.10]">
-                      <Sparkles className="h-5 w-5 text-violet-300" />
-                    </div>
+                                                <Tooltip
+                                                    content={
+                                                        <ChartTooltip />
+                                                    }
+                                                />
+                                            </RadarChart>
+                                        </ResponsiveContainer>
+                                    </div>
 
-                    <div>
+                                    <div className="flex flex-col justify-center">
+                                        <p className="mb-4 text-sm font-semibold uppercase tracking-[0.15em] text-violet-200">
+                                            Skill signals
+                                        </p>
 
-                      <h3 className="text-base font-bold text-white">
-                        Dykstra × LeetCode
-                      </h3>
+                                        <div className="space-y-4">
+                                            {radarData
+                                                .slice(
+                                                    0,
+                                                    5,
+                                                )
+                                                .map(
+                                                    (
+                                                        item,
+                                                    ) => (
+                                                        <div
+                                                            key={
+                                                                item.topic
+                                                            }
+                                                        >
+                                                            <div className="mb-2 flex items-center justify-between">
+                                                                <span className="text-sm font-medium text-white">
+                                                                    {
+                                                                        item.topic
+                                                                    }
+                                                                </span>
 
-                      <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-white/65">
-                        Your coding profile is connected and ready for deeper progress analysis and future recommendations.
-                      </p>
+                                                                <span className="text-sm font-bold text-violet-200">
+                                                                    {
+                                                                        item.score
+                                                                    }
+                                                                </span>
+                                                            </div>
 
-                    </div>
+                                                            <div className="h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                                                                <div
+                                                                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-400 transition-all duration-700"
+                                                                    style={{
+                                                                        width: `${item.score}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <EmptyAnalysis message="Solve a few Dykstra problems to build your DSA profile." />
+                            )}
+                        </CardContent>
+                    </Card>
 
-                  </div>
+                    {/* READINESS */}
 
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      navigate({
-                        to: "/dashboard",
-                      })
-                    }
-                    className="h-10 shrink-0 rounded-xl border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-white hover:bg-white/[0.08]"
-                  >
-                    Dashboard
+                    <Card className="overflow-hidden border-blue-400/[0.10] bg-gradient-to-br from-blue-500/[0.055] via-white/[0.025] to-violet-500/[0.035] shadow-2xl shadow-black/25">
+                        <CardContent className="p-7 md:p-8">
+                            <SectionHeading
+                                icon={Target}
+                                title="Interview Readiness"
+                                subtitle="Your current Dykstra preparation signal."
+                            />
 
-                    <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
+                            <div className="mt-7 flex items-center justify-center">
+                                <div className="relative flex h-52 w-52 items-center justify-center rounded-full border border-white/[0.08] bg-black/20">
+                                    <div
+                                        className="absolute inset-3 rounded-full"
+                                        style={{
+                                            background: `conic-gradient(#8b5cf6 ${readinessScore * 3.6}deg, rgba(255,255,255,0.055) 0deg)`,
+                                        }}
+                                    />
 
+                                    <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-[#08090d]">
+                                        <span className="text-5xl font-bold tracking-tight text-white">
+                                            {
+                                                readinessScore
+                                            }
+                                        </span>
+
+                                        <span className="mt-1 text-sm font-medium text-white/70">
+                                            out of 100
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5 text-center">
+                                <p className="text-sm font-medium uppercase tracking-[0.15em] text-white/65">
+                                    Current level
+                                </p>
+
+                                <p className="mt-2 text-2xl font-bold text-white">
+                                    {
+                                        readinessLevel
+                                    }
+                                </p>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                <MetricBox
+                                    label="Solved"
+                                    value={
+                                        solved
+                                    }
+                                />
+
+                                <MetricBox
+                                    label="Revision Due"
+                                    value={
+                                        revisionPending
+                                    }
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
-              </CardContent>
-            </Card>
+                {/* =================================================
+                    STRENGTHS + WEAKNESSES
+                ================================================= */}
 
-          </div>
-        )}
+                <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <StrengthWeaknessCard
+                        type="strength"
+                        topics={
+                            strongestTopics
+                        }
+                    />
 
-        {/* ====================================================
-            EMPTY STATE
-        ==================================================== */}
-
-        {!leetcode?.valid && loaded && (
-          <Card className="border-white/[0.09] bg-white/[0.025] shadow-xl shadow-black/30">
-
-            <CardContent className="flex flex-col items-center justify-center px-6 py-24 text-center">
-
-              <div className="relative mb-6">
-
-                <div className="absolute inset-0 rounded-3xl bg-violet-500/10 blur-2xl" />
-
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl border border-violet-400/15 bg-violet-500/[0.08]">
-
-                  <Code2 className="h-8 w-8 text-violet-300" />
-
+                    <StrengthWeaknessCard
+                        type="weakness"
+                        topics={
+                            weakestTopics
+                        }
+                    />
                 </div>
 
-              </div>
+                {/* =================================================
+                    GROWTH / DAILY SOLVING
+                ================================================= */}
 
-              <h2 className="text-2xl font-bold text-white">
-                Connect your LeetCode profile
-              </h2>
+                <Card className="mb-6 overflow-hidden border-white/[0.09] bg-white/[0.025] shadow-2xl shadow-black/25">
+                    <CardContent className="p-7 md:p-8">
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                            <SectionHeading
+                                icon={
+                                    TrendingUp
+                                }
+                                title="Solving Momentum"
+                                subtitle="Your actual Dykstra solving activity over time."
+                            />
 
-              <p className="mt-3 max-w-lg text-base font-medium leading-7 text-white/65">
-                Bring your solving history, statistics, achievements and activity into Dykstra.
-              </p>
+                            <div className="flex flex-wrap gap-3">
+                                <MetricPill
+                                    label="Active days"
+                                    value={
+                                        activityActiveDays
+                                    }
+                                />
 
-            </CardContent>
+                                <MetricPill
+                                    label="Best day"
+                                    value={
+                                        bestActivityDay
+                                    }
+                                />
+                            </div>
+                        </div>
 
-          </Card>
-        )}
+                        {activityChartData.length >
+                        0 ? (
+                            <div className="mt-7 h-[310px] w-full">
+                                <ResponsiveContainer
+                                    width="100%"
+                                    height="100%"
+                                >
+                                    <AreaChart
+                                        data={
+                                            activityChartData
+                                        }
+                                        margin={{
+                                            top: 10,
+                                            right: 10,
+                                            left: -15,
+                                            bottom: 0,
+                                        }}
+                                    >
+                                        <defs>
+                                            <linearGradient
+                                                id="activityGradient"
+                                                x1="0"
+                                                y1="0"
+                                                x2="0"
+                                                y2="1"
+                                            >
+                                                <stop
+                                                    offset="0%"
+                                                    stopColor="#8B5CF6"
+                                                    stopOpacity={
+                                                        0.38
+                                                    }
+                                                />
 
-      </div>
-    </div>
-  );
+                                                <stop
+                                                    offset="100%"
+                                                    stopColor="#8B5CF6"
+                                                    stopOpacity={
+                                                        0
+                                                    }
+                                                />
+                                            </linearGradient>
+                                        </defs>
+
+                                        <CartesianGrid
+                                            stroke="rgba(255,255,255,0.07)"
+                                            vertical={
+                                                false
+                                            }
+                                        />
+
+                                        <XAxis
+                                            dataKey="date"
+                                            tick={{
+                                                fill: "rgba(255,255,255,0.68)",
+                                                fontSize: 12,
+                                            }}
+                                            axisLine={false}
+                                            tickLine={
+                                                false
+                                            }
+                                        />
+
+                                        <YAxis
+                                            allowDecimals={
+                                                false
+                                            }
+                                            tick={{
+                                                fill: "rgba(255,255,255,0.68)",
+                                                fontSize: 12,
+                                            }}
+                                            axisLine={false}
+                                            tickLine={
+                                                false
+                                            }
+                                        />
+
+                                        <Tooltip
+                                            content={
+                                                <ChartTooltip />
+                                            }
+                                        />
+
+                                        <Area
+                                            type="monotone"
+                                            dataKey="solved"
+                                            name="Problems solved"
+                                            stroke="#A78BFA"
+                                            strokeWidth={
+                                                3
+                                            }
+                                            fill="url(#activityGradient)"
+                                            dot={{
+                                                r: 4,
+                                                fill: "#A78BFA",
+                                                strokeWidth: 0,
+                                            }}
+                                            activeDot={{
+                                                r: 6,
+                                            }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : (
+                            <EmptyAnalysis message="Your solving curve will appear here as you solve problems on Dykstra." />
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* =================================================
+                    DIFFICULTY + CONSISTENCY
+                ================================================= */}
+
+                <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+                    {/* DIFFICULTY */}
+
+                    <Card className="overflow-hidden border-white/[0.09] bg-white/[0.025] shadow-2xl shadow-black/25">
+                        <CardContent className="p-7 md:p-8">
+                            <SectionHeading
+                                icon={
+                                    BarChart3
+                                }
+                                title="Difficulty Progression"
+                                subtitle="How your current problem mix is distributed."
+                            />
+
+                            {difficultyData.length >
+                            0 ? (
+                                <>
+                                    <div className="mt-6 h-[250px]">
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height="100%"
+                                        >
+                                            <PieChart>
+                                                <Pie
+                                                    data={
+                                                        difficultyData
+                                                    }
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={
+                                                        72
+                                                    }
+                                                    outerRadius={
+                                                        100
+                                                    }
+                                                    paddingAngle={
+                                                        5
+                                                    }
+                                                    stroke="none"
+                                                >
+                                                    {difficultyData.map(
+                                                        (
+                                                            entry,
+                                                            index,
+                                                        ) => (
+                                                            <Cell
+                                                                key={`${entry.name}-${index}`}
+                                                                fill={
+                                                                    index ===
+                                                                    0
+                                                                        ? "#34D399"
+                                                                        : index ===
+                                                                            1
+                                                                          ? "#F59E0B"
+                                                                          : "#F87171"
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </Pie>
+
+                                                <Tooltip
+                                                    content={
+                                                        <ChartTooltip />
+                                                    }
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {difficultyData.map(
+                                            (
+                                                item,
+                                                index,
+                                            ) => (
+                                                <div
+                                                    key={
+                                                        item.name
+                                                    }
+                                                    className="rounded-2xl border border-white/[0.07] bg-black/20 p-4 text-center"
+                                                >
+                                                    <div
+                                                        className={`mx-auto mb-2 h-2.5 w-2.5 rounded-full ${
+                                                            index ===
+                                                            0
+                                                                ? "bg-emerald-400"
+                                                                : index ===
+                                                                    1
+                                                                  ? "bg-amber-400"
+                                                                  : "bg-red-400"
+                                                        }`}
+                                                    />
+
+                                                    <p className="text-sm font-semibold text-white">
+                                                        {
+                                                            item.value
+                                                        }
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm font-medium text-white/65">
+                                                        {
+                                                            item.name
+                                                        }
+                                                    </p>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 rounded-2xl border border-red-400/10 bg-red-500/[0.04] p-4">
+                                        <p className="text-sm font-semibold text-white">
+                                            Hard problem exposure
+                                        </p>
+
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <span className="text-sm text-white/70">
+                                                {
+                                                    hard
+                                                }{" "}
+                                                hard problems
+                                            </span>
+
+                                            <span className="text-sm font-bold text-red-300">
+                                                {
+                                                    hardPercentage
+                                                }
+                                                %
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                                            <div
+                                                className="h-full rounded-full bg-red-400"
+                                                style={{
+                                                    width: `${hardPercentage}%`,
+                                                }}
+                                            />
+                                        </div>
+
+                                        <p className="mt-3 text-sm leading-5 text-white/65">
+                                            Your medium exposure is{" "}
+                                            <span className="font-semibold text-white">
+                                                {
+                                                    mediumPercentage
+                                                }
+                                                %
+                                            }
+                                            . Keep increasing difficulty as your topic confidence improves.
+                                        </p>
+                                    </div>
+                                </>
+                            ) : (
+                                <EmptyAnalysis message="Difficulty analysis will appear after you solve problems on Dykstra." />
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* HEATMAP */}
+
+                    <Card className="overflow-hidden border-orange-400/[0.08] bg-gradient-to-br from-orange-500/[0.025] via-white/[0.018] to-transparent shadow-2xl shadow-black/25">
+                        <CardContent className="p-7 md:p-8">
+                            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                                <SectionHeading
+                                    icon={
+                                        Flame
+                                    }
+                                    title="Dykstra Consistency"
+                                    subtitle="This activity map is powered by problems you actually solved on Dykstra."
+                                />
+
+                                <div className="flex items-center gap-3 rounded-2xl border border-orange-400/15 bg-orange-500/[0.06] px-4 py-3">
+                                    <Flame className="h-5 w-5 text-orange-400" />
+
+                                    <div>
+                                        <p className="text-sm font-medium text-white/65">
+                                            Current streak
+                                        </p>
+
+                                        <p className="text-xl font-bold text-white">
+                                            {
+                                                streak
+                                            }{" "}
+                                            days
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-7 overflow-x-auto pb-2">
+                                <div className="min-w-[850px]">
+                                    <div className="mb-3 flex justify-end gap-4 text-sm text-white/60">
+                                        <span>
+                                            Less
+                                        </span>
+
+                                        {[0, 1, 2, 3, 4].map(
+                                            (
+                                                level,
+                                            ) => (
+                                                <span
+                                                    key={
+                                                        level
+                                                    }
+                                                    className={`h-3.5 w-3.5 rounded-[4px] ${
+                                                        level ===
+                                                        0
+                                                            ? "bg-white/[0.045]"
+                                                            : level ===
+                                                                1
+                                                              ? "bg-emerald-500/25"
+                                                              : level ===
+                                                                  2
+                                                                ? "bg-emerald-500/45"
+                                                                : level ===
+                                                                    3
+                                                                  ? "bg-emerald-500/70"
+                                                                  : "bg-emerald-400"
+                                                    }`}
+                                                />
+                                            ),
+                                        )}
+
+                                        <span>
+                                            More
+                                        </span>
+                                    </div>
+
+                                    <div className="flex gap-1.5">
+                                        {activityWeeks.map(
+                                            (
+                                                week,
+                                                weekIndex,
+                                            ) => (
+                                                <div
+                                                    key={
+                                                        weekIndex
+                                                    }
+                                                    className="flex flex-col gap-1.5"
+                                                >
+                                                    {week.map(
+                                                        (
+                                                            day,
+                                                        ) => {
+                                                            const level =
+                                                                getActivityLevel(
+                                                                    day.count,
+                                                                );
+
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        day.date
+                                                                    }
+                                                                    title={`${formatDate(day.date)} · ${day.count} problem${day.count === 1 ? "" : "s"} solved`}
+                                                                    className={`h-3.5 w-3.5 rounded-[4px] transition-all duration-200 hover:scale-125 ${
+                                                                        level ===
+                                                                        0
+                                                                            ? "bg-white/[0.045]"
+                                                                            : level ===
+                                                                                1
+                                                                              ? "bg-emerald-500/25"
+                                                                              : level ===
+                                                                                  2
+                                                                                ? "bg-emerald-500/45"
+                                                                                : level ===
+                                                                                    3
+                                                                                  ? "bg-emerald-500/70"
+                                                                                  : "bg-emerald-400"
+                                                                    }`}
+                                                                />
+                                                            );
+                                                        },
+                                                    )}
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <MetricBox
+                                    label="Problems"
+                                    value={
+                                        activityTotal
+                                    }
+                                />
+
+                                <MetricBox
+                                    label="Active days"
+                                    value={
+                                        activityActiveDays
+                                    }
+                                />
+
+                                <MetricBox
+                                    label="Best day"
+                                    value={
+                                        bestActivityDay
+                                    }
+                                />
+
+                                <MetricBox
+                                    label="Longest streak"
+                                    value={`${longestStreak}d`}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* =================================================
+                    REVISION + RECENT ACTIVITY
+                ================================================= */}
+
+                <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[0.75fr_1.25fr]">
+                    {/* REVISION */}
+
+                    <Card className="overflow-hidden border-violet-400/[0.10] bg-gradient-to-br from-violet-500/[0.045] via-white/[0.025] to-transparent shadow-2xl shadow-black/25">
+                        <CardContent className="p-7 md:p-8">
+                            <SectionHeading
+                                icon={
+                                    RefreshCw
+                                }
+                                title="Revision Health"
+                                subtitle="Keeping solved problems from becoming forgotten."
+                            />
+
+                            <div className="mt-7 flex items-center gap-5 rounded-2xl border border-white/[0.08] bg-black/20 p-5">
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-violet-400/15 bg-violet-500/[0.08]">
+                                    <RefreshCw className="h-7 w-7 text-violet-300" />
+                                </div>
+
+                                <div>
+                                    <p className="text-3xl font-bold text-white">
+                                        {
+                                            revisionPending
+                                        }
+                                    </p>
+
+                                    <p className="mt-1 text-sm font-medium text-white/65">
+                                        problems currently due
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 rounded-2xl border border-white/[0.08] bg-black/20 p-5">
+                                {revisionPending >
+                                0 ? (
+                                    <>
+                                        <p className="text-base font-semibold text-white">
+                                            Your revision queue needs attention
+                                        </p>
+
+                                        <p className="mt-2 text-sm leading-6 text-white/65">
+                                            Clear your due problems regularly so your solved count represents retained knowledge, not just completed questions.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-base font-semibold text-white">
+                                            Your revision queue is clear
+                                        </p>
+
+                                        <p className="mt-2 text-sm leading-6 text-white/65">
+                                            Keep following the spaced revision cycle as new problems enter your preparation history.
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* RECENT */}
+
+                    <Card className="overflow-hidden border-white/[0.09] bg-white/[0.025] shadow-2xl shadow-black/25">
+                        <CardContent className="p-7 md:p-8">
+                            <div className="flex items-center justify-between">
+                                <SectionHeading
+                                    icon={
+                                        Activity
+                                    }
+                                    title="Recent Dykstra Practice"
+                                    subtitle="What you've actually been solving recently."
+                                />
+                            </div>
+
+                            {recentActivity.length >
+                            0 ? (
+                                <div className="mt-6 space-y-3">
+                                    {recentActivity
+                                        .slice(
+                                            0,
+                                            6,
+                                        )
+                                        .map(
+                                            (
+                                                item,
+                                                index,
+                                            ) => (
+                                                <div
+                                                    key={`${item.title}-${item.solved_at}-${index}`}
+                                                    className="group flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4 transition-all duration-300 hover:border-violet-400/15 hover:bg-white/[0.025]"
+                                                >
+                                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-400/10 bg-violet-500/[0.07]">
+                                                        <Code2 className="h-5 w-5 text-violet-300" />
+                                                    </div>
+
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-base font-semibold text-white">
+                                                            {
+                                                                item.title
+                                                            }
+                                                        </p>
+
+                                                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+                                                            <span className="font-medium capitalize text-violet-200">
+                                                                {
+                                                                    item.topic
+                                                                }
+                                                            </span>
+
+                                                            <span className="text-white/30">
+                                                                •
+                                                            </span>
+
+                                                            <span
+                                                                className={`font-medium capitalize ${
+                                                                    item.difficulty?.toLowerCase() ===
+                                                                    "hard"
+                                                                        ? "text-red-300"
+                                                                        : item.difficulty?.toLowerCase() ===
+                                                                            "medium"
+                                                                          ? "text-amber-300"
+                                                                          : "text-emerald-300"
+                                                                }`}
+                                                            >
+                                                                {
+                                                                    item.difficulty
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="shrink-0 text-right">
+                                                        <p className="text-sm font-medium text-white/65">
+                                                            {formatRelativeDate(
+                                                                item.solved_at,
+                                                            )}
+                                                        </p>
+
+                                                        <Check className="ml-auto mt-1.5 h-4 w-4 text-emerald-400 opacity-70 transition-opacity group-hover:opacity-100" />
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                </div>
+                            ) : (
+                                <EmptyAnalysis message="Your recent Dykstra practice will appear here." />
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* =================================================
+                    FOCUS INSIGHT
+                ================================================= */}
+
+                <Card className="mb-6 overflow-hidden border-violet-400/[0.12] bg-gradient-to-r from-violet-500/[0.06] via-white/[0.025] to-blue-500/[0.05] shadow-2xl shadow-black/25">
+                    <CardContent className="p-7 md:p-8">
+                        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-start gap-5">
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-violet-400/15 bg-violet-500/[0.09]">
+                                    <Sparkles className="h-6 w-6 text-violet-300" />
+                                </div>
+
+                                <div>
+                                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-violet-200">
+                                        Dykstra insight
+                                    </p>
+
+                                    {dashboard?.focusTopic?.topic ? (
+                                        <>
+                                            <h2 className="mt-2 text-2xl font-bold text-white">
+                                                Focus on{" "}
+                                                <span className="capitalize text-violet-200">
+                                                    {
+                                                        dashboard
+                                                            .focusTopic
+                                                            .topic
+                                                    }
+                                                </span>
+                                            </h2>
+
+                                            <p className="mt-2 max-w-2xl text-base leading-7 text-white/70">
+                                                Dykstra currently identifies this topic as an area that deserves additional preparation based on your solving history.
+                                            </p>
+                                        </>
+                                    ) : weakestTopics.length >
+                                      0 ? (
+                                        <>
+                                            <h2 className="mt-2 text-2xl font-bold text-white">
+                                                Your biggest current gap is{" "}
+                                                <span className="text-violet-200">
+                                                    {formatTopic(
+                                                        weakestTopics[0]
+                                                            .topic,
+                                                    )}
+                                                </span>
+                                            </h2>
+
+                                            <p className="mt-2 max-w-2xl text-base leading-7 text-white/70">
+                                                Your current topic coverage suggests this is the area that would benefit most from additional practice.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h2 className="mt-2 text-2xl font-bold text-white">
+                                                Keep building your DSA profile
+                                            </h2>
+
+                                            <p className="mt-2 max-w-2xl text-base leading-7 text-white/70">
+                                                Solve more problems on Dykstra and this section will become increasingly personalized.
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <Button
+                                onClick={() =>
+                                    navigate({
+                                        to: "/dashboard",
+                                    })
+                                }
+                                className="group h-11 shrink-0 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-6 text-sm font-semibold shadow-lg shadow-violet-950/30"
+                            >
+                                Open Dashboard
+
+                                <ChevronRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* =================================================
+                    LEETCODE — SECONDARY
+                ================================================= */}
+
+                <Card className="mb-10 overflow-hidden border-yellow-400/[0.08] bg-gradient-to-br from-yellow-500/[0.025] via-white/[0.018] to-transparent shadow-2xl shadow-black/25">
+                    <CardContent className="p-7 md:p-8">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setShowLeetCodeDetails(
+                                    (value) =>
+                                        !value,
+                                )
+                            }
+                            className="flex w-full items-center justify-between text-left"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-yellow-400/10 bg-yellow-500/[0.08]">
+                                    <span className="text-xl">
+                                        🟨
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <h2 className="text-xl font-bold text-white">
+                                            External Profile
+                                        </h2>
+
+                                        {leetcode?.valid && (
+                                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-500/[0.08] px-3 py-1 text-sm font-medium text-emerald-300">
+                                                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+
+                                                Connected
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p className="mt-1.5 text-sm text-white/65">
+                                        LeetCode data is available as an external signal — your Dykstra analysis above remains the primary profile.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <ChevronRight
+                                className={`h-5 w-5 text-white/55 transition-transform duration-300 ${
+                                    showLeetCodeDetails
+                                        ? "rotate-90"
+                                        : ""
+                                }`}
+                            />
+                        </button>
+
+                        {showLeetCodeDetails && (
+                            <div className="mt-7 border-t border-white/[0.07] pt-7">
+                                {!leetcode?.valid ? (
+                                    <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-5">
+                                        <p className="text-base font-semibold text-white">
+                                            Connect LeetCode
+                                        </p>
+
+                                        <p className="mt-1.5 text-sm text-white/65">
+                                            Import your external coding profile without making it the center of your Dykstra profile.
+                                        </p>
+
+                                        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                                            <div className="relative flex-1">
+                                                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-white/45">
+                                                    leetcode.com/u/
+                                                </span>
+
+                                                <input
+                                                    value={
+                                                        username
+                                                    }
+                                                    onChange={(
+                                                        event,
+                                                    ) => {
+                                                        setUsername(
+                                                            event
+                                                                .target
+                                                                .value,
+                                                        );
+
+                                                        setLeetcode(
+                                                            null,
+                                                        );
+                                                    }}
+                                                    onBlur={() =>
+                                                        validateLeetCodeUsername(
+                                                            username,
+                                                        )
+                                                    }
+                                                    placeholder="username"
+                                                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 pl-[125px] pr-12 text-sm font-medium text-white outline-none placeholder:text-white/30 focus:border-violet-400/40 focus:ring-2 focus:ring-violet-500/[0.10]"
+                                                />
+
+                                                {checkingUsername && (
+                                                    <Loader2 className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-violet-300" />
+                                                )}
+                                            </div>
+
+                                            <Button
+                                                onClick={() =>
+                                                    handleConnect()
+                                                }
+                                                disabled={
+                                                    connecting ||
+                                                    !username.trim()
+                                                }
+                                                className="h-12 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-7 text-sm font-semibold"
+                                            >
+                                                {connecting ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Link2 className="mr-2 h-4 w-4" />
+                                                )}
+
+                                                Connect
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-5">
+                                        <div className="flex flex-col gap-5 rounded-2xl border border-white/[0.07] bg-black/20 p-5 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-14 w-14 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                                                    {leetcode.avatar ? (
+                                                        <img
+                                                            src={
+                                                                leetcode.avatar
+                                                            }
+                                                            alt={
+                                                                leetcode.username
+                                                            }
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center">
+                                                            <User className="h-6 w-6 text-violet-300" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-base font-semibold text-white">
+                                                            {leetcode.realName ||
+                                                                leetcode.username}
+                                                        </p>
+
+                                                        <Check className="h-4 w-4 text-emerald-400" />
+                                                    </div>
+
+                                                    <p className="mt-1 text-sm text-white/60">
+                                                        @
+                                                        {
+                                                            leetcode.username
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        window.open(
+                                                            leetcode.profileUrl,
+                                                            "_blank",
+                                                            "noopener,noreferrer",
+                                                        )
+                                                    }
+                                                    className="h-10 rounded-xl border-white/10 bg-white/[0.025] text-sm text-white hover:bg-white/[0.07]"
+                                                >
+                                                    <ExternalLink className="mr-2 h-4 w-4" />
+
+                                                    Profile
+                                                </Button>
+
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={
+                                                        handleSync
+                                                    }
+                                                    disabled={
+                                                        checkingUsername
+                                                    }
+                                                    className="h-10 rounded-xl border-white/10 bg-white/[0.025] text-sm text-white hover:bg-white/[0.07]"
+                                                >
+                                                    {checkingUsername ? (
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <RefreshCw className="mr-2 h-4 w-4" />
+                                                    )}
+
+                                                    Refresh
+                                                </Button>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    onClick={
+                                                        handleDisconnect
+                                                    }
+                                                    disabled={
+                                                        disconnecting
+                                                    }
+                                                    className="h-10 rounded-xl text-sm text-white/65 hover:bg-red-500/10 hover:text-red-300"
+                                                >
+                                                    {disconnecting ? (
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Unlink className="mr-2 h-4 w-4" />
+                                                    )}
+
+                                                    Disconnect
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                                            <MetricBox
+                                                label="Solved"
+                                                value={
+                                                    leetcodeStats?.totalSolved ??
+                                                    0
+                                                }
+                                            />
+
+                                            <MetricBox
+                                                label="Rating"
+                                                value={
+                                                    leetcodeStats?.contestRating
+                                                        ? Number(
+                                                              leetcodeStats.contestRating,
+                                                          ).toFixed(
+                                                              0,
+                                                          )
+                                                        : "—"
+                                                }
+                                            />
+
+                                            <MetricBox
+                                                label="Acceptance"
+                                                value={
+                                                    leetcodeStats?.acceptanceRate !==
+                                                    undefined
+                                                        ? `${Number(
+                                                              leetcodeStats.acceptanceRate,
+                                                          ).toFixed(
+                                                              1,
+                                                          )}%`
+                                                        : "—"
+                                                }
+                                            />
+
+                                            <MetricBox
+                                                label="Badges"
+                                                value={
+                                                    badges.length
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
 }
 
 /* ============================================================
@@ -1933,1234 +2575,340 @@ function ProfilePage() {
 ============================================================ */
 
 function HeroMetric({
-  label,
-  value,
-  icon: Icon,
+    icon: Icon,
+    label,
+    value,
+    accent,
 }: {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-}) {
-  return (
-    <div className="min-w-[105px] rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-4">
-
-      <div className="flex items-center justify-center gap-2">
-
-        <Icon className="h-4 w-4 text-violet-300" />
-
-        <span className="text-sm font-semibold text-white/65">
-          {label}
-        </span>
-
-      </div>
-
-      <p className="mt-2 text-center text-2xl font-bold tracking-tight text-white">
-        {value}
-      </p>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   SECTION HEADER
-============================================================ */
-
-function SectionHeader({
-  icon: Icon,
-  iconClass,
-  iconBg,
-  title,
-  description,
-}: {
-  icon: React.ElementType;
-  iconClass: string;
-  iconBg: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-
-      <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBg}`}
-      >
-        <Icon className={`h-5 w-5 ${iconClass}`} />
-      </div>
-
-      <div>
-
-        <h2 className="text-lg font-bold text-white md:text-xl">
-          {title}
-        </h2>
-
-        <p className="mt-1 text-sm font-medium text-white/65">
-          {description}
-        </p>
-
-      </div>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   ANALYSIS METRIC
-============================================================ */
-
-function AnalysisMetric({
-  label,
-  value,
-  positive,
-}: {
-  label: string;
-  value: string | number;
-  positive?: boolean;
-}) {
-  return (
-    <div className="rounded-xl border border-white/[0.07] bg-black/20 px-4 py-3">
-
-      <p className="text-sm font-medium text-white/60">
-        {label}
-      </p>
-
-      <p
-        className={`mt-1 text-xl font-bold ${
-          positive === undefined
-            ? "text-white"
-            : positive
-              ? "text-emerald-300"
-              : "text-red-300"
-        }`}
-      >
-        {value}
-      </p>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   INSIGHT STAT
-============================================================ */
-
-function InsightStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-xl border border-white/[0.08] bg-black/25 p-3">
-
-      <div className="flex items-center gap-2">
-
-        <Icon className="h-4 w-4 text-violet-300" />
-
-        <span className="text-sm font-medium text-white/60">
-          {label}
-        </span>
-
-      </div>
-
-      <p className="mt-2 text-xl font-bold text-white">
-        {value}
-      </p>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   IDENTITY
-============================================================ */
-
-function IdentityMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-xl border border-white/[0.07] bg-black/20 p-4">
-
-      <p className="text-sm font-semibold text-white/60">
-        {label}
-      </p>
-
-      <p className="mt-2 truncate text-base font-bold text-white">
-        {value}
-      </p>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   MINI PILL
-============================================================ */
-
-function MiniPill({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-full border border-white/[0.08] bg-white/[0.035] px-4 py-2">
-
-      <span className="text-sm font-medium text-white/60">
-        {label}
-      </span>
-
-      <span className="ml-2 text-sm font-bold text-white">
-        {value}
-      </span>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   DIFFICULTY LEGEND
-============================================================ */
-
-function DifficultyLegend({
-  label,
-  value,
-  percentage,
-  dot,
-  text,
-}: {
-  label: string;
-  value: number;
-  percentage: number;
-  dot: string;
-  text: string;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-black/20 px-4 py-3">
-
-      <div className="flex items-center gap-3">
-
-        <span
-          className={`h-2.5 w-2.5 rounded-full ${dot}`}
-        />
-
-        <span className="text-sm font-semibold text-white">
-          {label}
-        </span>
-
-      </div>
-
-      <div className="flex items-center gap-3">
-
-        <span className="text-base font-bold text-white">
-          {value}
-        </span>
-
-        <span
-          className={`text-sm font-bold ${text}`}
-        >
-          {percentage.toFixed(0)}%
-        </span>
-
-      </div>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   WEEKLY MOMENTUM CHART
-============================================================ */
-
-function WeeklyMomentumChart({
-  data,
-}: {
-  data: {
+    icon: React.ElementType;
     label: string;
-    value: number;
-  }[];
+    value: string | number;
+    accent:
+        | "violet"
+        | "orange"
+        | "blue"
+        | "emerald";
 }) {
-  const width = 900;
-  const height = 300;
-
-  const paddingLeft = 48;
-  const paddingRight = 24;
-  const paddingTop = 28;
-  const paddingBottom = 42;
-
-  const innerWidth =
-    width - paddingLeft - paddingRight;
-
-  const innerHeight =
-    height - paddingTop - paddingBottom;
-
-  const max = Math.max(
-    1,
-    ...data.map((item) => item.value),
-  );
-
-  const points = data.map(
-    (item, index) => {
-      const x =
-        paddingLeft +
-        (index /
-          Math.max(1, data.length - 1)) *
-          innerWidth;
-
-      const y =
-        paddingTop +
-        innerHeight -
-        (item.value / max) *
-          innerHeight;
-
-      return {
-        x,
-        y,
-        ...item,
-      };
-    },
-  );
-
-  const linePath = points
-    .map(
-      (point, index) =>
-        `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`,
-    )
-    .join(" ");
-
-  const areaPath = `${linePath} L ${points[points.length - 1]?.x ?? paddingLeft} ${
-    paddingTop + innerHeight
-  } L ${points[0]?.x ?? paddingLeft} ${
-    paddingTop + innerHeight
-  } Z`;
-
-  const gridValues = [0, 0.25, 0.5, 0.75, 1];
-
-  return (
-    <div className="w-full overflow-hidden">
-
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="h-auto w-full overflow-visible"
-        role="img"
-        aria-label="Weekly submission momentum"
-      >
-
-        <defs>
-
-          <linearGradient
-            id="momentumArea"
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
-            <stop
-              offset="0%"
-              stopColor="#8b5cf6"
-              stopOpacity="0.28"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#8b5cf6"
-              stopOpacity="0"
-            />
-          </linearGradient>
-
-          <linearGradient
-            id="momentumLine"
-            x1="0"
-            y1="0"
-            x2="1"
-            y2="0"
-          >
-            <stop
-              offset="0%"
-              stopColor="#8b5cf6"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#60a5fa"
-            />
-          </linearGradient>
-
-        </defs>
-
-        {gridValues.map(
-          (ratio) => {
-            const y =
-              paddingTop +
-              innerHeight -
-              ratio * innerHeight;
-
-            return (
-              <line
-                key={ratio}
-                x1={paddingLeft}
-                x2={width - paddingRight}
-                y1={y}
-                y2={y}
-                stroke="white"
-                strokeOpacity="0.07"
-                strokeDasharray="4 7"
-              />
-            );
-          },
-        )}
-
-        <path
-          d={areaPath}
-          fill="url(#momentumArea)"
-        />
-
-        <path
-          d={linePath}
-          fill="none"
-          stroke="url(#momentumLine)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {points.map(
-          (point, index) => (
-            <g key={index}>
-
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="6"
-                fill="#08090d"
-                stroke="#a78bfa"
-                strokeWidth="3"
-              />
-
-              {index ===
-                points.length - 1 && (
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r="10"
-                  fill="none"
-                  stroke="#a78bfa"
-                  strokeOpacity="0.25"
-                  strokeWidth="5"
-                />
-              )}
-
-              <text
-                x={point.x}
-                y={
-                  paddingTop +
-                  innerHeight +
-                  30
-                }
-                textAnchor="middle"
-                fill="white"
-                fillOpacity="0.6"
-                fontSize="13"
-                fontWeight="600"
-              >
-                {point.label}
-              </text>
-
-            </g>
-          ),
-        )}
-
-        <text
-          x={paddingLeft - 12}
-          y={paddingTop + 5}
-          textAnchor="end"
-          fill="white"
-          fillOpacity="0.55"
-          fontSize="12"
-          fontWeight="600"
-        >
-          {max}
-        </text>
-
-        <text
-          x={paddingLeft - 12}
-          y={
-            paddingTop +
-            innerHeight +
-            4
-          }
-          textAnchor="end"
-          fill="white"
-          fillOpacity="0.55"
-          fontSize="12"
-          fontWeight="600"
-        >
-          0
-        </text>
-
-      </svg>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   DIFFICULTY DONUT
-============================================================ */
-
-function DifficultyDonut({
-  easy,
-  medium,
-  hard,
-  total,
-}: {
-  easy: number;
-  medium: number;
-  hard: number;
-  total: number;
-}) {
-  const radius = 82;
-  const circumference =
-    2 * Math.PI * radius;
-
-  const values = [
-    {
-      value: easy,
-      color: "#34d399",
-    },
-    {
-      value: medium,
-      color: "#fb923c",
-    },
-    {
-      value: hard,
-      color: "#f87171",
-    },
-  ];
-
-  let offset = 0;
-
-  return (
-    <div className="relative h-[230px] w-[230px]">
-
-      <svg
-        viewBox="0 0 220 220"
-        className="h-full w-full -rotate-90"
-      >
-
-        <circle
-          cx="110"
-          cy="110"
-          r={radius}
-          fill="none"
-          stroke="white"
-          strokeOpacity="0.06"
-          strokeWidth="22"
-        />
-
-        {values.map(
-          (item, index) => {
-            const percentage =
-              total > 0
-                ? item.value / total
-                : 0;
-
-            const length =
-              percentage *
-              circumference;
-
-            const currentOffset =
-              -offset;
-
-            offset += length;
-
-            return (
-              <circle
-                key={index}
-                cx="110"
-                cy="110"
-                r={radius}
-                fill="none"
-                stroke={item.color}
-                strokeWidth="22"
-                strokeLinecap="round"
-                strokeDasharray={`${length} ${circumference - length}`}
-                strokeDashoffset={
-                  currentOffset
-                }
-              />
-            );
-          },
-        )}
-
-      </svg>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-
-        <p className="text-4xl font-bold text-white">
-          {total}
-        </p>
-
-        <p className="mt-1 text-sm font-semibold text-white/60">
-          solved
-        </p>
-
-      </div>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   RADAR
-============================================================ */
-
-function RadarChart({
-  values,
-}: {
-  values: {
-    label: string;
-    value: number;
-  }[];
-}) {
-  const center = 180;
-  const radius = 105;
-
-  const levels = [20, 40, 60, 80, 100];
-
-  const getPoint = (
-    index: number,
-    value: number,
-  ) => {
-    const angle =
-      -Math.PI / 2 +
-      (index / values.length) *
-        Math.PI *
-        2;
-
-    const distance =
-      (value / 100) * radius;
-
-    return {
-      x:
-        center +
-        Math.cos(angle) *
-          distance,
-      y:
-        center +
-        Math.sin(angle) *
-          distance,
-    };
-  };
-
-  const getGridPoint = (
-    index: number,
-    ratio: number,
-  ) => {
-    const angle =
-      -Math.PI / 2 +
-      (index / values.length) *
-        Math.PI *
-        2;
-
-    const distance =
-      ratio * radius;
-
-    return {
-      x:
-        center +
-        Math.cos(angle) *
-          distance,
-      y:
-        center +
-        Math.sin(angle) *
-          distance,
-    };
-  };
-
-  const gridPolygon = (
-    ratio: number,
-  ) =>
-    values
-      .map((_, index) => {
-        const point =
-          getGridPoint(
-            index,
-            ratio,
-          );
-
-        return `${point.x},${point.y}`;
-      })
-      .join(" ");
-
-  const dataPolygon = values
-    .map((item, index) => {
-      const point = getPoint(
-        index,
-        item.value,
-      );
-
-      return `${point.x},${point.y}`;
-    })
-    .join(" ");
-
-  return (
-    <div className="mx-auto w-full max-w-[430px]">
-
-      <svg
-        viewBox="0 0 360 360"
-        className="h-auto w-full"
-        role="img"
-        aria-label="Competitive profile radar chart"
-      >
-
-        {levels.map(
-          (level) => (
-            <polygon
-              key={level}
-              points={gridPolygon(
-                level / 100,
-              )}
-              fill="none"
-              stroke="white"
-              strokeOpacity="0.08"
-              strokeWidth="1"
-            />
-          ),
-        )}
-
-        {values.map(
-          (_, index) => {
-            const point =
-              getGridPoint(
-                index,
-                1,
-              );
-
-            return (
-              <line
-                key={index}
-                x1={center}
-                y1={center}
-                x2={point.x}
-                y2={point.y}
-                stroke="white"
-                strokeOpacity="0.08"
-              />
-            );
-          },
-        )}
-
-        <polygon
-          points={dataPolygon}
-          fill="#8b5cf6"
-          fillOpacity="0.22"
-          stroke="#a78bfa"
-          strokeWidth="3"
-          strokeLinejoin="round"
-        />
-
-        {values.map(
-          (item, index) => {
-            const point = getPoint(
-              index,
-              item.value,
-            );
-
-            const labelPoint =
-              getGridPoint(
-                index,
-                1.22,
-              );
-
-            return (
-              <g key={item.label}>
-
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r="5"
-                  fill="#08090d"
-                  stroke="#c4b5fd"
-                  strokeWidth="3"
-                />
-
-                <text
-                  x={labelPoint.x}
-                  y={labelPoint.y}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="white"
-                  fillOpacity="0.85"
-                  fontSize="13"
-                  fontWeight="700"
-                >
-                  {item.label}
-                </text>
-
-              </g>
-            );
-          },
-        )}
-
-      </svg>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   WEEKDAY CHART
-============================================================ */
-
-function WeekdayChart({
-  data,
-  max,
-}: {
-  data: {
-    name: string;
-    value: number;
-  }[];
-  max: number;
-}) {
-  return (
-    <div className="space-y-4">
-
-      {data.map((item) => {
-
-        const width =
-          (item.value / max) *
-          100;
-
-        return (
-          <div key={item.name}>
-
-            <div className="mb-2 flex items-center justify-between">
-
-              <span className="text-sm font-bold text-white">
-                {item.name}
-              </span>
-
-              <span className="text-sm font-bold text-white/70">
-                {item.value}
-              </span>
-
-            </div>
-
-            <div className="h-3 overflow-hidden rounded-full bg-white/[0.06]">
-
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-700"
-                style={{
-                  width: `${width}%`,
-                }}
-              />
-
-            </div>
-
-          </div>
-        );
-      })}
-
-    </div>
-  );
-}
-
-/* ============================================================
-   BADGE
-============================================================ */
-
-function BadgeCard({
-  badge,
-  index,
-}: {
-  badge: LeetCodeBadge;
-  index: number;
-}) {
-  return (
-    <div
-      className="group relative min-h-[145px] overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-black/25 p-4 text-center transition-all duration-500 hover:-translate-y-1 hover:border-yellow-400/20 hover:shadow-xl hover:shadow-yellow-500/[0.07]"
-      style={{
-        animationDelay: `${index * 40}ms`,
-      }}
-    >
-
-      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-yellow-400/[0.08] blur-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
-      <div className="relative flex h-full flex-col items-center justify-center">
-
-        {badge.icon ? (
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.06] bg-black/20">
-
-            <img
-              src={badge.icon}
-              alt={badge.name}
-              className="h-11 w-11 object-contain drop-shadow-lg transition-all duration-500 group-hover:scale-110"
-            />
-
-          </div>
-        ) : (
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-500/[0.08]">
-
-            <Award className="h-7 w-7 text-yellow-300" />
-
-          </div>
-        )}
-
-        <p className="line-clamp-2 text-sm font-bold leading-5 text-white">
-          {badge.name}
-        </p>
-
-        {badge.earned_at && (
-          <p className="mt-2 text-sm font-medium text-white/55">
-            {new Date(
-              badge.earned_at,
-            ).toLocaleDateString(
-              undefined,
-              {
-                month: "short",
-                year: "numeric",
-              },
-            )}
-          </p>
-        )}
-
-      </div>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   HEATMAP
-============================================================ */
-
-function LeetCodeHeatmap({
-  calendar,
-}: {
-  calendar: LeetCodeCalendarEntry[];
-}) {
-  const map = useMemo(() => {
-    const result = new Map<
-      string,
-      number
-    >();
-
-    calendar.forEach((entry) => {
-      const key = normalizeDateKey(
-        entry.activity_date,
-      );
-
-      if (!key) return;
-
-      result.set(
-        key,
-        Number(
-          entry.submission_count || 0,
-        ),
-      );
-    });
-
-    return result;
-  }, [calendar]);
-
-  const weeks = useMemo(() => {
-    const today =
-      normalizeDateKey(
-        new Date(),
-      );
-
-    const end =
-      parseDateKey(today);
-
-    const day =
-      end.getDay();
-
-    end.setDate(
-      end.getDate() +
-        (6 - day),
-    );
-
-    const start =
-      new Date(end);
-
-    start.setDate(
-      start.getDate() -
-        364,
-    );
-
-    const startDay =
-      start.getDay();
-
-    start.setDate(
-      start.getDate() -
-        startDay,
-    );
-
-    const result: {
-      date: string;
-      count: number;
-    }[][] = [];
-
-    let cursor =
-      new Date(start);
-
-    while (
-      cursor <= end
-    ) {
-      const week: {
-        date: string;
-        count: number;
-      }[] = [];
-
-      for (
-        let dayIndex = 0;
-        dayIndex < 7;
-        dayIndex++
-      ) {
-        const key =
-          normalizeDateKey(
-            cursor,
-          );
-
-        week.push({
-          date: key,
-          count:
-            map.get(key) || 0,
-        });
-
-        cursor.setDate(
-          cursor.getDate() + 1,
-        );
-      }
-
-      result.push(week);
-    }
-
-    return result;
-  }, [map]);
-
-  const getLevel = (
-    count: number,
-  ) => {
-    if (count === 0) return 0;
-    if (count <= 1) return 1;
-    if (count <= 3) return 2;
-    if (count <= 6) return 3;
-
-    return 4;
-  };
-
-  const getCellClass = (
-    level: number,
-  ) => {
-    switch (level) {
-      case 1:
-        return "bg-emerald-500/25";
-
-      case 2:
-        return "bg-emerald-500/45";
-
-      case 3:
-        return "bg-emerald-500/70";
-
-      case 4:
-        return "bg-emerald-400";
-
-      default:
-        return "bg-white/[0.055]";
-    }
-  };
-
-  const monthLabels =
-    useMemo(() => {
-      const labels: {
-        label: string;
-        week: number;
-      }[] = [];
-
-      let lastMonth = "";
-
-      weeks.forEach(
-        (
-          week,
-          weekIndex,
-        ) => {
-          const key =
-            week[0]?.date;
-
-          if (!key) return;
-
-          const month =
-            formatMonth(key);
-
-          if (
-            month !== lastMonth
-          ) {
-            labels.push({
-              label: month,
-              week: weekIndex,
-            });
-
-            lastMonth =
-              month;
-          }
+    const styles = {
+        violet: {
+            box: "bg-violet-500/[0.08]",
+            icon: "text-violet-300",
         },
-      );
+        orange: {
+            box: "bg-orange-500/[0.08]",
+            icon: "text-orange-300",
+        },
+        blue: {
+            box: "bg-blue-500/[0.08]",
+            icon: "text-blue-300",
+        },
+        emerald: {
+            box: "bg-emerald-500/[0.08]",
+            icon: "text-emerald-300",
+        },
+    };
 
-      return labels;
-    }, [weeks]);
+    const style = styles[accent];
 
-  return (
-    <div className="w-full overflow-x-auto pb-2">
+    return (
+        <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <p className="text-sm font-medium text-white/65">
+                        {label}
+                    </p>
 
-      <div className="min-w-[820px]">
-
-        {/* MONTHS */}
-
-        <div className="mb-3 grid grid-cols-[42px_1fr]">
-
-          <div />
-
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`,
-            }}
-          >
-
-            {weeks.map(
-              (_, index) => {
-                const month =
-                  monthLabels.find(
-                    (item) =>
-                      item.week ===
-                      index,
-                  );
-
-                return (
-                  <div
-                    key={index}
-                    className="text-sm font-semibold text-white/65"
-                  >
-                    {month?.label ||
-                      ""}
-                  </div>
-                );
-              },
-            )}
-
-          </div>
-        </div>
-
-        {/* GRID */}
-
-        <div className="grid grid-cols-[42px_1fr]">
-
-          <div className="mr-3 grid grid-rows-7 text-sm font-semibold text-white/60">
-
-            <span />
-
-            <span className="flex items-center">
-              Mon
-            </span>
-
-            <span />
-
-            <span className="flex items-center">
-              Wed
-            </span>
-
-            <span />
-
-            <span className="flex items-center">
-              Fri
-            </span>
-
-            <span />
-
-          </div>
-
-          <div
-            className="grid w-full gap-[4px]"
-            style={{
-              gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`,
-            }}
-          >
-
-            {weeks.map(
-              (
-                week,
-                weekIndex,
-              ) => (
-                <div
-                  key={
-                    weekIndex
-                  }
-                  className="grid grid-rows-7 gap-[4px]"
-                >
-
-                  {week.map(
-                    (day) => {
-
-                      const level =
-                        getLevel(
-                          day.count,
-                        );
-
-                      return (
-                        <div
-                          key={
-                            day.date
-                          }
-                          title={`${formatDate(day.date)} · ${day.count} submissions`}
-                          className={`aspect-square w-full max-w-[16px] justify-self-center rounded-[4px] ${getCellClass(level)} transition-all duration-150 hover:z-20 hover:scale-150 hover:ring-2 hover:ring-white/30`}
-                        />
-                      );
-                    },
-                  )}
-
+                    <p className="mt-1.5 text-2xl font-bold tracking-tight text-white">
+                        {value}
+                    </p>
                 </div>
-              ),
+
+                <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.box}`}
+                >
+                    <Icon
+                        className={`h-5 w-5 ${style.icon}`}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ============================================================
+   SECTION HEADING
+============================================================ */
+
+function SectionHeading({
+    icon: Icon,
+    title,
+    subtitle,
+}: {
+    icon: React.ElementType;
+    title: string;
+    subtitle: string;
+}) {
+    return (
+        <div className="flex items-start gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.045]">
+                <Icon className="h-5 w-5 text-violet-300" />
+            </div>
+
+            <div>
+                <h2 className="text-xl font-bold tracking-tight text-white md:text-2xl">
+                    {title}
+                </h2>
+
+                <p className="mt-1.5 text-sm leading-6 text-white/65 md:text-base">
+                    {subtitle}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+/* ============================================================
+   METRIC BOX
+============================================================ */
+
+function MetricBox({
+    label,
+    value,
+}: {
+    label: string;
+    value: string | number;
+}) {
+    return (
+        <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+            <p className="text-sm font-medium text-white/60">
+                {label}
+            </p>
+
+            <p className="mt-1.5 text-xl font-bold text-white md:text-2xl">
+                {value}
+            </p>
+        </div>
+    );
+}
+
+/* ============================================================
+   METRIC PILL
+============================================================ */
+
+function MetricPill({
+    label,
+    value,
+}: {
+    label: string;
+    value: string | number;
+}) {
+    return (
+        <div className="rounded-xl border border-white/[0.07] bg-black/20 px-4 py-2.5">
+            <span className="text-sm font-medium text-white/60">
+                {label}
+            </span>
+
+            <span className="ml-2 text-sm font-bold text-white">
+                {value}
+            </span>
+        </div>
+    );
+}
+
+/* ============================================================
+   STRENGTH / WEAKNESS
+============================================================ */
+
+function StrengthWeaknessCard({
+    type,
+    topics,
+}: {
+    type: "strength" | "weakness";
+    topics: {
+        topic: string;
+        count: number;
+        signal: number;
+        recent: number;
+    }[];
+}) {
+    const isStrength =
+        type === "strength";
+
+    return (
+        <Card
+            className={`overflow-hidden shadow-2xl shadow-black/25 ${
+                isStrength
+                    ? "border-emerald-400/[0.10] bg-gradient-to-br from-emerald-500/[0.035] via-white/[0.025] to-transparent"
+                    : "border-red-400/[0.10] bg-gradient-to-br from-red-500/[0.03] via-white/[0.025] to-transparent"
+            }`}
+        >
+            <CardContent className="p-7 md:p-8">
+                <div className="flex items-center gap-4">
+                    <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                            isStrength
+                                ? "bg-emerald-500/[0.09]"
+                                : "bg-red-500/[0.08]"
+                        }`}
+                    >
+                        {isStrength ? (
+                            <TrendingUp className="h-6 w-6 text-emerald-300" />
+                        ) : (
+                            <TrendingDown className="h-6 w-6 text-red-300" />
+                        )}
+                    </div>
+
+                    <div>
+                        <h2 className="text-xl font-bold text-white">
+                            {isStrength
+                                ? "Your Strengths"
+                                : "Your Weaknesses"}
+                        </h2>
+
+                        <p className="mt-1 text-sm text-white/65">
+                            {isStrength
+                                ? "Topics showing the strongest preparation signals."
+                                : "Topics that currently need more attention."}
+                        </p>
+                    </div>
+                </div>
+
+                {topics.length > 0 ? (
+                    <div className="mt-7 space-y-5">
+                        {topics.map(
+                            (topic) => (
+                                <div
+                                    key={
+                                        topic.topic
+                                    }
+                                >
+                                    <div className="mb-2.5 flex items-center justify-between">
+                                        <div>
+                                            <span className="text-base font-semibold capitalize text-white">
+                                                {formatTopic(
+                                                    topic.topic,
+                                                )}
+                                            </span>
+
+                                            <span className="ml-2 text-sm font-medium text-white/50">
+                                                {
+                                                    topic.count
+                                                }{" "}
+                                                solved
+                                            </span>
+                                        </div>
+
+                                        <span
+                                            className={`text-sm font-bold ${
+                                                isStrength
+                                                    ? "text-emerald-300"
+                                                    : "text-red-300"
+                                            }`}
+                                        >
+                                            {
+                                                topic.signal
+                                            }
+                                        </span>
+                                    </div>
+
+                                    <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.07]">
+                                        <div
+                                            className={`h-full rounded-full ${
+                                                isStrength
+                                                    ? "bg-gradient-to-r from-emerald-500 to-cyan-400"
+                                                    : "bg-gradient-to-r from-red-500 to-orange-400"
+                                            }`}
+                                            style={{
+                                                width: `${topic.signal}%`,
+                                            }}
+                                        />
+                                    </div>
+
+                                    <p className="mt-2 text-sm text-white/55">
+                                        {topic.recent >
+                                        0
+                                            ? `${topic.recent} recent practice signal${topic.recent === 1 ? "" : "s"}`
+                                            : "Limited recent practice"}
+                                    </p>
+                                </div>
+                            ),
+                        )}
+                    </div>
+                ) : (
+                    <EmptyAnalysis
+                        message={
+                            isStrength
+                                ? "Solve more problems to identify your strongest areas."
+                                : "Solve more problems to identify areas that need attention."
+                        }
+                    />
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+/* ============================================================
+   EMPTY
+============================================================ */
+
+function EmptyAnalysis({
+    message,
+}: {
+    message: string;
+}) {
+    return (
+        <div className="mt-6 rounded-2xl border border-dashed border-white/[0.10] bg-black/15 px-6 py-12 text-center">
+            <Activity className="mx-auto h-7 w-7 text-white/40" />
+
+            <p className="mx-auto mt-4 max-w-md text-base font-medium leading-6 text-white/70">
+                {message}
+            </p>
+        </div>
+    );
+}
+
+/* ============================================================
+   CHART TOOLTIP
+============================================================ */
+
+function ChartTooltip({
+    active,
+    payload,
+    label,
+}: any) {
+    if (
+        !active ||
+        !payload ||
+        !payload.length
+    ) {
+        return null;
+    }
+
+    return (
+        <div className="rounded-xl border border-white/[0.10] bg-[#090a0f]/95 px-4 py-3 shadow-2xl backdrop-blur-xl">
+            {label && (
+                <p className="mb-1.5 text-sm font-semibold text-white">
+                    {label}
+                </p>
             )}
 
-          </div>
-
+            {payload.map(
+                (
+                    item: any,
+                    index: number,
+                ) => (
+                    <p
+                        key={index}
+                        className="text-sm font-medium text-white/75"
+                    >
+                        {item.name}:{" "}
+                        <span className="font-bold text-white">
+                            {item.value}
+                        </span>
+                    </p>
+                ),
+            )}
         </div>
-
-        {/* LEGEND */}
-
-        <div className="mt-5 flex items-center justify-end gap-2 text-sm font-semibold text-white/60">
-
-          <span>
-            Less
-          </span>
-
-          {[0, 1, 2, 3, 4].map(
-            (level) => (
-              <div
-                key={level}
-                className={`h-3 w-3 rounded-[3px] ${getCellClass(level)}`}
-              />
-            ),
-          )}
-
-          <span>
-            More
-          </span>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
+    );
 }
