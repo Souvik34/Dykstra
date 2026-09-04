@@ -178,11 +178,10 @@
         );
     };
 
-    export const updateInterviewPhaseRepo = async (
+   export const updateInterviewPhaseRepo = async (
     sessionId,
     phase
 ) => {
-
     const { rows } = await pool.query(
         `
         UPDATE interview_sessions
@@ -192,7 +191,7 @@
             last_interrupt_at_version = NULL,
             coding_started =
                 CASE
-                    WHEN $2 = 'CODING' THEN TRUE
+                    WHEN $2::text = 'CODING' THEN TRUE
                     ELSE coding_started
                 END
         WHERE id = $1
@@ -202,10 +201,10 @@
     );
 
     console.log("DB Phase:", rows[0]?.phase);
+    console.log("Coding Started:", rows[0]?.coding_started);
 
     return rows[0];
 };
-
     export const updateCodeSnapshotRepo = async ({
         sessionId,
         code
