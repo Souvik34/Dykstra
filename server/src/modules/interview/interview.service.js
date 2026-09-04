@@ -60,7 +60,7 @@ const isInterviewExpired = (session) => {
         return false;
     }
 
-    const startedAt = new Date(session.created_at).getTime();
+   const startedAt = new Date(session.started_at).getTime();
 
     return Date.now() >= startedAt + INTERVIEW_DURATION;
 };
@@ -1906,7 +1906,7 @@ export const getInterviewByIdService = async ({
     delete question.expectedComplexity;
 
 
-   const startedAt = new Date(session.created_at);
+   const startedAt = new Date(session.started_at);
 
 if (isNaN(startedAt.getTime())) {
     console.error(
