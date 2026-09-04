@@ -177,8 +177,17 @@
         [sessionId]
         );
     };
-
-   export const updateInterviewPhaseRepo = async (
+export const markCodeSubmittedRepo = async (sessionId) => {
+    await pool.query(
+        `
+        UPDATE interview_sessions
+        SET code_submitted = TRUE
+        WHERE id = $1
+        `,
+        [sessionId]
+    );
+};
+export const updateInterviewPhaseRepo = async (
     sessionId,
     phase
 ) => {
@@ -186,12 +195,12 @@
         `
         UPDATE interview_sessions
         SET
-            phase = $2,
+            phase = $2::varchar,
             interruption_count = 0,
             last_interrupt_at_version = NULL,
             coding_started =
                 CASE
-                    WHEN $2::text = 'CODING' THEN TRUE
+                    WHEN $2::varchar = 'CODING' THEN TRUE
                     ELSE coding_started
                 END
         WHERE id = $1
@@ -205,6 +214,8 @@
 
     return rows[0];
 };
+
+
     export const updateCodeSnapshotRepo = async ({
         sessionId,
         code

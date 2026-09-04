@@ -14,7 +14,8 @@ import {
     getInterviewQuestionHistoryRepo,
     saveInterviewQuestionHistoryRepo,
     getInterviewHistoryRepo,
-    getInterviewReportRepo
+    getInterviewReportRepo,
+    markCodeSubmittedRepo,
 } from "./interview.repository.js";
 
 import { getIO } from "../../socket.js";
@@ -1028,7 +1029,7 @@ Could you briefly introduce yourself?
         codeDetected &&
         session.type === "DSA"
     ) {
-
+await markCodeSubmittedRepo(sessionId);
         console.log(
             "========== CODE SUBMISSION =========="
         );
@@ -1710,7 +1711,7 @@ const finalCode =
         : "";
 
 const codeWritten =
-    finalCode.length > 0;
+    session.coding_started === true;
 
 rawFeedback =
     await generateInterviewFeedback({
@@ -1725,7 +1726,7 @@ rawFeedback =
             interviewPackage.interviewGuide || {},
         code: finalCode,
         codeWritten,
-        codeSubmitted: false
+     codeSubmitted: session.code_submitted === true
     });
 
     } catch (feedbackError) {
