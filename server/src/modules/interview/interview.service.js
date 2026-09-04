@@ -1906,24 +1906,36 @@ export const getInterviewByIdService = async ({
     delete question.expectedComplexity;
 
 
-    return {
-session: {
-    id: session.id,
-    language: session.language,
-    difficulty: session.difficulty,
-    phase: session.phase,
-    status: session.status,
-    startedAt: session.created_at,
-    expiresAt:
-        new Date(
-            new Date(session.created_at).getTime() +
-            INTERVIEW_DURATION
-        ).toISOString()
-},
+   const startedAt = new Date(session.created_at);
 
-        firstQuestion:
-            question
-    };
+if (isNaN(startedAt.getTime())) {
+    console.error(
+        "Invalid interview created_at:",
+        session.created_at
+    );
+
+    throw new Error(
+        "Invalid interview start time"
+    );
+}
+
+const expiresAt = new Date(
+    startedAt.getTime() + INTERVIEW_DURATION
+);
+
+return {
+    session: {
+        id: session.id,
+        language: session.language,
+        difficulty: session.difficulty,
+        phase: session.phase,
+        status: session.status,
+        startedAt: startedAt.toISOString(),
+        expiresAt: expiresAt.toISOString()
+    },
+
+    firstQuestion: question
+};
 };
 
 
