@@ -41,8 +41,7 @@ const pathname = useRouterState({
     loadRevisions();
 
     // optional auto-refresh so system stays consistent
-    const interval = setInterval(loadRevisions, 60000);
-    return () => clearInterval(interval);
+    
   }, []);
 
   if (loading) return null; // or a loader if you want
