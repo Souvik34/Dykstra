@@ -195,17 +195,15 @@ const onEndInterview = async () => {
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Topbar */}
       <header className="flex items-center justify-between border-b border-border/60 bg-card/40 px-4 py-3">
-        <div className="flex items-center gap-3">
-          
-     
-          <span className="text-sm font-medium">{problem.title}</span>
-          <Badge variant="outline" className={difficultyTone}>
-            {problem.difficulty}
-          </Badge>
-          <Badge variant="secondary" className="hidden sm:inline-flex">
-            {problem.topic}
-          </Badge>
-        </div>
+    <div className="flex items-center gap-3">
+  <Badge variant="outline" className={difficultyTone}>
+    {problem.difficulty}
+  </Badge>
+
+  <Badge variant="secondary" className="hidden sm:inline-flex">
+    {problem.topic}
+  </Badge>
+</div>
 
     <AlertDialog
   open={endDialogOpen}
