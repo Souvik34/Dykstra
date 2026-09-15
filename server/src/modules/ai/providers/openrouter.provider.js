@@ -3,10 +3,10 @@ import OpenAI from "openai";
 const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     baseURL: "https://openrouter.ai/api/v1",
-    defaultHeaders: {
-        "HTTP-Referer": "http://localhost:5000",
-        "X-Title": "DSA Tracker Interview AI"
-    }
+   defaultHeaders: {
+    "HTTP-Referer": "https://dykstra.in",
+    "X-Title": "Dykstra"
+}
 });
 
 const MODELS = [
@@ -46,8 +46,12 @@ const response =
             }
         ],
 
-       max_tokens: 8000,
-temperature: 0.2
+        response_format: {
+            type: "json_object"
+        },
+
+        max_tokens: 8000,
+        temperature: 0.2
     });
 
             console.log(`Success -> ${model}`);
