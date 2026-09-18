@@ -1,8 +1,64 @@
-export function dijkstra(graph, start, target) {
-  const distances = {};
-  const previous = {};
-  const visited = new Set();
-  const steps = [];
+export type DijkstraEdge = {
+  node: string;
+  weight: number;
+};
+
+export type DijkstraGraph = Record<string, DijkstraEdge[]>;
+
+type PriorityQueueItem = {
+  node: string;
+  distance: number;
+};
+
+export type DijkstraStep =
+  | {
+      type: "visit";
+      node: string;
+      distances: Record<string, number>;
+      visited: string[];
+    }
+  | {
+      type: "explore";
+      from: string;
+      to: string;
+      weight: number;
+      distances: Record<string, number>;
+      visited: string[];
+    }
+  | {
+      type: "relax";
+      from: string;
+      to: string;
+      weight: number;
+      distance: number;
+      distances: Record<string, number>;
+      previous: Record<string, string | null>;
+      visited: string[];
+    }
+  | {
+      type: "path";
+      path: string[];
+      distance: number;
+      distances: Record<string, number>;
+      visited: string[];
+    };
+
+export type DijkstraResult = {
+  steps: DijkstraStep[];
+  distances: Record<string, number>;
+  previous: Record<string, string | null>;
+  path: string[];
+};
+
+export function dijkstra(
+  graph: DijkstraGraph,
+  start: string,
+  target: string,
+): DijkstraResult {
+  const distances: Record<string, number> = {};
+  const previous: Record<string, string | null> = {};
+  const visited = new Set<string>();
+  const steps: DijkstraStep[] = [];
 
   // Initialize distances
   for (const node of Object.keys(graph)) {
@@ -13,16 +69,31 @@ export function dijkstra(graph, start, target) {
   distances[start] = 0;
 
   // Helper to create a snapshot of current distances
-  const getDistanceSnapshot = () => ({ ...distances });
+  const getDistanceSnapshot = () => ({
+    ...distances,
+  });
 
   // Priority queue
-  const priorityQueue = [{ node: start, distance: 0 }];
+  const priorityQueue: PriorityQueueItem[] = [
+    {
+      node: start,
+      distance: 0,
+    },
+  ];
 
   while (priorityQueue.length > 0) {
     // Get node with smallest distance
-    priorityQueue.sort((a, b) => a.distance - b.distance);
+    priorityQueue.sort(
+      (a, b) => a.distance - b.distance,
+    );
 
     const current = priorityQueue.shift();
+
+    // TypeScript knows shift() can return undefined
+    if (!current) {
+      break;
+    }
+
     const currentNode = current.node;
 
     // Skip if already visited
@@ -64,7 +135,8 @@ export function dijkstra(graph, start, target) {
         continue;
       }
 
-      const newDistance = distances[currentNode] + weight;
+      const newDistance =
+        distances[currentNode] + weight;
 
       // Relax edge
       if (newDistance < distances[neighbor]) {
@@ -91,10 +163,10 @@ export function dijkstra(graph, start, target) {
   }
 
   // Build shortest path
-  const path = [];
+  const path: string[] = [];
 
   if (distances[target] !== Infinity) {
-    let current = target;
+    let current: string | null = target;
 
     while (current !== null) {
       path.unshift(current);

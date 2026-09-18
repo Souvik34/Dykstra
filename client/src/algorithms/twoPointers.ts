@@ -1,5 +1,35 @@
-export function twoPointers(array, target) {
-  const steps = [];
+export type TwoPointersStep = {
+  type:
+    | "start"
+    | "check"
+    | "found"
+    | "move-left"
+    | "move-right"
+    | "new-range"
+    | "not-found";
+
+  array: number[];
+  left: number;
+  right: number;
+  target: number;
+
+  leftValue?: number;
+  rightValue?: number;
+  sum?: number;
+  reason?: string;
+};
+
+export type TwoPointersResult = {
+  steps: TwoPointersStep[];
+  found: boolean;
+  indices: [number, number] | [];
+};
+
+export function twoPointers(
+  array: number[],
+  target: number,
+): TwoPointersResult {
+  const steps: TwoPointersStep[] = [];
 
   let left = 0;
   let right = array.length - 1;

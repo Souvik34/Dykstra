@@ -1,15 +1,63 @@
-export function binarySearch(array, target) {
-  const steps = [];
+export type BinarySearchSnapshot = {
+  left: number;
+  mid: number | null;
+  right: number;
+  array: number[];
+  value?: number;
+  target?: number;
+  index?: number;
+  eliminated?: [number, number];
+};
+
+export type BinarySearchStep =
+  | ({
+      type: "start";
+    } & BinarySearchSnapshot)
+  | ({
+      type: "check";
+    } & BinarySearchSnapshot)
+  | ({
+      type: "found";
+    } & BinarySearchSnapshot)
+  | ({
+      type: "move-right";
+    } & BinarySearchSnapshot)
+  | ({
+      type: "move-left";
+    } & BinarySearchSnapshot)
+  | ({
+      type: "new-range";
+    } & BinarySearchSnapshot)
+  | {
+      type: "not-found";
+      left: number;
+      right: number;
+      mid: null;
+      array: number[];
+      target: number;
+    };
+
+export type BinarySearchResult = {
+  steps: BinarySearchStep[];
+  found: boolean;
+  index: number;
+};
+
+export function binarySearch(
+  array: number[],
+  target: number,
+): BinarySearchResult {
+  const steps: BinarySearchStep[] = [];
 
   let left = 0;
   let right = array.length - 1;
 
   const createSnapshot = (
-    l,
-    m,
-    r,
-    extra = {}
-  ) => ({
+    l: number,
+    m: number | null,
+    r: number,
+    extra: Partial<BinarySearchSnapshot> = {},
+  ): BinarySearchSnapshot => ({
     left: l,
     mid: m,
     right: r,
@@ -22,13 +70,12 @@ export function binarySearch(array, target) {
     ...createSnapshot(
       left,
       Math.floor((left + right) / 2),
-      right
+      right,
     ),
   });
 
   while (left <= right) {
-    const mid =
-      Math.floor((left + right) / 2);
+    const mid = Math.floor((left + right) / 2);
 
     steps.push({
       type: "check",
@@ -39,7 +86,7 @@ export function binarySearch(array, target) {
         {
           value: array[mid],
           target,
-        }
+        },
       ),
     });
 
@@ -54,7 +101,7 @@ export function binarySearch(array, target) {
             value: array[mid],
             target,
             index: mid,
-          }
+          },
         ),
       });
 
@@ -75,11 +122,8 @@ export function binarySearch(array, target) {
           {
             value: array[mid],
             target,
-            eliminated: [
-              left,
-              mid,
-            ],
-          }
+            eliminated: [left, mid],
+          },
         ),
       });
 
@@ -94,11 +138,8 @@ export function binarySearch(array, target) {
           {
             value: array[mid],
             target,
-            eliminated: [
-              mid,
-              right,
-            ],
-          }
+            eliminated: [mid, right],
+          },
         ),
       });
 
@@ -106,15 +147,16 @@ export function binarySearch(array, target) {
     }
 
     if (left <= right) {
-      const nextMid =
-        Math.floor((left + right) / 2);
+      const nextMid = Math.floor(
+        (left + right) / 2,
+      );
 
       steps.push({
         type: "new-range",
         ...createSnapshot(
           left,
           nextMid,
-          right
+          right,
         ),
       });
     }

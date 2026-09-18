@@ -1,20 +1,42 @@
+export type BinarySearchAnswerStep = {
+  type:
+    | "check"
+    | "possible"
+    | "impossible"
+    | "found";
+  left: number;
+  mid: number;
+  right: number;
+  answer: number;
+  speed: number;
+  piles: number[];
+  requiredHours?: number;
+  allowedHours: number;
+  possible?: boolean;
+};
+
+export type BinarySearchAnswerResult = {
+  steps: BinarySearchAnswerStep[];
+  answer: number;
+};
+
 export function binarySearchAnswer(
-  piles,
-  hours
-) {
-  const steps = [];
+  piles: number[],
+  hours: number,
+): BinarySearchAnswerResult {
+  const steps: BinarySearchAnswerStep[] = [];
 
   let left = 1;
   let right = Math.max(...piles);
 
   let answer = right;
 
-  const canFinish = (speed) => {
+  const canFinish = (speed: number): boolean => {
     let requiredHours = 0;
 
     for (const pile of piles) {
       requiredHours += Math.ceil(
-        pile / speed
+        pile / speed,
       );
     }
 
@@ -22,14 +44,15 @@ export function binarySearchAnswer(
   };
 
   while (left <= right) {
-    const mid =
-      Math.floor((left + right) / 2);
+    const mid = Math.floor(
+      (left + right) / 2,
+    );
 
     let requiredHours = 0;
 
     for (const pile of piles) {
       requiredHours += Math.ceil(
-        pile / mid
+        pile / mid,
       );
     }
 

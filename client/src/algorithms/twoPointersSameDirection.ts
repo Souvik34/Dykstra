@@ -1,5 +1,31 @@
-export function twoPointersSameDirection(array) {
-  const steps = [];
+export type TwoPointersSameDirectionStep = {
+  type:
+    | "start"
+    | "check"
+    | "move"
+    | "advance-write"
+    | "skip"
+    | "advance-read"
+    | "complete";
+
+  array: number[];
+  read: number;
+  write: number;
+
+  value?: number;
+  from?: number;
+  to?: number;
+};
+
+export type TwoPointersSameDirectionResult = {
+  steps: TwoPointersSameDirectionStep[];
+  result: number[];
+};
+
+export function twoPointersSameDirection(
+  array: number[],
+): TwoPointersSameDirectionResult {
+  const steps: TwoPointersSameDirectionStep[] = [];
 
   const values = [...array];
 

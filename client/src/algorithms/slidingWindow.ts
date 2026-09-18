@@ -1,5 +1,31 @@
-export function maxSumSubarrayOfSizeK(array, k) {
-  const steps = [];
+export type MaxSumStep = {
+  type: "start" | "add" | "new-max" | "check" | "remove" | "complete";
+  left: number;
+  right: number;
+  windowSum: number;
+  maxSum: number | null;
+  bestStart: number;
+  bestEnd: number;
+  array: number[];
+
+  addedIndex?: number;
+  addedValue?: number;
+  removedIndex?: number;
+  removedValue?: number;
+};
+
+export type MaxSumResult = {
+  steps: MaxSumStep[];
+  maxSum: number;
+  start: number;
+  end: number;
+};
+
+export function maxSumSubarrayOfSizeK(
+  array: number[],
+  k: number,
+): MaxSumResult {
+  const steps: MaxSumStep[] = [];
 
   let left = 0;
   let right = 0;
@@ -105,8 +131,36 @@ export function maxSumSubarrayOfSizeK(array, k) {
 }
 
 
-export function minSizeSubarraySum(array, target) {
-  const steps = [];
+export type MinSizeStep = {
+  type: "add" | "valid" | "new-min" | "remove" | "complete";
+  left: number;
+  right: number;
+  windowSum: number;
+  target: number;
+  minLength: number | null;
+  bestStart: number;
+  bestEnd: number;
+  array: number[];
+
+  addedIndex?: number;
+  addedValue?: number;
+  removedIndex?: number;
+  removedValue?: number;
+  currentLength?: number;
+};
+
+export type MinSizeResult = {
+  steps: MinSizeStep[];
+  minLength: number;
+  start: number;
+  end: number;
+};
+
+export function minSizeSubarraySum(
+  array: number[],
+  target: number,
+): MinSizeResult {
+  const steps: MinSizeStep[] = [];
 
   let left = 0;
   let windowSum = 0;
@@ -115,7 +169,11 @@ export function minSizeSubarraySum(array, target) {
   let bestStart = -1;
   let bestEnd = -1;
 
-  for (let right = 0; right < array.length; right++) {
+  for (
+    let right = 0;
+    right < array.length;
+    right++
+  ) {
     windowSum += array[right];
 
     steps.push({
@@ -127,9 +185,7 @@ export function minSizeSubarraySum(array, target) {
       windowSum,
       target,
       minLength:
-        minLength === Infinity
-          ? null
-          : minLength,
+        minLength === Infinity ? null : minLength,
       bestStart,
       bestEnd,
       array: [...array],
@@ -147,9 +203,7 @@ export function minSizeSubarraySum(array, target) {
         target,
         currentLength,
         minLength:
-          minLength === Infinity
-            ? null
-            : minLength,
+          minLength === Infinity ? null : minLength,
         bestStart,
         bestEnd,
         array: [...array],
@@ -237,15 +291,49 @@ export function minSizeSubarraySum(array, target) {
 }
 
 
-export function longestSubstringWithoutRepeating(string) {
-  const steps = [];
+export type LongestSubstringStep = {
+  type:
+    | "start"
+    | "inspect"
+    | "duplicate"
+    | "move-left"
+    | "new-max"
+    | "update"
+    | "complete";
+
+  left: number;
+  right: number;
+  char: string | null;
+  currentLength: number;
+  maxLength: number;
+  bestStart: number;
+  bestEnd: number;
+  lastSeen: Record<string, number>;
+  string: string;
+
+  previousIndex?: number;
+  longestSubstring?: string;
+};
+
+export type LongestSubstringResult = {
+  steps: LongestSubstringStep[];
+  maxLength: number;
+  longestSubstring: string;
+  start: number;
+  end: number;
+};
+
+export function longestSubstringWithoutRepeating(
+  string: string,
+): LongestSubstringResult {
+  const steps: LongestSubstringStep[] = [];
 
   let left = 0;
   let maxLength = 0;
   let bestStart = 0;
   let bestEnd = -1;
 
-  const lastSeen = new Map();
+  const lastSeen = new Map<string, number>();
 
   steps.push({
     type: "start",
@@ -272,8 +360,7 @@ export function longestSubstringWithoutRepeating(string) {
       left,
       right,
       char,
-      currentLength:
-        right - left + 1,
+      currentLength: right - left + 1,
       maxLength,
       bestStart,
       bestEnd,
@@ -283,10 +370,9 @@ export function longestSubstringWithoutRepeating(string) {
 
     if (
       lastSeen.has(char) &&
-      lastSeen.get(char) >= left
+      lastSeen.get(char)! >= left
     ) {
-      const previousIndex =
-        lastSeen.get(char);
+      const previousIndex = lastSeen.get(char)!;
 
       steps.push({
         type: "duplicate",
@@ -294,14 +380,11 @@ export function longestSubstringWithoutRepeating(string) {
         right,
         char,
         previousIndex,
-        currentLength:
-          right - left + 1,
+        currentLength: right - left + 1,
         maxLength,
         bestStart,
         bestEnd,
-        lastSeen: Object.fromEntries(
-          lastSeen
-        ),
+        lastSeen: Object.fromEntries(lastSeen),
         string,
       });
 
@@ -313,14 +396,11 @@ export function longestSubstringWithoutRepeating(string) {
         right,
         char,
         previousIndex,
-        currentLength:
-          right - left + 1,
+        currentLength: right - left + 1,
         maxLength,
         bestStart,
         bestEnd,
-        lastSeen: Object.fromEntries(
-          lastSeen
-        ),
+        lastSeen: Object.fromEntries(lastSeen),
         string,
       });
     }
@@ -344,9 +424,7 @@ export function longestSubstringWithoutRepeating(string) {
         maxLength,
         bestStart,
         bestEnd,
-        lastSeen: Object.fromEntries(
-          lastSeen
-        ),
+        lastSeen: Object.fromEntries(lastSeen),
         string,
       });
     } else {
@@ -359,19 +437,16 @@ export function longestSubstringWithoutRepeating(string) {
         maxLength,
         bestStart,
         bestEnd,
-        lastSeen: Object.fromEntries(
-          lastSeen
-        ),
+        lastSeen: Object.fromEntries(lastSeen),
         string,
       });
     }
   }
 
-  const longestSubstring =
-    string.substring(
-      bestStart,
-      bestEnd + 1
-    );
+  const longestSubstring = string.substring(
+    bestStart,
+    bestEnd + 1,
+  );
 
   steps.push({
     type: "complete",
@@ -382,9 +457,7 @@ export function longestSubstringWithoutRepeating(string) {
     bestStart,
     bestEnd,
     longestSubstring,
-    lastSeen: Object.fromEntries(
-      lastSeen
-    ),
+    lastSeen: Object.fromEntries(lastSeen),
     string,
   });
 
