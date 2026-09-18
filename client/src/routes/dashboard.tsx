@@ -15,7 +15,7 @@ import InterviewReadinessCard from "@/features/dashboard/InterviewReadinessCard"
 import AIMentorCard from "@/features/dashboard/AIMentorCard";
 import DykstraTour from "@/components/tour/DykstraTour";
 import { useDykstraTour } from "../hooks/useDysktraTour";
-
+import SupportDykstra from "@/components/support/SupportDykstra";
 import { useDashboard } from "@/hooks/useDashboard";
 
 import { dashboardService } from "@/services/dashboardService";
@@ -481,6 +481,7 @@ useEffect(() => {
 {showReminder && (
     <Reminder onContinue={handleReminderContinue} />
 )}
+ <SupportDykstra />
     </DashboardShell>
 );
 }
