@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VisualizerRouteImport } from './routes/visualizer'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RevisionsRouteImport } from './routes/revisions'
@@ -30,6 +31,11 @@ import { Route as WorkspaceSessionIdRouteImport } from './routes/workspace.$sess
 import { Route as InterviewHistorySessionIdRouteImport } from './routes/interview-history/$sessionId'
 import { Route as InterviewSessionIdReportRouteImport } from './routes/interview.$sessionId.report'
 
+const VisualizerRoute = VisualizerRouteImport.update({
+  id: '/visualizer',
+  path: '/visualizer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/revisions': typeof RevisionsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/visualizer': typeof VisualizerRoute
   '/interview-history/$sessionId': typeof InterviewHistorySessionIdRoute
   '/workspace/$sessionId': typeof WorkspaceSessionIdRoute
   '/interview/$sessionId/report': typeof InterviewSessionIdReportRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/revisions': typeof RevisionsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/visualizer': typeof VisualizerRoute
   '/interview-history/$sessionId': typeof InterviewHistorySessionIdRoute
   '/workspace/$sessionId': typeof WorkspaceSessionIdRoute
   '/interview/$sessionId/report': typeof InterviewSessionIdReportRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/revisions': typeof RevisionsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/visualizer': typeof VisualizerRoute
   '/interview-history/$sessionId': typeof InterviewHistorySessionIdRoute
   '/workspace/$sessionId': typeof WorkspaceSessionIdRoute
   '/interview/$sessionId/report': typeof InterviewSessionIdReportRoute
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/revisions'
     | '/signup'
     | '/terms'
+    | '/visualizer'
     | '/interview-history/$sessionId'
     | '/workspace/$sessionId'
     | '/interview/$sessionId/report'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/revisions'
     | '/signup'
     | '/terms'
+    | '/visualizer'
     | '/interview-history/$sessionId'
     | '/workspace/$sessionId'
     | '/interview/$sessionId/report'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/revisions'
     | '/signup'
     | '/terms'
+    | '/visualizer'
     | '/interview-history/$sessionId'
     | '/workspace/$sessionId'
     | '/interview/$sessionId/report'
@@ -287,12 +299,20 @@ export interface RootRouteChildren {
   RevisionsRoute: typeof RevisionsRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  VisualizerRoute: typeof VisualizerRoute
   WorkspaceSessionIdRoute: typeof WorkspaceSessionIdRoute
   InterviewSessionIdReportRoute: typeof InterviewSessionIdReportRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/visualizer': {
+      id: '/visualizer'
+      path: '/visualizer'
+      fullPath: '/visualizer'
+      preLoaderRoute: typeof VisualizerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   RevisionsRoute: RevisionsRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  VisualizerRoute: VisualizerRoute,
   WorkspaceSessionIdRoute: WorkspaceSessionIdRoute,
   InterviewSessionIdReportRoute: InterviewSessionIdReportRoute,
 }

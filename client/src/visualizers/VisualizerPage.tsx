@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { useState } from "react";
 
 import BinarySearchVisualizer from "./BinarySearchVisualizer";
