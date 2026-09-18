@@ -7,6 +7,7 @@ import {
   CalendarClock,
   Trophy,
   History,
+   Waypoints,
 } from "lucide-react";
 
 import {
@@ -33,6 +34,11 @@ const mainItems = [
     title: "Problems",
     url: "/problems",
     icon: Code2,
+  },
+    {
+    title: "DSA Visualizer",
+    url: "/visualizer",
+    icon: Waypoints,
   },
   {
     title: "Interviews",
