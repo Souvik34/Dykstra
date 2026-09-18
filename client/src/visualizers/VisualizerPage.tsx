@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { useState } from "react";
 
-import BinarySearchVisualizer from "./BinarySearchVisualizer";
+import BinarySearchVisualizer from "../visualizers/"
 import DijkstraVisualizer from "./DijkstraVisualizer";
 import SlidingWindowVisualizer from "./SlidingWindowVisualizer";
 import TwoPointersVisualizer from "./TwoPointersVisualizer";

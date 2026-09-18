@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { useEffect, useState } from "react";
 import Graph from "../anim/Graph";
 import Controls from "../anim/Controls";
