@@ -1,17 +1,9 @@
-/* eslint-disable prettier/prettier */
+
 
 import { useEffect } from "react";
 
 function SupportDykstra() {
   useEffect(() => {
-    const existing = document.querySelector(
-      'script[data-name="BMC-Widget"]',
-    );
-
-    if (existing) {
-      return;
-    }
-
     const script = document.createElement("script");
 
     script.setAttribute("data-name", "BMC-Widget");
@@ -30,25 +22,24 @@ function SupportDykstra() {
     );
     script.setAttribute("data-color", "#FF813F");
     script.setAttribute("data-position", "Right");
-
-    // Bug button is around 18px from bottom.
-    // Put BMC above it.
     script.setAttribute("data-x_margin", "18");
     script.setAttribute("data-y_margin", "75");
+
+    script.async = true;
+
+    script.onload = () => {
+      const event = new Event("DOMContentLoaded");
+
+      window.dispatchEvent(event);
+    };
 
     document.head.appendChild(script);
 
     return () => {
       script.remove();
 
-      // Remove the BMC widget iframe/container when leaving Dashboard.
-      document
-        .querySelectorAll(
-          'iframe[src*="buymeacoffee"], [id*="bmc"], [class*="bmc"]',
-        )
-        .forEach((element) => {
-          element.remove();
-        });
+      document.getElementById("bmc-wbtn")?.remove();
+      document.getElementById("bmc-iframe")?.remove();
     };
   }, []);
 
