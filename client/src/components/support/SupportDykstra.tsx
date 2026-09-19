@@ -9,40 +9,14 @@ function SupportDykstra() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Support Dykstra"
-      className="
-        fixed
-        bottom-20
-        right-6
-        z-50
-        block
-      "
-      initial={{
-        opacity: 0,
-        y: 12,
-        scale: 0.9,
-      }}
-      animate={{
-        opacity: 1,
-        y: [0, -3, 0],
-        scale: [1, 1.03, 1],
-      }}
+      className="fixed right-0 bottom-20 z-[100] block"
+      initial={{ x: 115 }}
+      animate={{ x: 115 }}
+      whileHover={{ x: 0 }}
       transition={{
-        opacity: {
-          duration: 0.3,
-        },
-        y: {
-          duration: 2.5,
-          repeat: Infinity,
-          ease: "easeInOut",
-        },
-        scale: {
-          duration: 2.5,
-          repeat: Infinity,
-          ease: "easeInOut",
-        },
-      }}
-      whileHover={{
-        scale: 1.06,
+        type: "spring",
+        stiffness: 300,
+        damping: 25,
       }}
     >
       <img
