@@ -1343,7 +1343,7 @@ useEffect(() => {
 
     </div>
 
-    <Reveal delay={0.15}>
+    {/* <Reveal delay={0.15}>
       <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.015] px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="h-1.5 w-1.5 rounded-full bg-emerald-400/70" />
@@ -1356,7 +1356,7 @@ useEffect(() => {
           Powered by Vercel Analytics
         </span>
       </div>
-    </Reveal>
+    </Reveal> */}
 
   </div>
 </section>
