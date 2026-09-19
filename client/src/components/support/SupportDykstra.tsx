@@ -1,71 +1,75 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 function SupportDykstra() {
-  const [hovered, setHovered] = useState(false);
-
-  useEffect(() => {
-    // BMC creates its button after the script loads.
-    const script = document.createElement("script");
-
-    script.src =
-      "https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js";
-
-    script.setAttribute("data-name", "bmc-button");
-    script.setAttribute("data-slug", "dykstra");
-    script.setAttribute("data-color", "#FFDD00");
-    script.setAttribute("data-emoji", "");
-    script.setAttribute("data-font", "Comic");
-    script.setAttribute("data-text", "Buy me a coffee!");
-    script.setAttribute("data-outline-color", "#000000");
-    script.setAttribute("data-font-color", "#000000");
-    script.setAttribute("data-coffee-color", "#ffffff");
-
-    const container = document.getElementById("bmc-support-button");
-
-    if (container) {
-      container.appendChild(script);
-    }
-
-    return () => {
-      if (container) {
-        container.innerHTML = "";
-      }
-    };
-  }, []);
-
   return (
-    <motion.div
-      className="fixed bottom-24 right-6 z-50"
-      initial={{ opacity: 0, scale: 0.8, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+    <motion.a
+      href="https://buymeacoffee.com/dykstra"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="
+        group
+        fixed
+        bottom-24
+        right-6
+        z-50
+        flex
+        h-12
+        items-center
+        overflow-hidden
+        rounded-full
+        border
+        border-black/20
+        bg-[#FFDD00]
+        shadow-lg
+      "
+      initial={{ width: 48, opacity: 0, scale: 0.8, y: 20 }}
+      animate={{ width: 48, opacity: 1, scale: 1, y: 0 }}
+      whileHover={{ width: 170 }}
       transition={{
         type: "spring",
         stiffness: 260,
         damping: 20,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
+      {/* Coffee icon */}
       <motion.div
+        className="
+          flex
+          h-12
+          w-12
+          shrink-0
+          items-center
+          justify-center
+        "
         animate={{
-          y: hovered ? -2 : [0, -3, 0],
+          rotate: [0, -8, 8, -5, 5, 0],
         }}
         transition={{
-          y: hovered
-            ? {
-                duration: 0.2,
-              }
-            : {
-                duration: 2.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              },
+          duration: 2.5,
+          repeat: Infinity,
+          repeatDelay: 3,
+          ease: "easeInOut",
         }}
       >
-        <div id="bmc-support-button" />
+        <span className="text-2xl">☕</span>
       </motion.div>
-    </motion.div>
+
+      {/* Hover text */}
+      <motion.span
+        className="
+          whitespace-nowrap
+          pr-4
+          text-sm
+          font-bold
+          text-black
+        "
+        initial={{ opacity: 0 }}
+        whileHover={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+      >
+        Support Dykstra
+      </motion.span>
+    </motion.a>
   );
 }
 
