@@ -1,74 +1,55 @@
+/* eslint-disable prettier/prettier */
+
 import { motion } from "framer-motion";
 
 function SupportDykstra() {
   return (
     <motion.a
-      href="https://buymeacoffee.com/dykstra"
+      href="https://www.buymeacoffee.com/dykstra"
       target="_blank"
       rel="noopener noreferrer"
+      aria-label="Support Dykstra"
       className="
-        group
         fixed
-        bottom-24
+        bottom-20
         right-6
         z-50
-        flex
-        h-12
-        items-center
-        overflow-hidden
-        rounded-full
-        border
-        border-black/20
-        bg-[#FFDD00]
-        shadow-lg
+        block
       "
-      initial={{ width: 48, opacity: 0, scale: 0.8, y: 20 }}
-      animate={{ width: 48, opacity: 1, scale: 1, y: 0 }}
-      whileHover={{ width: 170 }}
-      transition={{
-        type: "spring",
-        stiffness: 260,
-        damping: 20,
+      initial={{
+        opacity: 0,
+        y: 12,
+        scale: 0.9,
       }}
-    >
-      {/* Coffee icon */}
-      <motion.div
-        className="
-          flex
-          h-12
-          w-12
-          shrink-0
-          items-center
-          justify-center
-        "
-        animate={{
-          rotate: [0, -8, 8, -5, 5, 0],
-        }}
-        transition={{
+      animate={{
+        opacity: 1,
+        y: [0, -3, 0],
+        scale: [1, 1.03, 1],
+      }}
+      transition={{
+        opacity: {
+          duration: 0.3,
+        },
+        y: {
           duration: 2.5,
           repeat: Infinity,
-          repeatDelay: 3,
           ease: "easeInOut",
-        }}
-      >
-        <span className="text-2xl">☕</span>
-      </motion.div>
-
-      {/* Hover text */}
-      <motion.span
-        className="
-          whitespace-nowrap
-          pr-4
-          text-sm
-          font-bold
-          text-black
-        "
-        initial={{ opacity: 0 }}
-        whileHover={{ opacity: 1 }}
-        transition={{ duration: 0.15 }}
-      >
-        Support Dykstra
-      </motion.span>
+        },
+        scale: {
+          duration: 2.5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        },
+      }}
+      whileHover={{
+        scale: 1.06,
+      }}
+    >
+      <img
+        src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=dykstra&button_colour=FFDD00&font_colour=000000&font_family=Comic&outline_colour=000000&coffee_colour=ffffff"
+        alt="Buy me a coffee"
+        className="h-auto w-[150px]"
+      />
     </motion.a>
   );
 }
