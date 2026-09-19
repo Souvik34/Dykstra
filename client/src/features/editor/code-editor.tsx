@@ -15,9 +15,7 @@ export type SupportedLanguageId = (typeof SUPPORTED_LANGUAGES)[number]["id"];
 export const STARTER_CODE: Record<SupportedLanguageId, string> = {
   cpp: `class Solution {\npublic:\n    // write your solution here\n};\n`,
   java: `class Solution {\n    // write your solution here\n}\n`,
-  python: `class Solution:\n    def solve(self):\n        # write your solution here\n        pass\n`,
-  javascript: `function solve() {\n  // write your solution here\n}\n`,
-  typescript: `function solve(): void {\n  // write your solution here\n}\n`,
+ 
 };
 
 interface CodeEditorProps {
