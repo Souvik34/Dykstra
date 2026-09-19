@@ -1,31 +1,44 @@
 /* eslint-disable prettier/prettier */
 
-import { motion } from "framer-motion";
+import { useEffect } from "react";
 
 function SupportDykstra() {
-  return (
-    <motion.a
-      href="https://www.buymeacoffee.com/dykstra"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Support Dykstra"
-      className="fixed right-0 bottom-20 z-[100] block"
-      initial={{ x: 115 }}
-      animate={{ x: 115 }}
-      whileHover={{ x: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 25,
-      }}
-    >
-      <img
-        src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=dykstra&button_colour=FFDD00&font_colour=000000&font_family=Comic&outline_colour=000000&coffee_colour=ffffff"
-        alt="Buy me a coffee"
-        className="h-auto w-[150px]"
-      />
-    </motion.a>
-  );
+  useEffect(() => {
+    const script = document.createElement("script");
+
+    script.setAttribute("data-name", "BMC-Widget");
+    script.setAttribute("data-cfasync", "false");
+    script.src =
+      "https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js";
+    script.setAttribute("data-id", "dykstra");
+    script.setAttribute(
+      "data-description",
+      "Support me on Buy me a coffee!",
+    );
+    script.setAttribute(
+      "data-message",
+      "Built with purpose. Supported by you.",
+    );
+    script.setAttribute("data-color", "#FF813F");
+    script.setAttribute("data-position", "Right");
+    script.setAttribute("data-x_margin", "18");
+    script.setAttribute("data-y_margin", "18");
+
+    document.body.appendChild(script);
+
+    return () => {
+      script.remove();
+
+      // Remove BMC's injected widget elements when leaving dashboard
+      document
+        .querySelectorAll('[id^="bmc"], [class*="bmc"]')
+        .forEach((element) => {
+          element.remove();
+        });
+    };
+  }, []);
+
+  return null;
 }
 
 export default SupportDykstra;
