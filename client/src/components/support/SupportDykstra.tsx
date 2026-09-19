@@ -1,4 +1,4 @@
-
+/* eslint-disable prettier/prettier */
 
 import { useEffect } from "react";
 
@@ -22,6 +22,8 @@ function SupportDykstra() {
     );
     script.setAttribute("data-color", "#FF813F");
     script.setAttribute("data-position", "Right");
+
+    // Keep BMC above the bug-report button.
     script.setAttribute("data-x_margin", "18");
     script.setAttribute("data-y_margin", "75");
 
@@ -29,14 +31,33 @@ function SupportDykstra() {
 
     script.onload = () => {
       const event = new Event("DOMContentLoaded");
-
       window.dispatchEvent(event);
     };
 
     document.head.appendChild(script);
 
+    // Make the BMC button and popup slightly smaller.
+    const style = document.createElement("style");
+
+    style.setAttribute("data-bmc-style", "true");
+
+    style.textContent = `
+      #bmc-wbtn {
+        transform: scale(0.8) !important;
+        transform-origin: bottom right !important;
+      }
+
+      #bmc-iframe {
+        transform: scale(0.8) !important;
+        transform-origin: bottom right !important;
+      }
+    `;
+
+    document.head.appendChild(style);
+
     return () => {
       script.remove();
+      style.remove();
 
       document.getElementById("bmc-wbtn")?.remove();
       document.getElementById("bmc-iframe")?.remove();
