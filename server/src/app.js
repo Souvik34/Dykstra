@@ -61,6 +61,9 @@ app.use("/api/v1/notifications", notificationRoutes);
 import broadcastRoutes from "./modules/broadcast/broadcast.routes.js";
 app.use("/api/v1/broadcast", broadcastRoutes);
 
+import publicStatsRoutes from "./modules/publicStats/publicStats.route.js";
+app.use("/api/public/stats", publicStatsRoutes);
+
 app.use((err, req, res, next) => {
   console.error(err);
 

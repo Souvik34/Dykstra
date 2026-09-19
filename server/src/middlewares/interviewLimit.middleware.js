@@ -39,9 +39,8 @@ export const interviewLimitMiddleware = async (
 
                 code:
                     "INTERVIEW_LIMIT_REACHED",
-
-                message:
-                    "You have reached your daily interview limit.",
+message:
+    "You have reached your 3-interview limit for the last 7 days.",
 
                 limit:
                     error.limit,

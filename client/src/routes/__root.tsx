@@ -10,7 +10,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-
+import { Analytics } from "@vercel/analytics/react";
 import { BugReportButton } from "@/components/bug-report/BugReportButton";
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
@@ -285,6 +285,7 @@ function RootComponent() {
         position="top-right"
         theme="dark"
       />
+      <Analytics />
     </QueryClientProvider>
   );
 }

@@ -1,112 +1,100 @@
 import {
     getInterviewLimitRepo,
-    createInterviewLimitRepo,
-    incrementInterviewLimitRepo,
-    resetInterviewLimitRepo
+    getRecentInterviewsRepo
 } from "./interviewLimit.repository.js";
 
 
-const DAILY_INTERVIEW_LIMIT = 3;
-
-const WINDOW_DURATION_MS =
-    24 * 60 * 60 * 1000;
+const INTERVIEW_LIMIT = 3;
 
 
 /*
- * Calculate when the current 24-hour window expires.
- */
-const getResetTime = (windowStartedAt) => {
-
-    return new Date(
-        new Date(windowStartedAt).getTime() +
-        WINDOW_DURATION_MS
-    );
-};
-
-
-/*
- * Get current interview limit.
+ * Get the current rolling 7-day interview quota.
  *
- * This does NOT consume a slot.
+ * Usage is based on actual interview_sessions.started_at
+ * timestamps rather than a fixed quota window.
  */
 export const getInterviewLimitService = async (
     userId
 ) => {
 
-    const limitRecord =
-        await getInterviewLimitRepo(userId);
-
-
-    /*
-     * User has never started an interview.
-     */
-    if (!limitRecord) {
-
-        return {
-            limit: DAILY_INTERVIEW_LIMIT,
-            used: 0,
-            remaining: DAILY_INTERVIEW_LIMIT,
-            resetsAt: null,
-            limitReached: false
-        };
-    }
-
-
-    const windowStartedAt =
-        new Date(
-            limitRecord.window_started_at
-        );
-
-    const resetTime =
-        getResetTime(windowStartedAt);
-
-    const now = new Date();
-
-
-    /*
-     * 24 hours have passed.
-     *
-     * New window automatically starts
-     * when the user tries again.
-     */
-    if (now >= resetTime) {
-
-        return {
-            limit: DAILY_INTERVIEW_LIMIT,
-            used: 0,
-            remaining: DAILY_INTERVIEW_LIMIT,
-            resetsAt: null,
-            limitReached: false
-        };
-    }
+    const recentInterviews =
+        await getRecentInterviewsRepo(userId);
 
 
     const used =
-        Number(limitRecord.used);
-
-    const limit =
-        Number(limitRecord.daily_limit);
+        recentInterviews.length;
 
     const remaining =
         Math.max(
-            limit - used,
+            INTERVIEW_LIMIT - used,
             0
+        );
+
+
+    /*
+     * No quota reached.
+     *
+     * There is no countdown because another
+     * interview can be started immediately.
+     */
+    if (used < INTERVIEW_LIMIT) {
+
+        return {
+
+            limit:
+                INTERVIEW_LIMIT,
+
+            used,
+
+            remaining,
+
+            resetsAt:
+                null,
+
+            limitReached:
+                false
+        };
+    }
+
+
+    /*
+     * All 3 interview slots are currently used.
+     *
+     * The oldest interview is the first one
+     * that will leave the rolling 7-day window.
+     */
+    const oldestInterview =
+        recentInterviews[0];
+
+
+    const oldestStartedAt =
+        new Date(
+            oldestInterview.started_at
+        );
+
+
+    const nextAvailableAt =
+        new Date(
+            oldestStartedAt.getTime() +
+            7 * 24 * 60 * 60 * 1000
         );
 
 
     return {
 
-        limit,
+        limit:
+            INTERVIEW_LIMIT,
 
         used,
 
-        remaining,
+        remaining:
+            0,
 
         resetsAt:
-            resetTime.toISOString(),
+            nextAvailableAt.toISOString(),
 
         limitReached:
-            remaining <= 0
+            true
     };
 };
 
@@ -120,179 +108,94 @@ export const consumeInterviewSlotService = async (
     userId
 ) => {
 
-    const limitRecord =
-        await getInterviewLimitRepo(userId);
+    const recentInterviews =
+        await getRecentInterviewsRepo(userId);
 
 
-    /*
-     * First interview ever.
-     */
-    if (!limitRecord) {
-
-        const created =
-            await createInterviewLimitRepo(
-                userId
-            );
-
-        const resetTime =
-            getResetTime(
-                created.window_started_at
-            );
-
-        const used =
-            Number(created.used);
-
-        const limit =
-            Number(created.daily_limit);
-
-        return {
-
-            allowed: true,
-
-            limit,
-
-            used,
-
-            remaining:
-                Math.max(
-                    limit - used,
-                    0
-                ),
-
-            resetsAt:
-                resetTime.toISOString()
-        };
-    }
-
-
-    const windowStartedAt =
-        new Date(
-            limitRecord.window_started_at
-        );
-
-    const resetTime =
-        getResetTime(windowStartedAt);
-
-    const now = new Date();
-
-
-    /*
-     * Current 24-hour window expired.
-     *
-     * Start a completely new window.
-     *
-     * Previous unused interviews are NOT
-     * carried forward.
-     */
-    if (now >= resetTime) {
-
-        const reset =
-            await resetInterviewLimitRepo(
-                userId
-            );
-
-        const newResetTime =
-            getResetTime(
-                reset.window_started_at
-            );
-
-        const used =
-            Number(reset.used);
-
-        const limit =
-            Number(reset.daily_limit);
-
-        return {
-
-            allowed: true,
-
-            limit,
-
-            used,
-
-            remaining:
-                Math.max(
-                    limit - used,
-                    0
-                ),
-
-            resetsAt:
-                newResetTime.toISOString()
-        };
-    }
-
-
-    /*
-     * Current window is still active.
-     */
     const used =
-        Number(limitRecord.used);
-
-    const limit =
-        Number(limitRecord.daily_limit);
+        recentInterviews.length;
 
 
     /*
-     * No interviews remaining.
+     * All 3 slots are currently occupied.
      */
-    if (used >= limit) {
+    if (used >= INTERVIEW_LIMIT) {
+
+        const oldestInterview =
+            recentInterviews[0];
+
+
+        const oldestStartedAt =
+            new Date(
+                oldestInterview.started_at
+            );
+
+
+        const nextAvailableAt =
+            new Date(
+                oldestStartedAt.getTime() +
+                7 * 24 * 60 * 60 * 1000
+            );
+
 
         const error =
             new Error(
-                "Daily interview limit reached."
+                "Interview limit reached for this 7-day period."
             );
+
 
         error.code =
             "INTERVIEW_LIMIT_REACHED";
 
+
         error.limit =
-            limit;
+            INTERVIEW_LIMIT;
+
 
         error.used =
             used;
 
+
         error.remaining =
             0;
 
+
         error.resetsAt =
-            resetTime.toISOString();
+            nextAvailableAt.toISOString();
+
 
         throw error;
     }
 
 
     /*
-     * Consume one slot.
+     * There is at least one available slot.
+     *
+     * The actual interview session will be created
+     * immediately after this service returns.
      */
-    const updated =
-        await incrementInterviewLimitRepo(
-            userId
-        );
-
-    const updatedUsed =
-        Number(updated.used);
-
-    const updatedLimit =
-        Number(updated.daily_limit);
+    const newUsed =
+        used + 1;
 
 
     return {
 
-        allowed: true,
+        allowed:
+            true,
 
         limit:
-            updatedLimit,
+            INTERVIEW_LIMIT,
 
         used:
-            updatedUsed,
+            newUsed,
 
         remaining:
             Math.max(
-                updatedLimit - updatedUsed,
+                INTERVIEW_LIMIT - newUsed,
                 0
             ),
 
         resetsAt:
-            resetTime.toISOString()
+            null
     };
 };

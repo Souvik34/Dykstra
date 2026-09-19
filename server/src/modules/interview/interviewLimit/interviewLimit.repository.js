@@ -18,6 +18,23 @@ export const getInterviewLimitRepo = async (userId) => {
     return rows[0] || null;
 };
 
+export const getRecentInterviewsRepo = async (userId) => {
+
+    const { rows } = await pool.query(
+        `
+        SELECT
+            started_at
+        FROM interview_sessions
+        WHERE user_id = $1
+          AND started_at >= NOW() - INTERVAL '7 days'
+        ORDER BY started_at ASC
+        LIMIT 3
+        `,
+        [userId]
+    );
+
+    return rows;
+};
 
 export const createInterviewLimitRepo = async (userId) => {
 
