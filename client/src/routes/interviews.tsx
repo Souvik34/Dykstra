@@ -126,102 +126,90 @@ function InterviewsPage() {
    * ============================================================
    */
 
-  useEffect(() => {
+useEffect(() => {
 
-    if (!resetAt) {
+  if (!resetAt) {
+    setTimeRemaining("");
+    return;
+  }
+
+  const updateTimer = () => {
+
+    const now =
+      Date.now();
+
+    const resetTime =
+      new Date(resetAt).getTime();
+
+    const difference =
+      resetTime - now;
+
+
+    /*
+     * Window expired.
+     *
+     * Ask backend for the fresh
+     * quota instead of guessing.
+     */
+    if (difference <= 0) {
+
       setTimeRemaining("");
+
+      fetchInterviewLimit();
+
       return;
     }
 
-    const updateTimer = () => {
 
-      const now =
-        Date.now();
-
-      const resetTime =
-        new Date(resetAt).getTime();
-
-      const difference =
-        resetTime - now;
-
-
-      /*
-       * Window expired.
-       *
-       * Ask backend for the fresh
-       * limit instead of guessing.
-       */
-
-      if (difference <= 0) {
-
-        setTimeRemaining("");
-
-        fetchInterviewLimit();
-
-        return;
-      }
-
-
-      const totalSeconds =
-        Math.floor(
-          difference / 1000
-        );
-
-      const hours =
-        Math.floor(
-          totalSeconds / 3600
-        );
-
-      const minutes =
-        Math.floor(
-          (totalSeconds % 3600) / 60
-        );
-
-      const seconds =
-        totalSeconds % 60;
-
-
-      /*
-       * Keep the UI clean.
-       *
-       * Example:
-       *
-       * 17h 42m
-       *
-       * 42m 18s
-       */
-
-      if (hours > 0) {
-
-        setTimeRemaining(
-          `${hours}h ${minutes}m`
-        );
-
-      } else {
-
-        setTimeRemaining(
-          `${minutes}m ${seconds}s`
-        );
-      }
-    };
-
-
-    updateTimer();
-
-    const interval =
-      setInterval(
-        updateTimer,
-        1000
+    const totalSeconds =
+      Math.floor(
+        difference / 1000
       );
 
 
-    return () => {
-      clearInterval(interval);
-    };
+    const days =
+      Math.floor(
+        totalSeconds / 86400
+      );
 
-  }, [resetAt]);
+
+    const hours =
+      Math.floor(
+        (totalSeconds % 86400) / 3600
+      );
 
 
+    const minutes =
+      Math.floor(
+        (totalSeconds % 3600) / 60
+      );
+
+
+    const seconds =
+      totalSeconds % 60;
+
+
+    setTimeRemaining(
+      `${days}d ${hours}h ${minutes}m ${seconds}s`
+    );
+  };
+
+
+  updateTimer();
+
+
+  const interval =
+    setInterval(
+      updateTimer,
+      1000
+    );
+
+
+  return () => {
+    clearInterval(interval);
+  };
+
+}, [resetAt]);
   /*
    * ============================================================
    * START INTERVIEW
@@ -242,8 +230,8 @@ function InterviewsPage() {
     if (interviewsRemaining <= 0) {
 
       toast.error(
-        "You've reached your daily interview limit."
-      );
+  "You've reached your 7-day interview limit."
+);
 
       return;
     }
@@ -662,7 +650,7 @@ function InterviewsPage() {
                     />
 
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      Daily Limit
+                     7-Day Limit
                     </span>
 
                   </div>
@@ -753,12 +741,12 @@ function InterviewsPage() {
                     <p className="text-xs font-medium">
 
                       {limitReached
-                        ? "Daily interview limit reached"
+                        ? "7-day interview limit reached"
                         : `${interviewsRemaining} interview${
-                            interviewsRemaining === 1
-                              ? ""
-                              : "s"
-                          } remaining today`
+  interviewsRemaining === 1
+    ? ""
+    : "s"
+} remaining`
                       }
 
                     </p>
@@ -767,7 +755,7 @@ function InterviewsPage() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
 
                       {limitReached
-                        ? "Your interviews will become available again after the current 24-hour window."
+                        ? "Your next interview becomes available when the oldest interview leaves the 7-day window."
                         : "You can start another AI interview whenever you're ready."
                       }
 
@@ -887,13 +875,7 @@ function InterviewsPage() {
                       C++
                     </SelectItem>
 
-                    <SelectItem value="python">
-                      Python
-                    </SelectItem>
-
-                    <SelectItem value="javascript">
-                      JavaScript
-                    </SelectItem>
+                  
 
                   </SelectContent>
 
@@ -1141,34 +1123,31 @@ function InterviewsPage() {
 
               {limitReached && timeRemaining ? (
 
-                <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
 
-                  Your next{" "}
-                  <span className="font-medium text-white/70">
-                    3 interviews
-                  </span>{" "}
-                  will be available in{" "}
+  Your next{" "}
+  <span className="font-medium text-white/70">
+    interview
+  </span>{" "}
+  will be available in{" "}
 
-                  <span className="font-medium text-blue-400">
-                    {timeRemaining}
-                  </span>
+  <span className="font-medium text-blue-400">
+    {timeRemaining}
+  </span>
 
-                  .
+  .
 
-                </p>
+</p>
 
               ) : (
 
                 <p className="text-[11px] text-muted-foreground">
 
-                  Free users can start up to{" "}
-
-                  <span className="font-medium text-white/70">
-                    {interviewLimit} AI interviews
-                  </span>{" "}
-
-                  within a 24-hour window.
-
+                Free users can start up to{" "}
+<span className="font-medium text-white/70">
+  {interviewLimit} AI interviews
+</span>{" "}
+within a rolling 7-day window.
                 </p>
 
               )}

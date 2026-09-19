@@ -7,9 +7,7 @@ import { useCallback } from "react";
 export const SUPPORTED_LANGUAGES = [
   { id: "cpp", label: "C++" },
   { id: "java", label: "Java" },
-  { id: "python", label: "Python" },
-  { id: "javascript", label: "JavaScript" },
-  { id: "typescript", label: "TypeScript" },
+
 ] as const;
 
 export type SupportedLanguageId = (typeof SUPPORTED_LANGUAGES)[number]["id"];
