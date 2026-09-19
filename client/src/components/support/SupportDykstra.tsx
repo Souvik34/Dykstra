@@ -18,12 +18,14 @@ function SupportDykstra() {
       "data-message",
       "Built with purpose. Supported by you.",
     );
-    script.setAttribute("data-color", "#FF813F");
+
+    // Yellow BMC button
+    script.setAttribute("data-color", "#FACC15");
     script.setAttribute("data-position", "Right");
 
-    // Position BMC directly above the bug-report button.
+    // Position above the bug-report button
     script.setAttribute("data-x_margin", "18");
-    script.setAttribute("data-y_margin", "75");
+    script.setAttribute("data-y_margin", "90");
 
     script.async = true;
 
@@ -44,8 +46,8 @@ function SupportDykstra() {
          ========================================= */
 
       #bmc-wbtn {
-        width: 38px !important;
-        height: 38px !important;
+        width: 42px !important;
+        height: 42px !important;
 
         border-radius: 50% !important;
 
@@ -58,25 +60,24 @@ function SupportDykstra() {
           filter 220ms ease !important;
 
         box-shadow:
-          0 0 8px rgba(255, 129, 63, 0.55),
-          0 0 20px rgba(255, 129, 63, 0.25) !important;
+          0 0 8px rgba(250, 204, 21, 0.65),
+          0 0 20px rgba(250, 204, 21, 0.3) !important;
 
         filter: brightness(0.96);
       }
 
-      /* Hover = small slide + neon glow */
+      /* Hover effect */
 
       #bmc-wbtn:hover {
         transform: translateX(-5px) scale(0.96) !important;
 
         box-shadow:
-          0 0 10px rgba(255, 129, 63, 0.8),
-          0 0 25px rgba(255, 129, 63, 0.45),
-          0 0 45px rgba(255, 129, 63, 0.18) !important;
+          0 0 10px rgba(250, 204, 21, 0.9),
+          0 0 25px rgba(250, 204, 21, 0.5),
+          0 0 45px rgba(250, 204, 21, 0.2) !important;
 
-        filter: brightness(1.08);
+        filter: brightness(1.1);
       }
-
 
       /* =========================================
          BMC POPUP
