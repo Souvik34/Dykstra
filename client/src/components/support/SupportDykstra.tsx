@@ -4,13 +4,16 @@ import { useEffect } from "react";
 
 function SupportDykstra() {
   useEffect(() => {
-    if (document.querySelector('script[data-name="BMC-Widget"]')) {
+    const existing = document.querySelector(
+      'script[data-name="BMC-Widget"]',
+    );
+
+    if (existing) {
       return;
     }
 
     const script = document.createElement("script");
 
-    script.type = "text/javascript";
     script.setAttribute("data-name", "BMC-Widget");
     script.setAttribute("data-cfasync", "false");
     script.src =
@@ -27,10 +30,26 @@ function SupportDykstra() {
     );
     script.setAttribute("data-color", "#FF813F");
     script.setAttribute("data-position", "Right");
-    script.setAttribute("data-x_margin", "18");
-    script.setAttribute("data-y_margin", "18");
 
-    document.body.appendChild(script);
+    // Bug button is around 18px from bottom.
+    // Put BMC above it.
+    script.setAttribute("data-x_margin", "18");
+    script.setAttribute("data-y_margin", "75");
+
+    document.head.appendChild(script);
+
+    return () => {
+      script.remove();
+
+      // Remove the BMC widget iframe/container when leaving Dashboard.
+      document
+        .querySelectorAll(
+          'iframe[src*="buymeacoffee"], [id*="bmc"], [class*="bmc"]',
+        )
+        .forEach((element) => {
+          element.remove();
+        });
+    };
   }, []);
 
   return null;
