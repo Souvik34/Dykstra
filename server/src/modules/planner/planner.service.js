@@ -632,7 +632,7 @@ export const getSuggestions = async ({
   topic,
   difficulties,
 }) => {
-  return getPlannerSuggestionsRepo({
+  return plannerRepository.getPlannerSuggestionsRepo({
     userId,
     topic,
     difficulties,
