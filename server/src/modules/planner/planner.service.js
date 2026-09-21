@@ -639,3 +639,48 @@ export const getSuggestions = async ({
     limit: 100,
   });
 };
+
+export const addPlanItem = async ({
+  userId,
+  weekStart,
+  problemId,
+  plannedDate,
+  position,
+  source = "USER",
+}) => {
+  const planDate = String(plannedDate).slice(0, 10);
+
+  let plan =
+    await plannerRepository.getPlanRepo(
+      userId,
+      weekStart,
+    );
+
+  if (!plan) {
+    const monday =
+      getMonday(
+        new Date(`${weekStart}T00:00:00`),
+      );
+
+    const weekEnd =
+      formatDate(
+        addDays(monday, 6),
+      );
+
+    plan =
+      await plannerRepository.createPlanRepo(
+        userId,
+        weekStart,
+        weekEnd,
+        1,
+      );
+  }
+
+  return plannerRepository.addPlanItemRepo({
+    planId: plan.id,
+    problemId,
+    plannedDate: planDate,
+    position,
+    source,
+  });
+};
