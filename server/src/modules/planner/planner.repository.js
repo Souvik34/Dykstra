@@ -273,9 +273,7 @@ export const getCandidateProblemsRepo = async ({
       p.topic,
       p.tags,
       p.platform
-
     FROM problems p
-
     WHERE NOT EXISTS (
       SELECT 1
       FROM solved_problems sp
@@ -284,43 +282,46 @@ export const getCandidateProblemsRepo = async ({
     )
   `;
 
-
   if (topics && topics.length > 0) {
-    values.push(topics);
+    values.push(
+      topics.map((topic) =>
+        String(topic).trim().toLowerCase(),
+      ),
+    );
 
     query += `
-      AND p.topic = ANY($${values.length})
+      AND LOWER(TRIM(p.topic)) =
+          ANY($${values.length})
     `;
   }
-
 
   if (difficulties && difficulties.length > 0) {
-    values.push(difficulties);
+    values.push(
+      difficulties.map((difficulty) =>
+        String(difficulty).trim().toLowerCase(),
+      ),
+    );
 
     query += `
-      AND p.difficulty::text = ANY($${values.length})
+      AND LOWER(TRIM(p.difficulty::text)) =
+          ANY($${values.length})
     `;
   }
-
 
   values.push(limit);
 
   query += `
-    ORDER BY
-      p.id ASC
-
+    ORDER BY p.id ASC
     LIMIT $${values.length}
   `;
 
-
   const result = await pool.query(
     query,
-    values
+    values,
   );
 
   return result.rows;
 };
-
 
 /*
 |--------------------------------------------------------------------------

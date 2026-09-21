@@ -9,6 +9,13 @@ import type {
   SavePlannerRequest,
 } from "./planner.types";
 
+const getWeekEnd = (weekStart: string) => {
+  const date = new Date(`${weekStart}T00:00:00`);
+  date.setDate(date.getDate() + 6);
+
+  return date.toISOString().slice(0, 10);
+};
+
 export const getPlanner = async (
   weekStart: string,
 ): Promise<PlannerPlan | null> => {
@@ -22,7 +29,10 @@ export const getPlanner = async (
 export const generatePlannerDraft = async (
   payload: PlannerDraftRequest,
 ): Promise<PlannerDraft> => {
-  const response = await api.post("/planner/draft", payload);
+  const response = await api.post(
+    "/planner/draft",
+    payload,
+  );
 
   return response.data.data;
 };
@@ -30,7 +40,20 @@ export const generatePlannerDraft = async (
 export const savePlanner = async (
   payload: SavePlannerRequest,
 ): Promise<PlannerPlan> => {
-  const response = await api.post("/planner", payload);
+  const normalizedPayload = {
+    ...payload,
+    weekEnd:
+      payload.weekEnd ||
+      getWeekEnd(payload.weekStart),
+    items: Array.isArray(payload.items)
+      ? payload.items
+      : [],
+  };
+
+  const response = await api.post(
+    "/planner",
+    normalizedPayload,
+  );
 
   return response.data.data;
 };
