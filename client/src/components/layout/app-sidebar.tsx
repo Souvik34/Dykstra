@@ -4,12 +4,12 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Code2,
+  CalendarDays,
   CalendarClock,
   Trophy,
   History,
-   Waypoints,
+  Waypoints,
 } from "lucide-react";
-
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +34,11 @@ const mainItems = [
     title: "Problems",
     url: "/problems",
     icon: Code2,
+  },
+    {
+    title: "Planner",
+    url: "/planner",
+    icon: CalendarDays,
   },
     {
     title: "DSA Visualizer",

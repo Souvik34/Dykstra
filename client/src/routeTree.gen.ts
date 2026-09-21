@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProblemsRouteImport } from './routes/problems'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as OauthSuccessRouteImport } from './routes/oauth-success'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InterviewsRouteImport } from './routes/interviews'
@@ -69,6 +70,11 @@ const ProblemsRoute = ProblemsRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlannerRoute = PlannerRouteImport.update({
+  id: '/planner',
+  path: '/planner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OauthSuccessRoute = OauthSuccessRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/interviews': typeof InterviewsRoute
   '/login': typeof LoginRoute
   '/oauth-success': typeof OauthSuccessRoute
+  '/planner': typeof PlannerRoute
   '/privacy': typeof PrivacyRoute
   '/problems': typeof ProblemsRoute
   '/profile': typeof ProfileRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/interviews': typeof InterviewsRoute
   '/login': typeof LoginRoute
   '/oauth-success': typeof OauthSuccessRoute
+  '/planner': typeof PlannerRoute
   '/privacy': typeof PrivacyRoute
   '/problems': typeof ProblemsRoute
   '/profile': typeof ProfileRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/interviews': typeof InterviewsRoute
   '/login': typeof LoginRoute
   '/oauth-success': typeof OauthSuccessRoute
+  '/planner': typeof PlannerRoute
   '/privacy': typeof PrivacyRoute
   '/problems': typeof ProblemsRoute
   '/profile': typeof ProfileRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/interviews'
     | '/login'
     | '/oauth-success'
+    | '/planner'
     | '/privacy'
     | '/problems'
     | '/profile'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/interviews'
     | '/login'
     | '/oauth-success'
+    | '/planner'
     | '/privacy'
     | '/problems'
     | '/profile'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/interviews'
     | '/login'
     | '/oauth-success'
+    | '/planner'
     | '/privacy'
     | '/problems'
     | '/profile'
@@ -292,6 +304,7 @@ export interface RootRouteChildren {
   InterviewsRoute: typeof InterviewsRoute
   LoginRoute: typeof LoginRoute
   OauthSuccessRoute: typeof OauthSuccessRoute
+  PlannerRoute: typeof PlannerRoute
   PrivacyRoute: typeof PrivacyRoute
   ProblemsRoute: typeof ProblemsRoute
   ProfileRoute: typeof ProfileRoute
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planner': {
+      id: '/planner'
+      path: '/planner'
+      fullPath: '/planner'
+      preLoaderRoute: typeof PlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oauth-success': {
@@ -478,6 +498,7 @@ const rootRouteChildren: RootRouteChildren = {
   InterviewsRoute: InterviewsRoute,
   LoginRoute: LoginRoute,
   OauthSuccessRoute: OauthSuccessRoute,
+  PlannerRoute: PlannerRoute,
   PrivacyRoute: PrivacyRoute,
   ProblemsRoute: ProblemsRoute,
   ProfileRoute: ProfileRoute,
