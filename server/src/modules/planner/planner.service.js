@@ -280,7 +280,6 @@ const selectProblems = ({
 |
 |--------------------------------------------------------------------------
 */
-
 const distributeProblemsAcrossWeek = (
   problems,
   weekStart,
@@ -311,6 +310,60 @@ const distributeProblemsAcrossWeek = (
 
   const monday =
     getMonday(parsedWeekStart);
+
+  const today = getToday();
+
+  const daysSinceMonday = Math.floor(
+    (
+      today.getTime() -
+      monday.getTime()
+    ) /
+      (24 * 60 * 60 * 1000),
+  );
+
+  const startDayIndex =
+    daysSinceMonday >= 0 &&
+    daysSinceMonday <= 6
+      ? daysSinceMonday
+      : 0;
+
+  const practiceDays = [];
+
+  for (
+    let day = startDayIndex;
+    day <= 6;
+    day++
+  ) {
+    practiceDays.push(day);
+  }
+
+  return problems.map(
+    (problem, index) => {
+      const dayIndex =
+        practiceDays[
+          index %
+            practiceDays.length
+        ];
+
+      const plannedDate =
+        formatDate(
+          addDays(
+            monday,
+            dayIndex,
+          ),
+        );
+
+      return {
+        problem,
+        plannedDate,
+        position: Math.floor(
+          index /
+            practiceDays.length,
+        ),
+      };
+    },
+  );
+};
 /*
 |--------------------------------------------------------------------------
 | Get existing plan
