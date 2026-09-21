@@ -18,9 +18,27 @@ const formatDate = (date) => {
 };
 
 const getToday = () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
+  const parts = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    },
+  ).formatToParts(new Date());
+
+  const values = {};
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      values[part.type] = part.value;
+    }
+  }
+
+  return new Date(
+    `${values.year}-${values.month}-${values.day}T00:00:00`,
+  );
 };
 
 const isPastDate = (dateString) => {
@@ -311,15 +329,18 @@ const distributeProblemsAcrossWeek = (
   const monday =
     getMonday(parsedWeekStart);
 
-  const today = getToday();
+  const todayString = formatDate(getToday());
+const todayDate = new Date(
+  `${todayString}T00:00:00`,
+);
 
-  const daysSinceMonday = Math.floor(
-    (
-      today.getTime() -
-      monday.getTime()
-    ) /
-      (24 * 60 * 60 * 1000),
-  );
+const daysSinceMonday = Math.floor(
+  (
+    todayDate.getTime() -
+    monday.getTime()
+  ) /
+    (24 * 60 * 60 * 1000),
+);
 
   const startDayIndex =
     daysSinceMonday >= 0 &&
