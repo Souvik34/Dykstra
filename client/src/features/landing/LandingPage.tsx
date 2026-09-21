@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef} from "react";
 import { Link } from "@tanstack/react-router";
 import BuyMeCoffee from "./BuyMeCoffee";
+import {  UserRound } from "lucide-react";
 import {
   ArrowRight,
   ChevronDown,
@@ -38,6 +39,8 @@ import img3 from "@/assets/images/img3.png";
 import img4 from "@/assets/images/img4.png";
 import img5 from "@/assets/images/img5.png";
 import img6 from "@/assets/images/img6.png";
+import img7 from "@/assets/images/img7.png";
+import Preview from "@/assets/images/Preview.png";
 
 import {
   motion,
@@ -61,6 +64,15 @@ const features = [
     image: img2,
     align: "left" as const,
   },
+  {
+  eyebrow: "PLANNER",
+  title: "Know exactly what to work on this week.",
+  description:
+    "Plan your DSA week around your goals, available days and leaves, then adapt the plan as your week changes.",
+  icon: Target,
+  image: img7,
+  align: "right" as const,
+},
   {
     eyebrow: "REVISION",
     title: "Remember what you worked for.",
@@ -1668,13 +1680,28 @@ useEffect(() => {
           <Reveal>
             <h2 className="text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
               <span className="text-white">
-                <AboutLinkPreview>Solving</AboutLinkPreview>{" "}
-                <AboutLinkPreview>DSA</AboutLinkPreview> is one thing.
+            <Link
+  to="/about"
+  className="inline-block"
+>
+  <AboutLinkPreview>
+    Solving DSA
+  </AboutLinkPreview>
+</Link>{" "}
+is one thing.
               </span>
               <br />
               <span className="text-white/60">
                 Keeping what you learned{" "}
-                <AboutLinkPreview>fresh</AboutLinkPreview> is another.
+                      <Link
+  to="/about"
+  className="inline-block"
+>
+  <AboutLinkPreview>
+   fresh
+  </AboutLinkPreview>
+</Link>{" "}
+is another.
               </span>
             </h2>
 
@@ -1684,9 +1711,60 @@ useEffect(() => {
               practicing and improving.
             </p>
 
-            <p className="mt-8 text-sm text-white/40">
-              Built by <AboutLinkPreview>Souvik Sural</AboutLinkPreview>
-            </p>
+           <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true, margin: "-80px" }}
+  transition={{ duration: 0.6 }}
+  className="mx-auto mt-12 max-w-3xl"
+>
+  <Link to="/about" className="group block">
+    <motion.div
+      whileHover={{ y: -6 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-2xl shadow-black/20"
+    >
+      {/* About page preview */}
+      <div className="relative aspect-[16/9] overflow-hidden">
+     <img
+  src={Preview}
+  alt="Preview of the Dykstra About page"
+  className="h-full w-full object-cover brightness-[0.7] transition-all duration-700 group-hover:scale-[1.03] group-hover:brightness-[0.78]"
+/>
+
+<div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+
+<div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20" />
+
+        {/* content */}
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+          <div className="flex items-end justify-between gap-6">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
+                <UserRound className="h-3.5 w-3.5" />
+                About Dykstra
+              </div>
+
+              <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Meet the person behind Dykstra.
+              </h3>
+
+              <p className="mt-2 max-w-lg text-sm leading-6 text-white/55 sm:text-base">
+                A little more about why Dykstra exists, how it started,
+                and the person building it.
+              </p>
+            </div>
+
+            <div className="hidden shrink-0 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all duration-300 group-hover:bg-white/15 sm:flex">
+              Read more
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  </Link>
+</motion.div>
           </Reveal>
         </div>
       </section>
