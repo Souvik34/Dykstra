@@ -7,10 +7,13 @@ import {
 } from "react";
 
 import {
+  AlertTriangle,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -22,8 +25,11 @@ import { toast } from "sonner";
 
 import PlannerSetup from "./PlannerSetup";
 import PlannerWeekView from "./PlannerWeekView";
+import PlannerProblemPicker from "./PlannerProblemPicker";
 
 import {
+  addPlannerItem,
+  deletePlannerItem,
   generatePlannerDraft,
   getPlanner,
   savePlanner,
@@ -34,6 +40,7 @@ import type {
   PlannerDifficulty,
   PlannerItem,
   PlannerPlan,
+  PlannerSuggestion,
 } from "./planner.types";
 
 import {
@@ -97,8 +104,59 @@ export default function PlannerPage() {
   const [goalCount, setGoalCount] =
     useState(5);
 
+  /*
+  |--------------------------------------------------------------------------
+  | ADD TASK
+  |--------------------------------------------------------------------------
+  */
+
+  const [pickerDate, setPickerDate] =
+    useState<string | null>(null);
+
+  /*
+  |--------------------------------------------------------------------------
+  | CONFIRMATION
+  |--------------------------------------------------------------------------
+  */
+
+  const [confirmAction, setConfirmAction] =
+    useState<
+      | {
+          type: "delete";
+          item: PlannerItem;
+        }
+      | {
+          type: "reset-day";
+          date: string;
+        }
+      | {
+          type: "reset-week";
+        }
+      | {
+          type: "rebuild";
+        }
+      | null
+    >(null);
+
+  const [actionLoading, setActionLoading] =
+    useState(false);
+
+  /*
+  |--------------------------------------------------------------------------
+  | DERIVED WEEK VALUES
+  |--------------------------------------------------------------------------
+  */
+
   const weekStartString =
     formatDate(weekStart);
+
+  const weekEndString =
+    formatDate(
+      addDays(
+        weekStart,
+        6,
+      ),
+    );
 
   /*
   |--------------------------------------------------------------------------
@@ -121,6 +179,7 @@ export default function PlannerPage() {
         if (cancelled) return;
 
         setPlan(result);
+
         setItems(
           result?.items ?? [],
         );
@@ -278,29 +337,21 @@ export default function PlannerPage() {
 
       /*
       |--------------------------------------------------------------------------
-      | Draft is now guaranteed to use:
-      |
-      | problem_id
-      | planned_date
-      | position
-      | source
+      | IMPORTANT
       |--------------------------------------------------------------------------
+      |
+      | savePlanner currently replaces the planner items for this week.
+      | Rebuild is therefore protected by a confirmation modal.
+      |
       */
-
-      const weekEnd =
-        formatDate(
-          addDays(
-            weekStart,
-            6,
-          ),
-        );
 
       const savedPlan =
         await savePlanner({
           weekStart:
             weekStartString,
 
-          weekEnd,
+          weekEnd:
+            weekEndString,
 
           goalCount:
             Number(
@@ -341,6 +392,8 @@ export default function PlannerPage() {
 
       setShowSetup(false);
 
+      setConfirmAction(null);
+
       toast.success(
         "Your week is ready",
       );
@@ -378,11 +431,13 @@ export default function PlannerPage() {
 
     if (!item) return;
 
-    if (
+    const currentDate =
       String(
         item.planned_date,
-      ).slice(0, 10) ===
-      plannedDate
+      ).slice(0, 10);
+
+    if (
+      currentDate === plannedDate
     ) {
       return;
     }
@@ -458,44 +513,423 @@ export default function PlannerPage() {
   |--------------------------------------------------------------------------
   | OPEN PROBLEM
   |--------------------------------------------------------------------------
+  |
+  | Planner does NOT solve problems.
+  |
+  | It sends the user to the Problems module,
+  | which remains the source of truth for solving.
+  |
   */
 
   const openProblem = (
     item: PlannerItem,
   ) => {
-    if (
-      !item.question_link
-    ) {
-      return;
-    }
-
-    window.open(
-      item.question_link,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    window.location.href =
+      `/problems?problemId=${item.problem_id}`;
   };
 
   /*
   |--------------------------------------------------------------------------
   | ADD PROBLEM
   |--------------------------------------------------------------------------
-  |
-  | For now, this opens the planner setup.
-  | The next step can be a real problem picker.
-  |--------------------------------------------------------------------------
   */
 
   const handleAddProblem = (
     date: string,
   ) => {
-    console.log(
-      "Add problem for:",
-      date,
-    );
+    setPickerDate(date);
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | ADD PROBLEM TO PLANNER
+  |--------------------------------------------------------------------------
+  */
+
+  const addProblemToPlanner = async (
+    problem: PlannerSuggestion,
+    date: string,
+  ) => {
+    try {
+      /*
+      |--------------------------------------------------------------------------
+      | Position
+      |--------------------------------------------------------------------------
+      */
+
+      const existingForDay =
+        items.filter(
+          (item) =>
+            String(
+              item.planned_date,
+            ).slice(0, 10) === date,
+        );
+
+      const nextPosition =
+        existingForDay.length;
+
+      /*
+      |--------------------------------------------------------------------------
+      | API
+      |--------------------------------------------------------------------------
+      */
+
+      const added =
+        await addPlannerItem({
+          problemId:
+            problem.problem_id,
+
+          plannedDate:
+            date,
+
+          position:
+            nextPosition,
+
+          source: "USER",
+        });
+
+      /*
+      |--------------------------------------------------------------------------
+      | Add to local state
+      |--------------------------------------------------------------------------
+      */
+
+      const enrichedItem: PlannerItem =
+        {
+          ...added,
+
+          problem_id:
+            problem.problem_id,
+
+          title:
+            problem.title,
+
+          difficulty:
+            problem.difficulty,
+
+          topic:
+            problem.topic,
+
+          tags:
+            problem.tags,
+
+          platform:
+            problem.platform,
+
+          question_link:
+            problem.question_link,
+
+          solved:
+            problem.solved,
+        };
+
+      setItems((current) => [
+        ...current,
+        enrichedItem,
+      ]);
+
+      setPickerDate(null);
+
+      /*
+      |--------------------------------------------------------------------------
+      | If the week did not previously have
+      | a plan, reload it so we get the
+      | actual plan metadata.
+      |--------------------------------------------------------------------------
+      */
+
+      if (!plan) {
+        const refreshed =
+          await getPlanner(
+            weekStartString,
+          );
+
+        setPlan(refreshed);
+
+        setItems(
+          refreshed?.items ?? [
+            enrichedItem,
+          ],
+        );
+      }
+
+      toast.success(
+        "Problem added to your planner",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to add planner problem:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to add problem",
+      );
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | DELETE SINGLE ITEM
+  |--------------------------------------------------------------------------
+  */
+
+  const deleteProblem = async (
+    item: PlannerItem,
+  ) => {
+    setActionLoading(true);
+
+    try {
+      await deletePlannerItem(
+        item.id,
+      );
+
+      setItems((current) =>
+        current.filter(
+          (currentItem) =>
+            currentItem.id !==
+            item.id,
+        ),
+      );
+
+      setConfirmAction(null);
+
+      toast.success(
+        "Problem removed from planner",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to delete planner item:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove problem",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | RESET DAY
+  |--------------------------------------------------------------------------
+  */
+
+  const resetDay = async (
+    date: string,
+  ) => {
+    if (!plan) {
+      setConfirmAction(null);
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      /*
+      |--------------------------------------------------------------------------
+      | Keep every item except this day.
+      |--------------------------------------------------------------------------
+      */
+
+      const remainingItems =
+        items.filter(
+          (item) =>
+            String(
+              item.planned_date,
+            ).slice(0, 10) !== date,
+        );
+
+      const savedPlan =
+        await savePlanner({
+          weekStart:
+            weekStartString,
+
+          weekEnd:
+            weekEndString,
+
+          goalCount:
+            plan.goal_count,
+
+          items:
+            remainingItems.map(
+              (item) => ({
+                problemId:
+                  item.problem_id,
+
+                plannedDate:
+                  String(
+                    item.planned_date,
+                  ).slice(0, 10),
+
+                position:
+                  item.position,
+
+                source:
+                  item.source,
+              }),
+            ),
+        });
+
+      setPlan(savedPlan);
+
+      setItems(
+        savedPlan.items,
+      );
+
+      setConfirmAction(null);
+
+      toast.success(
+        "Day cleared",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to reset day:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to reset day",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | RESET WEEK
+  |--------------------------------------------------------------------------
+  */
+
+  const resetWeek = async () => {
+    if (!plan) {
+      setConfirmAction(null);
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      const savedPlan =
+        await savePlanner({
+          weekStart:
+            weekStartString,
+
+          weekEnd:
+            weekEndString,
+
+          goalCount:
+            plan.goal_count,
+
+          items: [],
+        });
+
+      setPlan(savedPlan);
+
+      setItems([]);
+
+      setConfirmAction(null);
+
+      toast.success(
+        "Week cleared",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to reset week:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to reset week",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | REBUILD CONFIRMATION
+  |--------------------------------------------------------------------------
+  */
+
+  const handlePlanButton = () => {
+    if (
+      plan &&
+      items.length > 0
+    ) {
+      setConfirmAction({
+        type: "rebuild",
+      });
+
+      return;
+    }
 
     setShowSetup(true);
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | CONFIRM ACTION
+  |--------------------------------------------------------------------------
+  */
+
+  const handleConfirmAction =
+    async () => {
+      if (!confirmAction) {
+        return;
+      }
+
+      if (
+        confirmAction.type ===
+        "delete"
+      ) {
+        await deleteProblem(
+          confirmAction.item,
+        );
+
+        return;
+      }
+
+      if (
+        confirmAction.type ===
+        "reset-day"
+      ) {
+        await resetDay(
+          confirmAction.date,
+        );
+
+        return;
+      }
+
+      if (
+        confirmAction.type ===
+        "reset-week"
+      ) {
+        await resetWeek();
+
+        return;
+      }
+
+      if (
+        confirmAction.type ===
+        "rebuild"
+      ) {
+        setConfirmAction(null);
+        setShowSetup(true);
+      }
+    };
 
   /*
   |--------------------------------------------------------------------------
@@ -546,25 +980,52 @@ export default function PlannerPage() {
             </p>
           </div>
 
-          <motion.button
-            whileHover={{
-              y: -1,
-            }}
-            whileTap={{
-              scale: 0.97,
-            }}
-            type="button"
-            onClick={() =>
-              setShowSetup(true)
-            }
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10"
-          >
-            <Sparkles className="h-4 w-4" />
+          <div className="flex flex-wrap items-center gap-2">
+            {plan &&
+              items.length > 0 && (
+                <motion.button
+                  whileHover={{
+                    y: -1,
+                  }}
+                  whileTap={{
+                    scale: 0.97,
+                  }}
+                  type="button"
+                  onClick={() =>
+                    setConfirmAction(
+                      {
+                        type: "reset-week",
+                      },
+                    )
+                  }
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
 
-            {plan
-              ? "Rebuild week"
-              : "Plan my week"}
-          </motion.button>
+                  Reset week
+                </motion.button>
+              )}
+
+            <motion.button
+              whileHover={{
+                y: -1,
+              }}
+              whileTap={{
+                scale: 0.97,
+              }}
+              type="button"
+              onClick={
+                handlePlanButton
+              }
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10"
+            >
+              <Sparkles className="h-4 w-4" />
+
+              {plan
+                ? "Rebuild week"
+                : "Plan my week"}
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* NAVIGATION */}
@@ -585,7 +1046,6 @@ export default function PlannerPage() {
           className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card/70 px-2 py-2 shadow-sm backdrop-blur"
         >
           <div className="flex items-center gap-1">
-
             <motion.button
               whileTap={{
                 scale: 0.9,
@@ -635,7 +1095,6 @@ export default function PlannerPage() {
           </div>
 
           <div className="flex items-center gap-3 pr-2">
-
             <div className="hidden text-xs text-muted-foreground sm:block">
               {progress.solved}/
               {progress.total}{" "}
@@ -680,17 +1139,9 @@ export default function PlannerPage() {
             />
           </div>
         ) : (
-          /*
-          |--------------------------------------------------------------------------
-          | DEFAULT PLANNER BOARD
-          |--------------------------------------------------------------------------
-          |
-          | This is intentionally rendered even when there is no plan.
-          | The Planner is a calendar/kanban workspace first.
-          |--------------------------------------------------------------------------
-          */
-
-          <AnimatePresence mode="wait">
+          <AnimatePresence
+            mode="wait"
+          >
             <motion.div
               key={weekStartString}
               initial={{
@@ -719,12 +1170,30 @@ export default function PlannerPage() {
                 onAddProblem={
                   handleAddProblem
                 }
+                onDeleteProblem={(
+                  item,
+                ) =>
+                  setConfirmAction(
+                    {
+                      type: "delete",
+                      item,
+                    },
+                  )
+                }
+                onResetDay={(date) =>
+                  setConfirmAction(
+                    {
+                      type: "reset-day",
+                      date,
+                    },
+                  )
+                }
               />
             </motion.div>
           </AnimatePresence>
         )}
 
-        {/* SETUP */}
+        {/* WEEK BUILDER */}
 
         <AnimatePresence>
           {showSetup && (
@@ -757,6 +1226,143 @@ export default function PlannerPage() {
                 building
               }
             />
+          )}
+        </AnimatePresence>
+
+        {/* ADD TASK PICKER */}
+
+        <AnimatePresence>
+          {pickerDate && (
+            <PlannerProblemPicker
+              date={
+                pickerDate
+              }
+              existingProblemIds={items.map(
+                (item) =>
+                  item.problem_id,
+              )}
+              onAdd={
+                addProblemToPlanner
+              }
+              onClose={() =>
+                setPickerDate(null)
+              }
+            />
+          )}
+        </AnimatePresence>
+
+        {/* CONFIRMATION MODAL */}
+
+        <AnimatePresence>
+          {confirmAction && (
+            <motion.div
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              exit={{
+                opacity: 0,
+              }}
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: 10,
+                  scale: 0.98,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: 5,
+                  scale: 0.98,
+                }}
+                className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+              >
+                <div className="flex gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-500">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold text-foreground">
+                      {confirmAction.type ===
+                      "delete"
+                        ? "Remove this task?"
+                        : confirmAction.type ===
+                            "reset-day"
+                          ? "Reset this day?"
+                          : confirmAction.type ===
+                              "reset-week"
+                            ? "Reset this week?"
+                            : "Rebuild this week?"}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {confirmAction.type ===
+                      "delete"
+                        ? "This removes the problem from your planner only. Your solved status and Problems data are not affected."
+                        : confirmAction.type ===
+                            "reset-day"
+                          ? "All planned problems on this day will be removed from the planner."
+                          : confirmAction.type ===
+                              "reset-week"
+                            ? "All planned problems for this week will be removed from the planner."
+                            : "Your current weekly arrangement will be replaced with a new generated draft."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      actionLoading
+                    }
+                    onClick={() =>
+                      setConfirmAction(
+                        null,
+                      )
+                    }
+                    className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      actionLoading
+                    }
+                    onClick={
+                      handleConfirmAction
+                    }
+                    className={[
+                      "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50",
+                      confirmAction.type ===
+                        "rebuild"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                    ].join(" ")}
+                  >
+                    {actionLoading && (
+                      <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                    )}
+
+                    {confirmAction.type ===
+                    "rebuild"
+                      ? "Continue"
+                      : "Confirm"}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

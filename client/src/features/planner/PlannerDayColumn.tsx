@@ -1,24 +1,22 @@
 /* eslint-disable prettier/prettier */
 
 import {
+  CalendarPlus,
+  MoreHorizontal,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
+
+import {
   useState,
   type DragEvent,
 } from "react";
 
-import {
-  CalendarPlus,
-  Plus,
-} from "lucide-react";
-
-import {
-  motion,
-} from "framer-motion";
+import { motion } from "framer-motion";
 
 import PlannerProblemCard from "./PlannerProblemCard";
 
-import type {
-  PlannerItem,
-} from "./planner.types";
+import type { PlannerItem } from "./planner.types";
 
 import {
   formatDate,
@@ -29,9 +27,7 @@ import {
 
 interface PlannerDayColumnProps {
   date: Date;
-
   dayName: string;
-
   items: PlannerItem[];
 
   onDropItem: (
@@ -46,6 +42,14 @@ interface PlannerDayColumnProps {
   onAddProblem: (
     date: string,
   ) => void;
+
+  onDeleteProblem: (
+    item: PlannerItem,
+  ) => void;
+
+  onResetDay: (
+    date: string,
+  ) => void;
 }
 
 export default function PlannerDayColumn({
@@ -55,21 +59,23 @@ export default function PlannerDayColumn({
   onDropItem,
   onOpenProblem,
   onAddProblem,
+  onDeleteProblem,
+  onResetDay,
 }: PlannerDayColumnProps) {
   const [isDragOver, setIsDragOver] =
     useState(false);
 
-  const today =
-    isSameDay(
-      date,
-      new Date(),
-    );
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
-  const past =
-    isPastDay(date);
+  const today = isSameDay(
+    date,
+    new Date(),
+  );
 
-  const dateKey =
-    formatDate(date);
+  const past = isPastDay(date);
+
+  const dateKey = formatDate(date);
 
   const handleDragOver = (
     event: DragEvent<HTMLDivElement>,
@@ -85,11 +91,6 @@ export default function PlannerDayColumn({
   const handleDragLeave = (
     event: DragEvent<HTMLDivElement>,
   ) => {
-    /*
-    Don't remove highlight while
-    moving between children.
-    */
-
     if (
       event.currentTarget.contains(
         event.relatedTarget as Node,
@@ -113,49 +114,34 @@ export default function PlannerDayColumn({
         "planner-item-id",
       );
 
-    const itemId =
-      Number(rawId);
+    const itemId = Number(rawId);
 
-    if (!itemId) {
-      return;
-    }
+    if (!itemId) return;
 
-    onDropItem(
-      itemId,
-      dateKey,
-    );
+    onDropItem(itemId, dateKey);
   };
 
   return (
     <motion.div
       animate={{
-        scale: isDragOver
-          ? 1.01
-          : 1,
+        scale: isDragOver ? 1.01 : 1,
       }}
       transition={{
         duration: 0.15,
       }}
-      onDragOver={
-        handleDragOver
-      }
-      onDragLeave={
-        handleDragLeave
-      }
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={[
-        "relative flex min-h-[620px] min-w-[220px] flex-1 flex-col border-r border-white/[0.06] transition-colors last:border-r-0",
+        "relative flex min-h-[620px] min-w-[220px] flex-1 flex-col border-r border-border transition-colors last:border-r-0",
         past
-          ? "bg-white/[0.012]"
-          : "bg-[#090909]",
+          ? "bg-muted/20"
+          : "bg-background/70",
         isDragOver
-          ? "bg-primary/[0.07]"
+          ? "bg-primary/[0.06]"
           : "",
       ].join(" ")}
     >
-
-      {/* DROP GLOW */}
-
       {isDragOver && (
         <motion.div
           initial={{
@@ -172,14 +158,11 @@ export default function PlannerDayColumn({
 
       <div
         className={[
-          "relative z-10 border-b border-white/[0.06] px-4 py-3",
-          past
-            ? "opacity-50"
-            : "",
+          "relative z-10 border-b border-border px-4 py-3",
+          past ? "opacity-50" : "",
         ].join(" ")}
       >
         <div className="flex items-start justify-between">
-
           <div>
             <p
               className={[
@@ -210,28 +193,51 @@ export default function PlannerDayColumn({
             </div>
           </div>
 
-          {today && (
-            <motion.span
-              initial={{
-                opacity: 0,
-                scale: 0.8,
-              }}
-              animate={{
-                opacity: 1,
-                scale: 1,
-              }}
-              className="rounded-full bg-primary/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-primary"
+          <div className="relative flex items-center gap-1">
+            {today && (
+              <span className="rounded-full bg-primary/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-primary">
+                Today
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                setMenuOpen(
+                  (value) => !value,
+                )
+              }
+              className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              aria-label="Day actions"
             >
-              Today
-            </motion.span>
-          )}
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-8 z-40 w-36 rounded-lg border border-border bg-popover p-1 shadow-xl">
+                <button
+                  type="button"
+                  disabled={
+                    items.length === 0
+                  }
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onResetDay(dateKey);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-popover-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset day
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* TASK AREA */}
 
       <div className="relative z-10 flex flex-1 flex-col gap-2.5 p-3">
-
         {items.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
             <motion.div
@@ -242,15 +248,15 @@ export default function PlannerDayColumn({
                       scale: 1.02,
                     }
                   : {
-                      opacity: 0.45,
+                      opacity: 0.55,
                       scale: 1,
                     }
               }
-              className="w-full rounded-xl border border-dashed border-white/[0.07] px-3 py-8 text-center"
+              className="w-full rounded-xl border border-dashed border-border px-3 py-8 text-center"
             >
               <CalendarPlus className="mx-auto mb-2 h-4 w-4 text-muted-foreground/40" />
 
-              <p className="text-[11px] text-muted-foreground/50">
+              <p className="text-[11px] text-muted-foreground/60">
                 {isDragOver
                   ? "Drop here"
                   : "No tasks"}
@@ -264,10 +270,9 @@ export default function PlannerDayColumn({
                 key={item.id}
                 item={item}
                 index={index}
-                onOpen={() =>
-                  onOpenProblem(
-                    item,
-                  )
+                onOpen={onOpenProblem}
+                onDelete={
+                  onDeleteProblem
                 }
               />
             ),
@@ -277,22 +282,16 @@ export default function PlannerDayColumn({
 
       {/* ADD */}
 
-      <div className="relative z-10 border-t border-white/[0.06] p-2.5">
+      <div className="relative z-10 border-t border-border p-2.5">
         <motion.button
           type="button"
-          whileHover={{
-            backgroundColor:
-              "rgba(255,255,255,0.035)",
-          }}
           whileTap={{
             scale: 0.97,
           }}
           onClick={() =>
-            onAddProblem(
-              dateKey,
-            )
+            onAddProblem(dateKey)
           }
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-white/[0.07] hover:text-foreground"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-border hover:bg-muted hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5" />
           Add task

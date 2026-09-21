@@ -129,3 +129,13 @@ export interface PlannerProgress {
 
   percentage: number;
 }
+export interface PlannerSuggestion {
+  problem_id: number;
+  title: string;
+  difficulty: string;
+  topic: string;
+  tags?: string | null;
+  platform?: string;
+  question_link?: string;
+  solved: boolean;
+}

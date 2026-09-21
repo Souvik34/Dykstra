@@ -1,11 +1,14 @@
 import api from "@/lib/api";
 
 import type {
+  PlannerDifficulty,
   PlannerDraft,
   PlannerDraftRequest,
   PlannerItem,
+  PlannerItemSource,
   PlannerPlan,
   PlannerProgress,
+  PlannerSuggestion,
   SavePlannerRequest,
 } from "./planner.types";
 
@@ -89,6 +92,30 @@ export const getPlannerProgress = async (
   const response = await api.get(
     `/planner/${planId}/progress`,
   );
+
+  return response.data.data;
+};
+export const getPlannerSuggestions = async (
+  topic: string,
+  difficulty?: PlannerDifficulty[],
+): Promise<PlannerSuggestion[]> => {
+  const response = await api.get("/planner/suggestions", {
+    params: {
+      topic,
+      difficulties: difficulty?.join(","),
+    },
+  });
+
+  return response.data.data;
+};
+
+export const addPlannerItem = async (payload: {
+  problemId: number;
+  plannedDate: string;
+  position: number;
+  source?: PlannerItemSource;
+}): Promise<PlannerItem> => {
+  const response = await api.post("/planner/items", payload);
 
   return response.data.data;
 };

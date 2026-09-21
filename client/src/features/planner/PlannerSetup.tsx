@@ -1,6 +1,11 @@
 /* eslint-disable prettier/prettier */
 
-import { Minus, Plus, Sparkles, X } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -18,13 +23,17 @@ interface PlannerSetupProps {
   selectedDifficulties: PlannerDifficulty[];
   goalCount: number;
 
-  onTopicsChange: (topics: string[]) => void;
+  onTopicsChange: (
+    topics: string[],
+  ) => void;
 
   onDifficultiesChange: (
     difficulties: PlannerDifficulty[],
   ) => void;
 
-  onGoalCountChange: (count: number) => void;
+  onGoalCountChange: (
+    count: number,
+  ) => void;
 
   onBuild: () => void;
   onClose?: () => void;
@@ -43,8 +52,12 @@ export default function PlannerSetup({
   onClose,
   loading = false,
 }: PlannerSetupProps) {
-  const toggleTopic = (topic: string) => {
-    if (selectedTopics.includes(topic)) {
+  const toggleTopic = (
+    topic: string,
+  ) => {
+    if (
+      selectedTopics.includes(topic)
+    ) {
       onTopicsChange(
         selectedTopics.filter(
           (item) => item !== topic,
@@ -68,7 +81,8 @@ export default function PlannerSetup({
     ) {
       onDifficultiesChange(
         selectedDifficulties.filter(
-          (item) => item !== difficulty,
+          (item) =>
+            item !== difficulty,
         ),
       );
     } else {
@@ -80,49 +94,56 @@ export default function PlannerSetup({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0b0b0b] shadow-[0_30px_100px_-30px_rgba(0,0,0,0.9)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl">
+        {/* CLOSE */}
+
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-5 rounded-lg p-2 text-slate-500 transition hover:bg-white/[0.05] hover:text-white"
+            className="absolute right-5 top-5 rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
         )}
 
-        <div className="border-b border-white/[0.06] p-6">
+        {/* HEADER */}
+
+        <div className="border-b border-border p-6">
           <div className="mb-2 flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500/10 text-blue-300">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
               <Sparkles className="h-4 w-4" />
             </div>
 
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
               Weekly Planner
             </span>
           </div>
 
-          <h2 className="text-xl font-semibold text-white">
+          <h2 className="text-xl font-semibold text-foreground">
             Build your week
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Tell Dykstra what you want to practice.
-            We'll build the first draft for you.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tell Dykstra what you want to
+            practice. We'll build the first
+            draft for you.
           </p>
         </div>
+
+        {/* CONTENT */}
 
         <div className="space-y-7 p-6">
           {/* TOPICS */}
 
           <section>
             <div className="mb-3">
-              <h3 className="text-sm font-semibold text-slate-200">
+              <h3 className="text-sm font-semibold text-foreground">
                 What do you want to practice?
               </h3>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Select one or more topics.
               </p>
             </div>
@@ -130,20 +151,24 @@ export default function PlannerSetup({
             <div className="flex flex-wrap gap-2">
               {TOPICS.map((topic) => {
                 const selected =
-                  selectedTopics.includes(topic);
+                  selectedTopics.includes(
+                    topic,
+                  );
 
                 return (
                   <button
                     key={topic}
                     type="button"
                     onClick={() =>
-                      toggleTopic(topic)
+                      toggleTopic(
+                        topic,
+                      )
                     }
                     className={[
                       "rounded-lg border px-3 py-2 text-xs font-medium transition",
                       selected
-                        ? "border-blue-400/30 bg-blue-500/10 text-blue-300 shadow-[0_0_20px_-12px_rgba(59,130,246,0.9)]"
-                        : "border-white/[0.07] bg-white/[0.02] text-slate-400 hover:border-white/[0.14] hover:bg-white/[0.04] hover:text-slate-200",
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/20 hover:bg-muted hover:text-foreground",
                     ].join(" ")}
                   >
                     {topic}
@@ -157,12 +182,13 @@ export default function PlannerSetup({
 
           <section>
             <div className="mb-3">
-              <h3 className="text-sm font-semibold text-slate-200">
+              <h3 className="text-sm font-semibold text-foreground">
                 Difficulty
               </h3>
 
-              <p className="mt-1 text-xs text-slate-500">
-                Dykstra will balance the selected levels.
+              <p className="mt-1 text-xs text-muted-foreground">
+                Dykstra will balance the selected
+                levels.
               </p>
             </div>
 
@@ -186,8 +212,8 @@ export default function PlannerSetup({
                       className={[
                         "rounded-xl border px-4 py-3 text-sm font-medium capitalize transition",
                         selected
-                          ? "border-blue-400/30 bg-blue-500/10 text-blue-300"
-                          : "border-white/[0.07] bg-white/[0.02] text-slate-400 hover:bg-white/[0.04] hover:text-slate-200",
+                          ? "border-primary/30 bg-primary/10 text-primary"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
                       ].join(" ")}
                     >
                       {difficulty}
@@ -202,17 +228,17 @@ export default function PlannerSetup({
 
           <section>
             <div className="mb-3">
-              <h3 className="text-sm font-semibold text-slate-200">
+              <h3 className="text-sm font-semibold text-foreground">
                 Weekly goal
               </h3>
 
-              <p className="mt-1 text-xs text-slate-500">
-                How many new problems do you want
+              <p className="mt-1 text-xs text-muted-foreground">
+                How many problems do you want
                 on your board?
               </p>
             </div>
 
-            <div className="flex w-fit items-center rounded-xl border border-white/[0.08] bg-white/[0.025]">
+            <div className="flex w-fit items-center rounded-xl border border-border bg-background">
               <button
                 type="button"
                 onClick={() =>
@@ -223,12 +249,12 @@ export default function PlannerSetup({
                     ),
                   )
                 }
-                className="grid h-11 w-11 place-items-center text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                className="grid h-11 w-11 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 <Minus className="h-4 w-4" />
               </button>
 
-              <div className="w-14 text-center text-lg font-semibold text-white">
+              <div className="w-14 text-center text-lg font-semibold text-foreground">
                 {goalCount}
               </div>
 
@@ -242,7 +268,7 @@ export default function PlannerSetup({
                     ),
                   )
                 }
-                className="grid h-11 w-11 place-items-center text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+                className="grid h-11 w-11 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -251,15 +277,17 @@ export default function PlannerSetup({
 
           {/* ACTION */}
 
-          <div className="flex justify-end border-t border-white/[0.06] pt-5">
+          <div className="flex justify-end border-t border-border pt-5">
             <Button
               disabled={
                 loading ||
-                selectedTopics.length === 0 ||
-                selectedDifficulties.length === 0
+                selectedTopics.length ===
+                  0 ||
+                selectedDifficulties.length ===
+                  0
               }
               onClick={onBuild}
-              className="gap-2 bg-blue-500 px-5 text-white shadow-[0_0_30px_-12px_rgba(59,130,246,0.9)] hover:bg-blue-400"
+              className="gap-2 bg-primary px-5 text-primary-foreground shadow-sm hover:bg-primary/90"
             >
               <Sparkles className="h-4 w-4" />
 

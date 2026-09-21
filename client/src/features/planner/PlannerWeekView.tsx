@@ -15,7 +15,6 @@ import {
 
 interface PlannerWeekViewProps {
   weekStart: Date;
-
   items: PlannerItem[];
 
   onMoveItem: (
@@ -30,6 +29,14 @@ interface PlannerWeekViewProps {
   onAddProblem: (
     date: string,
   ) => void;
+
+  onDeleteProblem: (
+    item: PlannerItem,
+  ) => void;
+
+  onResetDay: (
+    date: string,
+  ) => void;
 }
 
 export default function PlannerWeekView({
@@ -38,9 +45,10 @@ export default function PlannerWeekView({
   onMoveItem,
   onOpenProblem,
   onAddProblem,
+  onDeleteProblem,
+  onResetDay,
 }: PlannerWeekViewProps) {
-  const monday =
-    getMonday(weekStart);
+  const monday = getMonday(weekStart);
 
   return (
     <motion.div
@@ -55,17 +63,15 @@ export default function PlannerWeekView({
       transition={{
         duration: 0.35,
       }}
-      className="overflow-x-auto rounded-2xl border border-border bg-[#070707] shadow-[0_30px_100px_-50px_rgba(0,0,0,0.95)]"
+      className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm"
     >
       <div className="flex min-w-[1540px]">
-
         {WEEK_DAYS.map(
           (day, index) => {
-            const date =
-              addDays(
-                monday,
-                index,
-              );
+            const date = addDays(
+              monday,
+              index,
+            );
 
             const dateString =
               formatDate(date);
@@ -76,10 +82,7 @@ export default function PlannerWeekView({
                   (item) =>
                     String(
                       item.planned_date,
-                    ).slice(
-                      0,
-                      10,
-                    ) ===
+                    ).slice(0, 10) ===
                     dateString,
                 )
                 .sort(
@@ -102,6 +105,12 @@ export default function PlannerWeekView({
                 }
                 onAddProblem={
                   onAddProblem
+                }
+                onDeleteProblem={
+                  onDeleteProblem
+                }
+                onResetDay={
+                  onResetDay
                 }
               />
             );
