@@ -233,7 +233,7 @@ export default function PlannerDayColumn({
 
       <div
         className={[
-          "relative z-30 overflow-hidden border-b border-slate-200/80",
+          "relative z-30 overflow-visible border-b border-slate-200/80",
           past
             ? "opacity-50"
             : "",

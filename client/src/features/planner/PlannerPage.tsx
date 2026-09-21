@@ -1117,7 +1117,7 @@ export default function PlannerPage() {
   */
 
   return (
-    <div className="min-h-full bg-slate-400">
+    <div className="min-h-full bg-slate-200">
       <div className="mx-auto max-w-[1800px] px-4 py-7 sm:px-6 lg:px-8">
 
         {/* PAGE HEADER */}
