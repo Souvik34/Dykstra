@@ -530,7 +530,11 @@ for (
   index++
 ) {
   const item = items[index];
-
+console.log("SAVE PLANNER ITEM:", {
+  problemId: item.problemId,
+  plannedDate: item.plannedDate,
+  fullItem: item,
+});
   const plannedDate =
     String(item.plannedDate).slice(0, 10);
 
