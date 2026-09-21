@@ -301,11 +301,9 @@ const selectProblems = ({
 const distributeProblemsAcrossWeek = (
   problems,
   weekStart,
+  leaveDates = [],
 ) => {
-  if (
-    !problems ||
-    problems.length === 0
-  ) {
+  if (!problems || problems.length === 0) {
     return [];
   }
 
@@ -316,31 +314,25 @@ const distributeProblemsAcrossWeek = (
     `${weekStartString}T00:00:00`,
   );
 
-  if (
-    Number.isNaN(
-      parsedWeekStart.getTime(),
-    )
-  ) {
+  if (Number.isNaN(parsedWeekStart.getTime())) {
     throw new Error(
       `Invalid planner weekStart: ${weekStart}`,
     );
   }
 
-  const monday =
-    getMonday(parsedWeekStart);
+  const monday = getMonday(parsedWeekStart);
+  const today = getToday();
 
-  const todayString = formatDate(getToday());
-const todayDate = new Date(
-  `${todayString}T00:00:00`,
-);
+  const leaveSet = new Set(
+    leaveDates.map((date) =>
+      String(date).slice(0, 10),
+    ),
+  );
 
-const daysSinceMonday = Math.floor(
-  (
-    todayDate.getTime() -
-    monday.getTime()
-  ) /
-    (24 * 60 * 60 * 1000),
-);
+  const daysSinceMonday = Math.floor(
+    (today.getTime() - monday.getTime()) /
+      (24 * 60 * 60 * 1000),
+  );
 
   const startDayIndex =
     daysSinceMonday >= 0 &&
@@ -348,42 +340,47 @@ const daysSinceMonday = Math.floor(
       ? daysSinceMonday
       : 0;
 
-  const practiceDays = [];
+  const availableDays = [];
 
   for (
-    let day = startDayIndex;
-    day <= 6;
-    day++
+    let dayIndex = startDayIndex;
+    dayIndex <= 6;
+    dayIndex++
   ) {
-    practiceDays.push(day);
+    const date = formatDate(
+      addDays(monday, dayIndex),
+    );
+
+    if (leaveSet.has(date)) {
+      continue;
+    }
+
+    availableDays.push({
+      dayIndex,
+      date,
+    });
   }
 
-  return problems.map(
-    (problem, index) => {
-      const dayIndex =
-        practiceDays[
-          index %
-            practiceDays.length
-        ];
+  if (availableDays.length === 0) {
+    throw new Error(
+      "No available days remain in this week",
+    );
+  }
 
-      const plannedDate =
-        formatDate(
-          addDays(
-            monday,
-            dayIndex,
-          ),
-        );
+  return problems.map((problem, index) => {
+    const day =
+      availableDays[
+        index % availableDays.length
+      ];
 
-      return {
-        problem,
-        plannedDate,
-        position: Math.floor(
-          index /
-            practiceDays.length,
-        ),
-      };
-    },
-  );
+    return {
+      problem,
+      plannedDate: day.date,
+      position: Math.floor(
+        index / availableDays.length,
+      ),
+    };
+  });
 };
 /*
 |--------------------------------------------------------------------------
@@ -443,11 +440,21 @@ export const generateWeeklyDraft = async ({
         `${weekStart}T00:00:00`,
       ),
     );
+const existingPlan =
+  await plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
 
+const leaveDates =
+  existingPlan?.leaves?.map(
+    (leave) => leave.leave_date,
+  ) ?? [];
   const scheduled =
   distributeProblemsAcrossWeek(
     selected,
     formatDate(monday),
+    leaveDates,
   );
 
   const weekEnd = formatDate(
@@ -556,6 +563,16 @@ export const saveWeeklyPlan = async ({
   plan.id,
   formatDate(getToday()),
 );
+const planLeaves =
+  await plannerRepository.getPlanLeavesRepo(
+    plan.id,
+  );
+
+const leaveDates = new Set(
+  planLeaves.map((leave) =>
+    String(leave.leave_date).slice(0, 10),
+  ),
+);
 
 for (
   let index = 0;
@@ -563,13 +580,13 @@ for (
   index++
 ) {
   const item = items[index];
-console.log("SAVE PLANNER ITEM:", {
-  problemId: item.problemId,
-  plannedDate: item.plannedDate,
-  fullItem: item,
-});
+
   const plannedDate =
     String(item.plannedDate).slice(0, 10);
+
+  if (leaveDates.has(plannedDate)) {
+    continue;
+  }
 
   if (isPastDate(plannedDate)) {
     continue;
@@ -577,19 +594,10 @@ console.log("SAVE PLANNER ITEM:", {
 
   await plannerRepository.addPlanItemRepo({
     planId: plan.id,
-
-    problemId:
-      Number(item.problemId),
-
+    problemId: Number(item.problemId),
     plannedDate,
-
-    position:
-      Number(
-        item.position ?? index,
-      ),
-
-    source:
-      item.source || "USER",
+    position: Number(item.position ?? index),
+    source: item.source || "USER",
   });
 }
 
@@ -645,6 +653,22 @@ if (isPastDate(currentDate)) {
 if (isPastDate(newDate)) {
   throw new Error(
     "Past planner days are locked",
+  );
+}
+const planLeaves =
+  await plannerRepository.getPlanLeavesRepo(
+    owner.plan_id,
+  );
+
+const leaveDates = new Set(
+  planLeaves.map((leave) =>
+    String(leave.leave_date).slice(0, 10),
+  ),
+);
+
+if (leaveDates.has(newDate)) {
+  throw new Error(
+    "Cannot move a task to a leave day",
   );
 }
   return await plannerRepository.updatePlanItemRepo(
@@ -759,6 +783,95 @@ if (isPastDate(planDate)) {
   throw new Error("Past planner days are locked");
 }
 
+ const plan =
+  await plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
+
+if (!plan) {
+  throw new Error("Planner week not found");
+}
+
+const planLeaves =
+  await plannerRepository.getPlanLeavesRepo(plan.id);
+
+const leaveDates = new Set(
+  planLeaves.map((leave) =>
+    String(leave.leave_date).slice(0, 10),
+  ),
+);
+
+const normalizedPlannedDate =
+  String(plannedDate).slice(0, 10);
+
+if (leaveDates.has(normalizedPlannedDate)) {
+  throw new Error("Cannot add a task to a leave day");
+}
+
+if (isPastDate(normalizedPlannedDate)) {
+  throw new Error("Cannot add a task to a past day");
+}
+
+return plannerRepository.addPlanItemRepo({
+  planId: plan.id,
+  problemId,
+  plannedDate: normalizedPlannedDate,
+  position,
+  source,
+});
+}
+
+export const getPlanLeaves = async ({
+  userId,
+  weekStart,
+}) => {
+  const plan =
+    await plannerRepository.getPlanRepo(
+      userId,
+      weekStart,
+    );
+
+  if (!plan) {
+    return [];
+  }
+
+  return plannerRepository.getPlanLeavesRepo(
+    plan.id,
+  );
+};
+
+export const setPlanLeave = async ({
+  userId,
+  weekStart,
+  leaveDate,
+}) => {
+  const normalizedLeaveDate =
+    String(leaveDate).slice(0, 10);
+const monday = getMonday(
+  new Date(
+    `${String(weekStart).slice(0, 10)}T00:00:00`,
+  ),
+);
+
+const weekEnd = formatDate(
+  addDays(monday, 6),
+);
+
+if (
+  normalizedLeaveDate <
+    formatDate(monday) ||
+  normalizedLeaveDate >
+    weekEnd
+) {
+  throw new Error(
+    "Leave date must belong to the selected planner week",
+  );
+}
+  if (isPastDate(normalizedLeaveDate)) {
+    throw new Error("Cannot set leave for a past day");
+  }
+
   let plan =
     await plannerRepository.getPlanRepo(
       userId,
@@ -766,30 +879,134 @@ if (isPastDate(planDate)) {
     );
 
   if (!plan) {
-    const monday =
-      getMonday(
-        new Date(`${weekStart}T00:00:00`),
-      );
-
-    const weekEnd =
-      formatDate(
-        addDays(monday, 6),
-      );
-
     plan =
-      await plannerRepository.createPlanRepo(
+      await plannerRepository.createPlanRepo({
         userId,
         weekStart,
-        weekEnd,
-        1,
-      );
+        goalCount: 5,
+      });
   }
 
-  return plannerRepository.addPlanItemRepo({
+  const existingLeaves = new Set(
+    (plan.leaves ?? []).map((leave) =>
+      String(leave.leave_date).slice(0, 10),
+    ),
+  );
+
+  if (existingLeaves.has(normalizedLeaveDate)) {
+    return plannerRepository.getPlanRepo(
+      userId,
+      weekStart,
+    );
+  }
+
+  const affectedItems =
+    (plan.items ?? []).filter(
+      (item) =>
+        String(item.planned_date).slice(0, 10) ===
+        normalizedLeaveDate,
+    );
+
+
+  const today = getToday();
+
+  const availableDays = [];
+
+  for (let dayIndex = 0; dayIndex <= 6; dayIndex++) {
+    const date = formatDate(
+      addDays(monday, dayIndex),
+    );
+
+    if (isPastDate(date)) continue;
+    if (date === normalizedLeaveDate) continue;
+    if (existingLeaves.has(date)) continue;
+
+    availableDays.push(date);
+  }
+
+  if (
+    affectedItems.length > 0 &&
+    availableDays.length === 0
+  ) {
+    throw new Error(
+      "Cannot mark leave: no available days remain for these tasks",
+    );
+  }
+
+  await plannerRepository.addPlanLeaveRepo({
     planId: plan.id,
-    problemId,
-    plannedDate: planDate,
-    position,
-    source,
+    leaveDate: normalizedLeaveDate,
   });
+
+  if (affectedItems.length > 0) {
+    const positionCounts = {};
+
+    for (const item of plan.items ?? []) {
+      const date = String(item.planned_date).slice(0, 10);
+
+      if (
+        date !== normalizedLeaveDate &&
+        !existingLeaves.has(date) &&
+        !isPastDate(date)
+      ) {
+        positionCounts[date] =
+          (positionCounts[date] ?? 0) + 1;
+      }
+    }
+
+    for (let index = 0; index < affectedItems.length; index++) {
+      const targetDate =
+        availableDays[
+          index % availableDays.length
+        ];
+
+      const position =
+        positionCounts[targetDate] ?? 0;
+
+      await plannerRepository.updatePlanItemRepo({
+        itemId: affectedItems[index].id,
+        plannedDate: targetDate,
+        position,
+      });
+
+      positionCounts[targetDate] = position + 1;
+    }
+  }
+
+  return plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
+};
+export const removePlanLeave = async ({
+  userId,
+  weekStart,
+  leaveDate,
+}) => {
+  const normalizedLeaveDate =
+    String(leaveDate).slice(0, 10);
+
+  if (isPastDate(normalizedLeaveDate)) {
+    throw new Error("Cannot modify leave for a past day");
+  }
+
+  const plan =
+    await plannerRepository.getPlanRepo(
+      userId,
+      weekStart,
+    );
+
+  if (!plan) {
+    throw new Error("Planner week not found");
+  }
+
+  await plannerRepository.deletePlanLeaveRepo({
+    planId: plan.id,
+    leaveDate: normalizedLeaveDate,
+  });
+
+  return plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
 };

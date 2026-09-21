@@ -493,3 +493,107 @@ export const getSuggestions = async (req, res) => {
     });
   }
 };
+
+export const getLeaves = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { weekStart } = req.query;
+
+    if (!weekStart) {
+      return res.status(400).json({
+        success: false,
+        message: "weekStart is required",
+      });
+    }
+
+    const leaves = await plannerService.getPlanLeaves({
+      userId,
+      weekStart,
+    });
+
+    return res.json({
+      success: true,
+      data: leaves,
+    });
+  } catch (err) {
+    console.error("GET PLANNER LEAVES ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const setLeave = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { weekStart, leaveDate } = req.body;
+
+    if (!weekStart || !leaveDate) {
+      return res.status(400).json({
+        success: false,
+        message: "weekStart and leaveDate are required",
+      });
+    }
+
+    const plan = await plannerService.setPlanLeave({
+      userId,
+      weekStart,
+      leaveDate,
+    });
+
+    return res.json({
+      success: true,
+      data: plan,
+    });
+  } catch (err) {
+    console.error("SET PLANNER LEAVE ERROR:", err);
+
+    const message = err.message || "";
+
+    const status =
+      message.toLowerCase().includes("past") ||
+      message.toLowerCase().includes("available")
+        ? 403
+        : 500;
+
+    return res.status(status).json({
+      success: false,
+      message,
+    });
+  }
+};
+
+export const removeLeave = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { weekStart, leaveDate } = req.body;
+
+    if (!weekStart || !leaveDate) {
+      return res.status(400).json({
+        success: false,
+        message: "weekStart and leaveDate are required",
+      });
+    }
+
+    const plan =
+      await plannerService.removePlanLeave({
+        userId,
+        weekStart,
+        leaveDate,
+      });
+
+    return res.json({
+      success: true,
+      data: plan,
+    });
+  } catch (err) {
+    console.error("REMOVE PLANNER LEAVE ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

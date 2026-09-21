@@ -71,13 +71,24 @@ export const getPlanRepo = async (userId, weekStart) => {
     [userId, plan.id]
   );
 
-  return {
-    ...plan,
-    items: itemsResult.rows,
-  };
+const leavesResult = await pool.query(
+  `
+  SELECT
+    id,
+    leave_date
+  FROM planner_plan_leaves
+  WHERE plan_id = $1
+  ORDER BY leave_date ASC
+  `,
+  [plan.id],
+);
+
+return {
+  ...plan,
+  items: itemsResult.rows,
+  leaves: leavesResult.rows,
 };
-
-
+}
 /*
 |--------------------------------------------------------------------------
 | Create plan
@@ -535,4 +546,55 @@ export const getPlannerSuggestionsRepo = async ({
   );
 
   return result.rows;
+};
+
+export const getPlanLeavesRepo = async (planId) => {
+  const result = await pool.query(
+    `
+    SELECT
+      id,
+      leave_date
+    FROM planner_plan_leaves
+    WHERE plan_id = $1
+    ORDER BY leave_date ASC
+    `,
+    [planId],
+  );
+
+  return result.rows;
+};
+
+export const addPlanLeaveRepo = async ({
+  planId,
+  leaveDate,
+}) => {
+  const result = await pool.query(
+    `
+    INSERT INTO planner_plan_leaves (
+      plan_id,
+      leave_date
+    )
+    VALUES ($1, $2)
+    ON CONFLICT (plan_id, leave_date)
+    DO NOTHING
+    RETURNING id, leave_date
+    `,
+    [planId, leaveDate],
+  );
+
+  return result.rows[0] ?? null;
+};
+
+export const deletePlanLeaveRepo = async ({
+  planId,
+  leaveDate,
+}) => {
+  await pool.query(
+    `
+    DELETE FROM planner_plan_leaves
+    WHERE plan_id = $1
+      AND leave_date = $2
+    `,
+    [planId, leaveDate],
+  );
 };

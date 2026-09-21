@@ -63,6 +63,9 @@ router.get(
   protect,
   plannerController.getSuggestions
 );
+router.get("/leaves", protect, getLeaves);
+router.post("/leaves", protect, setLeave);
+router.delete("/leaves", protect, removeLeave);
 router.get(
   "/:planId/progress",
   protect,
