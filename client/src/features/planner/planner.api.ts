@@ -110,12 +110,12 @@ export const getPlannerSuggestions = async (
 };
 
 export const addPlannerItem = async (payload: {
+  weekStart: string;
   problemId: number;
   plannedDate: string;
   position: number;
   source?: PlannerItemSource;
-}): Promise<PlannerItem> => {
+}) => {
   const response = await api.post("/planner/items", payload);
-
   return response.data.data;
 };

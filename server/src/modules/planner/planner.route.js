@@ -5,6 +5,7 @@ import {
   generateDraft,
   savePlan,
   updateItem,
+   addItem,
   deleteItem,
   getProgress,
 } from "./planner.controller.js";
@@ -29,6 +30,11 @@ router.post(
   "/draft",
   protect,
   generateDraft
+);
+router.post(
+  "/items",
+  protect,
+  addItem
 );
 
 

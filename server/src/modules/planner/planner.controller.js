@@ -199,7 +199,79 @@ export const savePlan = async (
   }
 };
 
+/*
+|--------------------------------------------------------------------------
+| Add item to planner
+|--------------------------------------------------------------------------
+*/
 
+export const addItem = async (
+  req,
+  res
+) => {
+  try {
+    const userId = req.user.id;
+
+    const {
+      weekStart,
+      problemId,
+      plannedDate,
+      position,
+      source,
+    } = req.body;
+
+    if (
+      !weekStart ||
+      !problemId ||
+      !plannedDate ||
+      position === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "weekStart, problemId, plannedDate and position are required",
+      });
+    }
+
+    const item =
+      await plannerService.addPlanItem({
+        userId,
+        weekStart,
+        problemId: Number(problemId),
+        plannedDate,
+        position: Number(position),
+        source: source || "USER",
+      });
+
+    return res.json({
+      success: true,
+      data: item,
+    });
+  } catch (err) {
+    console.error(
+      "ADD PLANNER ITEM ERROR:",
+      err
+    );
+
+    const message =
+      err.message || "";
+
+    const status =
+      message
+        .toLowerCase()
+        .includes("past") ||
+      message
+        .toLowerCase()
+        .includes("unauthorized")
+        ? 403
+        : 500;
+
+    return res.status(status).json({
+      success: false,
+      message,
+    });
+  }
+};
 /*
 |--------------------------------------------------------------------------
 | Move / update item
