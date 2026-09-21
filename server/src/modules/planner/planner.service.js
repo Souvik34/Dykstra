@@ -292,66 +292,25 @@ const distributeProblemsAcrossWeek = (
     return [];
   }
 
-  const monday = new Date(
-    `${String(weekStart).slice(0, 10)}T00:00:00`,
+  const weekStartString =
+    String(weekStart).slice(0, 10);
+
+  const parsedWeekStart = new Date(
+    `${weekStartString}T00:00:00`,
   );
 
-  monday.setHours(0, 0, 0, 0);
-
-  const today = getToday();
-
-  const daysSinceMonday = Math.floor(
-    (
-      today.getTime() -
-      monday.getTime()
-    ) /
-      (24 * 60 * 60 * 1000),
-  );
-
-  const startDayIndex =
-    daysSinceMonday >= 0 &&
-    daysSinceMonday <= 6
-      ? daysSinceMonday
-      : 0;
-
-  const practiceDays = [];
-
-  for (
-    let day = startDayIndex;
-    day <= 6;
-    day++
+  if (
+    Number.isNaN(
+      parsedWeekStart.getTime(),
+    )
   ) {
-    practiceDays.push(day);
+    throw new Error(
+      `Invalid planner weekStart: ${weekStart}`,
+    );
   }
 
-  return problems.map(
-    (problem, index) => {
-      const dayIndex =
-        practiceDays[
-          index %
-            practiceDays.length
-        ];
-
-      const plannedDate =
-        formatDate(
-          addDays(
-            monday,
-            dayIndex,
-          ),
-        );
-
-      return {
-        problem,
-        plannedDate,
-        position: Math.floor(
-          index /
-            practiceDays.length,
-        ),
-      };
-    },
-  );
-};
-
+  const monday =
+    getMonday(parsedWeekStart);
 /*
 |--------------------------------------------------------------------------
 | Get existing plan
@@ -412,10 +371,10 @@ export const generateWeeklyDraft = async ({
     );
 
   const scheduled =
-    distributeProblemsAcrossWeek(
-      selected,
-      monday,
-    );
+  distributeProblemsAcrossWeek(
+    selected,
+    formatDate(monday),
+  );
 
   const weekEnd = formatDate(
     addDays(monday, 6),
