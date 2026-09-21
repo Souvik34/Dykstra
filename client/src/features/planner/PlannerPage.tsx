@@ -167,112 +167,87 @@ export default function PlannerPage() {
   // BUILD WEEK
   // --------------------------------------------------
 
-  const buildWeek = async () => {
-    if (selectedTopics.length === 0) {
-      toast.error(
-        "Select at least one topic",
+const buildWeek = async () => {
+  if (selectedTopics.length === 0) {
+    toast.error("Select at least one topic");
+    return;
+  }
+
+  if (selectedDifficulties.length === 0) {
+    toast.error("Select at least one difficulty");
+    return;
+  }
+
+  setBuilding(true);
+
+  try {
+    const draft = await generatePlannerDraft({
+      weekStart: weekStartString,
+      topics: selectedTopics,
+      difficulties: selectedDifficulties,
+      goalCount,
+      mentorProblemIds: [],
+    });
+
+    if (!draft) {
+      throw new Error(
+        "Planner could not generate a draft.",
       );
-      return;
     }
 
-    if (
-      selectedDifficulties.length === 0
-    ) {
-      toast.error(
-        "Select at least one difficulty",
+    if (!Array.isArray(draft.items)) {
+      throw new Error(
+        "Planner returned invalid tasks.",
       );
-      return;
     }
 
-    setBuilding(true);
-
-    try {
-      const draft =
-        await generatePlannerDraft({
-          weekStart: weekStartString,
-          topics: selectedTopics,
-          difficulties:
-            selectedDifficulties,
-          goalCount,
-          mentorProblemIds: [],
-        });
-
-      if (!draft) {
-        throw new Error(
-          "Planner could not generate a draft.",
-        );
-      }
-
-      if (!draft.weekStart) {
-        throw new Error(
-          "Planner draft is missing week start.",
-        );
-      }
-
-      if (!draft.weekEnd) {
-        throw new Error(
-          "Planner draft is missing week end.",
-        );
-      }
-
-      if (!Array.isArray(draft.items)) {
-        throw new Error(
-          "Planner returned invalid tasks.",
-        );
-      }
-
-      if (draft.items.length === 0) {
-        throw new Error(
-          "No unsolved problems matched your selected topics and difficulties.",
-        );
-      }
-
-      const savedPlan =
-        await savePlanner({
-          weekStart: draft.weekStart,
-          weekEnd: draft.weekEnd,
-          goalCount: draft.goalCount,
-          items: draft.items.map(
-            (item) => ({
-              problemId:
-                Number(item.problem_id),
-              plannedDate:
-                item.planned_date.slice(
-                  0,
-                  10,
-                ),
-              position:
-                Number(item.position),
-              source:
-                item.source ??
-                "PLANNER",
-            }),
-          ),
-        });
-
-      setPlan(savedPlan);
-      setItems(savedPlan.items);
-      setShowSetup(false);
-
-      toast.success(
-        "Your week is ready",
+    if (draft.items.length === 0) {
+      throw new Error(
+        "No unsolved problems matched your selected topics and difficulties.",
       );
-    } catch (error) {
-      console.error(
-        "Failed to build planner:",
-        error,
-      );
-
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to build your week",
-      );
-    } finally {
-      setBuilding(false);
     }
-  };
 
+    // weekEnd is deterministic.
+    // Do not depend on the draft endpoint returning it.
+    const weekEnd = formatDate(
+      addDays(weekStart, 6),
+    );
+
+    const savedPlan = await savePlanner({
+      weekStart: weekStartString,
+      weekEnd,
+      goalCount: Number(
+        draft.goalCount || goalCount,
+      ),
+      items: draft.items.map((item) => ({
+        problemId: Number(item.problem_id),
+        plannedDate:
+          item.planned_date.slice(0, 10),
+        position: Number(item.position),
+        source: item.source ?? "PLANNER",
+      })),
+    });
+
+    setPlan(savedPlan);
+    setItems(savedPlan.items);
+    setShowSetup(false);
+
+    toast.success("Your week is ready");
+  } catch (error) {
+    console.error(
+      "Failed to build planner:",
+      error,
+    );
+
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Failed to build your week",
+    );
+  } finally {
+    setBuilding(false);
+  }
+};
   // --------------------------------------------------
   // MOVE TASK
   // --------------------------------------------------
@@ -427,7 +402,7 @@ export default function PlannerPage() {
             </p>
           </div>
 
-          {!loading && (
+          {/* {!loading && (
             <motion.button
               whileHover={{
                 y: -1,
@@ -447,7 +422,7 @@ export default function PlannerPage() {
                 ? "Edit week"
                 : "Build My Week"}
             </motion.button>
-          )}
+          )} */}
         </motion.div>
 
         {/* NAVIGATION BAR */}
@@ -637,7 +612,7 @@ export default function PlannerPage() {
 
         {/* WEEK BOARD */}
 
-        {!loading && plan && (
+        {/* {!loading && plan && (
           <motion.div
             initial={{
               opacity: 0,
@@ -661,7 +636,7 @@ export default function PlannerPage() {
               }
             />
           </motion.div>
-        )}
+        )} */}
 
         {/* SETUP */}
 
