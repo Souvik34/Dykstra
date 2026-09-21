@@ -54,9 +54,9 @@ router.delete(
 
 router.get(
   "/suggestions",
+  protect,
   plannerController.getSuggestions
 );
-
 router.get(
   "/:planId/progress",
   protect,
