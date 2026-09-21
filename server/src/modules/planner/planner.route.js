@@ -8,7 +8,7 @@ import {
   deleteItem,
   getProgress,
 } from "./planner.controller.js";
-
+import * as plannerController from "./planner.controller.js";
 import {
   protect,
 } from "../../middlewares/auth.middleware.js";
