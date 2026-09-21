@@ -157,7 +157,19 @@ export const deletePlanItemsRepo = async (planId) => {
     [planId]
   );
 };
-
+export const deletePlanItemsFromDateRepo = async (
+  planId,
+  fromDate,
+) => {
+  await pool.query(
+    `
+    DELETE FROM planner_plan_items
+    WHERE plan_id = $1
+      AND planned_date >= $2
+    `,
+    [planId, fromDate],
+  );
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -410,22 +422,20 @@ export const getPlanProgressRepo = async (
 export const getPlanItemOwnerRepo = async (
   itemId
 ) => {
-  const result = await pool.query(
-    `
-    SELECT
-      ppi.id,
-      pp.user_id,
-      pp.id AS plan_id
-
-    FROM planner_plan_items ppi
-
-    JOIN planner_plans pp
-      ON pp.id = ppi.plan_id
-
-    WHERE ppi.id = $1
-    `,
-    [itemId]
-  );
+const result = await pool.query(
+  `
+  SELECT
+    ppi.id,
+    pp.user_id,
+    pp.id AS plan_id,
+    ppi.planned_date
+  FROM planner_plan_items ppi
+  JOIN planner_plans pp
+    ON pp.id = ppi.plan_id
+  WHERE ppi.id = $1
+  `,
+  [itemId],
+);
 
   return result.rows[0] || null;
 };

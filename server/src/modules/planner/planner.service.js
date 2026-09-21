@@ -17,6 +17,22 @@ const formatDate = (date) => {
   ].join("-");
 };
 
+const getToday = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+const isPastDate = (dateString) => {
+  const date = new Date(
+    `${String(dateString).slice(0, 10)}T00:00:00`,
+  );
+
+  date.setHours(0, 0, 0, 0);
+
+  return date < getToday();
+};
+
 const getMonday = (date = new Date()) => {
   const result = new Date(date);
 
@@ -276,10 +292,37 @@ const distributeProblemsAcrossWeek = (
     return [];
   }
 
-  const practiceDays =
-    problems.length <= 5
-      ? [0, 1, 2, 3, 4]
-      : [0, 1, 2, 3, 4, 5, 6];
+  const monday = new Date(
+    `${String(weekStart).slice(0, 10)}T00:00:00`,
+  );
+
+  monday.setHours(0, 0, 0, 0);
+
+  const today = getToday();
+
+  const daysSinceMonday = Math.floor(
+    (
+      today.getTime() -
+      monday.getTime()
+    ) /
+      (24 * 60 * 60 * 1000),
+  );
+
+  const startDayIndex =
+    daysSinceMonday >= 0 &&
+    daysSinceMonday <= 6
+      ? daysSinceMonday
+      : 0;
+
+  const practiceDays = [];
+
+  for (
+    let day = startDayIndex;
+    day <= 6;
+    day++
+  ) {
+    practiceDays.push(day);
+  }
 
   return problems.map(
     (problem, index) => {
@@ -292,7 +335,7 @@ const distributeProblemsAcrossWeek = (
       const plannedDate =
         formatDate(
           addDays(
-            weekStart,
+            monday,
             dayIndex,
           ),
         );
@@ -476,38 +519,42 @@ export const saveWeeklyPlan = async ({
       );
   }
 
-  await plannerRepository.deletePlanItemsRepo(
-    plan.id,
-  );
+  await plannerRepository.deletePlanItemsFromDateRepo(
+  plan.id,
+  formatDate(getToday()),
+);
 
-  for (
-    let index = 0;
-    index < items.length;
-    index++
-  ) {
-    const item = items[index];
+for (
+  let index = 0;
+  index < items.length;
+  index++
+) {
+  const item = items[index];
 
-    await plannerRepository.addPlanItemRepo({
-      planId: plan.id,
+  const plannedDate =
+    String(item.plannedDate).slice(0, 10);
 
-      problemId:
-        Number(item.problemId),
-
-      plannedDate:
-        String(item.plannedDate).slice(
-          0,
-          10,
-        ),
-
-      position:
-        Number(
-          item.position ?? index,
-        ),
-
-      source:
-        item.source || "USER",
-    });
+  if (isPastDate(plannedDate)) {
+    continue;
   }
+
+  await plannerRepository.addPlanItemRepo({
+    planId: plan.id,
+
+    problemId:
+      Number(item.problemId),
+
+    plannedDate,
+
+    position:
+      Number(
+        item.position ?? index,
+      ),
+
+    source:
+      item.source || "USER",
+  });
+}
 
   return await plannerRepository.getPlanRepo(
     userId,
@@ -546,7 +593,23 @@ export const updatePlanItem = async ({
       "Unauthorized planner item",
     );
   }
+const currentDate =
+  String(owner.planned_date).slice(0, 10);
 
+const newDate =
+  String(plannedDate).slice(0, 10);
+
+if (isPastDate(currentDate)) {
+  throw new Error(
+    "Past planner days are locked",
+  );
+}
+
+if (isPastDate(newDate)) {
+  throw new Error(
+    "Past planner days are locked",
+  );
+}
   return await plannerRepository.updatePlanItemRepo(
     {
       itemId,
@@ -585,7 +648,12 @@ export const deletePlanItem = async ({
       "Unauthorized planner item",
     );
   }
+const itemDate =
+  String(owner.planned_date).slice(0, 10);
 
+if (isPastDate(itemDate)) {
+  throw new Error("Past planner days are locked");
+}
   await plannerRepository.deletePlanItemRepo(
     itemId,
   );
@@ -649,6 +717,10 @@ export const addPlanItem = async ({
   source = "USER",
 }) => {
   const planDate = String(plannedDate).slice(0, 10);
+
+if (isPastDate(planDate)) {
+  throw new Error("Past planner days are locked");
+}
 
   let plan =
     await plannerRepository.getPlanRepo(
