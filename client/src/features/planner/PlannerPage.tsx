@@ -1,13 +1,23 @@
 /* eslint-disable prettier/prettier */
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Sparkles,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+
+import {
+  AnimatePresence,
+  motion,
+} from "framer-motion";
+
 import { toast } from "sonner";
 
 import PlannerSetup from "./PlannerSetup";
@@ -34,9 +44,22 @@ import {
 } from "./planner.utils";
 
 export default function PlannerPage() {
-  const [weekStart, setWeekStart] = useState(() =>
-    getMonday(new Date()),
-  );
+  /*
+  |--------------------------------------------------------------------------
+  | WEEK
+  |--------------------------------------------------------------------------
+  */
+
+  const [weekStart, setWeekStart] =
+    useState(() =>
+      getMonday(new Date()),
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | DATA
+  |--------------------------------------------------------------------------
+  */
 
   const [plan, setPlan] =
     useState<PlannerPlan | null>(null);
@@ -50,13 +73,22 @@ export default function PlannerPage() {
   const [building, setBuilding] =
     useState(false);
 
+  /*
+  |--------------------------------------------------------------------------
+  | SETUP
+  |--------------------------------------------------------------------------
+  */
+
   const [showSetup, setShowSetup] =
     useState(false);
 
   const [selectedTopics, setSelectedTopics] =
     useState<string[]>([]);
 
-  const [selectedDifficulties, setSelectedDifficulties] =
+  const [
+    selectedDifficulties,
+    setSelectedDifficulties,
+  ] =
     useState<PlannerDifficulty[]>([
       "easy",
       "medium",
@@ -68,9 +100,11 @@ export default function PlannerPage() {
   const weekStartString =
     formatDate(weekStart);
 
-  // --------------------------------------------------
-  // LOAD PLAN
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | LOAD PLAN
+  |--------------------------------------------------------------------------
+  */
 
   useEffect(() => {
     let cancelled = false;
@@ -79,17 +113,22 @@ export default function PlannerPage() {
       setLoading(true);
 
       try {
-        const result = await getPlanner(
-          weekStartString,
-        );
+        const result =
+          await getPlanner(
+            weekStartString,
+          );
 
         if (cancelled) return;
 
         setPlan(result);
-        setItems(result?.items ?? []);
+        setItems(
+          result?.items ?? [],
+        );
 
         if (result) {
-          setGoalCount(result.goal_count);
+          setGoalCount(
+            result.goal_count,
+          );
         }
       } catch (error) {
         console.error(
@@ -118,16 +157,19 @@ export default function PlannerPage() {
     };
   }, [weekStartString]);
 
-  // --------------------------------------------------
-  // PROGRESS
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | PROGRESS
+  |--------------------------------------------------------------------------
+  */
 
   const progress = useMemo(() => {
     const total = items.length;
 
-    const solved = items.filter(
-      (item) => item.solved,
-    ).length;
+    const solved =
+      items.filter(
+        (item) => item.solved,
+      ).length;
 
     return {
       total,
@@ -141,9 +183,11 @@ export default function PlannerPage() {
     };
   }, [items]);
 
-  // --------------------------------------------------
-  // NAVIGATION
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | NAVIGATION
+  |--------------------------------------------------------------------------
+  */
 
   const goToPreviousWeek = () => {
     setWeekStart((current) =>
@@ -163,124 +207,206 @@ export default function PlannerPage() {
     );
   };
 
-  // --------------------------------------------------
-  // BUILD WEEK
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | BUILD WEEK
+  |--------------------------------------------------------------------------
+  */
 
-const buildWeek = async () => {
-  if (selectedTopics.length === 0) {
-    toast.error("Select at least one topic");
-    return;
-  }
-
-  if (selectedDifficulties.length === 0) {
-    toast.error("Select at least one difficulty");
-    return;
-  }
-
-  setBuilding(true);
-
-  try {
-    const draft = await generatePlannerDraft({
-      weekStart: weekStartString,
-      topics: selectedTopics,
-      difficulties: selectedDifficulties,
-      goalCount,
-      mentorProblemIds: [],
-    });
-
-    if (!draft) {
-      throw new Error(
-        "Planner could not generate a draft.",
+  const buildWeek = async () => {
+    if (
+      selectedTopics.length === 0
+    ) {
+      toast.error(
+        "Select at least one topic",
       );
+      return;
     }
 
-    if (!Array.isArray(draft.items)) {
-      throw new Error(
-        "Planner returned invalid tasks.",
+    if (
+      selectedDifficulties.length === 0
+    ) {
+      toast.error(
+        "Select at least one difficulty",
       );
+      return;
     }
 
-    if (draft.items.length === 0) {
-      throw new Error(
-        "No unsolved problems matched your selected topics and difficulties.",
+    setBuilding(true);
+
+    try {
+      const draft =
+        await generatePlannerDraft({
+          weekStart:
+            weekStartString,
+
+          topics:
+            selectedTopics,
+
+          difficulties:
+            selectedDifficulties,
+
+          goalCount:
+            Number(goalCount),
+
+          mentorProblemIds: [],
+        });
+
+      if (!draft) {
+        throw new Error(
+          "Planner could not generate a draft.",
+        );
+      }
+
+      if (
+        !Array.isArray(
+          draft.items,
+        )
+      ) {
+        throw new Error(
+          "Planner returned invalid tasks.",
+        );
+      }
+
+      if (
+        draft.items.length === 0
+      ) {
+        throw new Error(
+          "No unsolved problems matched your selected topics and difficulties.",
+        );
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Draft is now guaranteed to use:
+      |
+      | problem_id
+      | planned_date
+      | position
+      | source
+      |--------------------------------------------------------------------------
+      */
+
+      const weekEnd =
+        formatDate(
+          addDays(
+            weekStart,
+            6,
+          ),
+        );
+
+      const savedPlan =
+        await savePlanner({
+          weekStart:
+            weekStartString,
+
+          weekEnd,
+
+          goalCount:
+            Number(
+              draft.goalCount ??
+                goalCount,
+            ),
+
+          items:
+            draft.items.map(
+              (item) => ({
+                problemId:
+                  Number(
+                    item.problem_id,
+                  ),
+
+                plannedDate:
+                  String(
+                    item.planned_date,
+                  ).slice(0, 10),
+
+                position:
+                  Number(
+                    item.position ?? 0,
+                  ),
+
+                source:
+                  item.source ??
+                  "PLANNER",
+              }),
+            ),
+        });
+
+      setPlan(savedPlan);
+
+      setItems(
+        savedPlan.items,
       );
+
+      setShowSetup(false);
+
+      toast.success(
+        "Your week is ready",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to build planner:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to build your week",
+      );
+    } finally {
+      setBuilding(false);
     }
+  };
 
-    // weekEnd is deterministic.
-    // Do not depend on the draft endpoint returning it.
-    const weekEnd = formatDate(
-      addDays(weekStart, 6),
-    );
-
-    const savedPlan = await savePlanner({
-      weekStart: weekStartString,
-      weekEnd,
-      goalCount: Number(
-        draft.goalCount || goalCount,
-      ),
-      items: draft.items.map((item) => ({
-        problemId: Number(item.problem_id),
-        plannedDate:
-          item.planned_date.slice(0, 10),
-        position: Number(item.position),
-        source: item.source ?? "PLANNER",
-      })),
-    });
-
-    setPlan(savedPlan);
-    setItems(savedPlan.items);
-    setShowSetup(false);
-
-    toast.success("Your week is ready");
-  } catch (error) {
-    console.error(
-      "Failed to build planner:",
-      error,
-    );
-
-    toast.error(
-      error instanceof Error
-        ? error.message
-        : "Failed to build your week",
-    );
-  } finally {
-    setBuilding(false);
-  }
-};
-  // --------------------------------------------------
-  // MOVE TASK
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | MOVE ITEM
+  |--------------------------------------------------------------------------
+  */
 
   const moveItem = async (
     itemId: number,
     plannedDate: string,
   ) => {
-    const item = items.find(
-      (current) =>
-        current.id === itemId,
-    );
+    const item =
+      items.find(
+        (current) =>
+          current.id === itemId,
+      );
 
     if (!item) return;
 
     if (
-      item.planned_date.slice(0, 10) ===
+      String(
+        item.planned_date,
+      ).slice(0, 10) ===
       plannedDate
     ) {
       return;
     }
 
-    const previousItems = items;
+    const previousItems =
+      items;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Optimistic update
+    |--------------------------------------------------------------------------
+    */
 
     setItems((current) =>
-      current.map((currentItem) =>
-        currentItem.id === itemId
-          ? {
-              ...currentItem,
-              planned_date:
-                plannedDate,
-            }
-          : currentItem,
+      current.map(
+        (currentItem) =>
+          currentItem.id ===
+          itemId
+            ? {
+                ...currentItem,
+                planned_date:
+                  plannedDate,
+              }
+            : currentItem,
       ),
     );
 
@@ -296,16 +422,18 @@ const buildWeek = async () => {
         );
 
       setItems((current) =>
-        current.map((currentItem) =>
-          currentItem.id === itemId
-            ? {
-                ...currentItem,
-                planned_date:
-                  updatedItem.planned_date,
-                position:
-                  updatedItem.position,
-              }
-            : currentItem,
+        current.map(
+          (currentItem) =>
+            currentItem.id ===
+            itemId
+              ? {
+                  ...currentItem,
+                  planned_date:
+                    updatedItem.planned_date,
+                  position:
+                    updatedItem.position,
+                }
+              : currentItem,
         ),
       );
     } catch (error) {
@@ -314,7 +442,9 @@ const buildWeek = async () => {
         error,
       );
 
-      setItems(previousItems);
+      setItems(
+        previousItems,
+      );
 
       toast.error(
         error instanceof Error
@@ -324,14 +454,20 @@ const buildWeek = async () => {
     }
   };
 
-  // --------------------------------------------------
-  // OPEN PROBLEM
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | OPEN PROBLEM
+  |--------------------------------------------------------------------------
+  */
 
   const openProblem = (
     item: PlannerItem,
   ) => {
-    if (!item.question_link) return;
+    if (
+      !item.question_link
+    ) {
+      return;
+    }
 
     window.open(
       item.question_link,
@@ -340,24 +476,32 @@ const buildWeek = async () => {
     );
   };
 
-  // --------------------------------------------------
-  // ADD PROBLEM
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | ADD PROBLEM
+  |--------------------------------------------------------------------------
+  |
+  | For now, this opens the planner setup.
+  | The next step can be a real problem picker.
+  |--------------------------------------------------------------------------
+  */
 
   const handleAddProblem = (
     date: string,
   ) => {
     console.log(
-      "Add problem:",
+      "Add problem for:",
       date,
     );
 
-    // Problem picker comes next.
+    setShowSetup(true);
   };
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
+  /*
+  |--------------------------------------------------------------------------
+  | UI
+  |--------------------------------------------------------------------------
+  */
 
   return (
     <div className="min-h-full bg-background">
@@ -397,35 +541,33 @@ const buildWeek = async () => {
             </h1>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Decide what you're going to
-              practice this week.
+              Organize your DSA practice
+              across the week.
             </p>
           </div>
 
-          {/* {!loading && (
-            <motion.button
-              whileHover={{
-                y: -1,
-              }}
-              whileTap={{
-                scale: 0.97,
-              }}
-              type="button"
-              onClick={() =>
-                setShowSetup(true)
-              }
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10 transition hover:shadow-primary/20"
-            >
-              <Sparkles className="h-4 w-4" />
+          <motion.button
+            whileHover={{
+              y: -1,
+            }}
+            whileTap={{
+              scale: 0.97,
+            }}
+            type="button"
+            onClick={() =>
+              setShowSetup(true)
+            }
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10"
+          >
+            <Sparkles className="h-4 w-4" />
 
-              {plan
-                ? "Edit week"
-                : "Build My Week"}
-            </motion.button>
-          )} */}
+            {plan
+              ? "Rebuild week"
+              : "Plan my week"}
+          </motion.button>
         </motion.div>
 
-        {/* NAVIGATION BAR */}
+        {/* NAVIGATION */}
 
         <motion.div
           initial={{
@@ -443,19 +585,16 @@ const buildWeek = async () => {
           className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card/70 px-2 py-2 shadow-sm backdrop-blur"
         >
           <div className="flex items-center gap-1">
+
             <motion.button
-              whileHover={{
-                backgroundColor:
-                  "rgba(255,255,255,0.05)",
-              }}
               whileTap={{
-                scale: 0.92,
+                scale: 0.9,
               }}
               type="button"
               onClick={
                 goToPreviousWeek
               }
-              className="flex h-9 w-9 items-center justify-center rounded-lg"
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
               aria-label="Previous week"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -475,16 +614,14 @@ const buildWeek = async () => {
             </motion.button>
 
             <motion.button
-              whileHover={{
-                backgroundColor:
-                  "rgba(255,255,255,0.05)",
-              }}
               whileTap={{
-                scale: 0.92,
+                scale: 0.9,
               }}
               type="button"
-              onClick={goToNextWeek}
-              className="flex h-9 w-9 items-center justify-center rounded-lg"
+              onClick={
+                goToNextWeek
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
               aria-label="Next week"
             >
               <ChevronRight className="h-4 w-4" />
@@ -498,9 +635,11 @@ const buildWeek = async () => {
           </div>
 
           <div className="flex items-center gap-3 pr-2">
+
             <div className="hidden text-xs text-muted-foreground sm:block">
               {progress.solved}/
-              {progress.total} completed
+              {progress.total}{" "}
+              completed
             </div>
 
             <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:w-28">
@@ -513,7 +652,6 @@ const buildWeek = async () => {
                 }}
                 transition={{
                   duration: 0.6,
-                  ease: "easeOut",
                 }}
                 className="h-full rounded-full bg-primary"
               />
@@ -527,7 +665,7 @@ const buildWeek = async () => {
 
         {/* LOADING */}
 
-        {loading && (
+        {loading ? (
           <div className="flex min-h-[560px] items-center justify-center rounded-2xl border border-border bg-card">
             <motion.div
               animate={{
@@ -541,102 +679,50 @@ const buildWeek = async () => {
               className="h-6 w-6 rounded-full border-2 border-muted border-t-primary"
             />
           </div>
-        )}
+        ) : (
+          /*
+          |--------------------------------------------------------------------------
+          | DEFAULT PLANNER BOARD
+          |--------------------------------------------------------------------------
+          |
+          | This is intentionally rendered even when there is no plan.
+          | The Planner is a calendar/kanban workspace first.
+          |--------------------------------------------------------------------------
+          */
 
-        {/* EMPTY */}
-
-        <AnimatePresence mode="wait">
-          {!loading && !plan && (
+          <AnimatePresence mode="wait">
             <motion.div
-              key="empty"
+              key={weekStartString}
               initial={{
                 opacity: 0,
-                scale: 0.98,
+                y: 8,
               }}
               animate={{
                 opacity: 1,
-                scale: 1,
+                y: 0,
               }}
-              exit={{
-                opacity: 0,
-                scale: 0.98,
+              transition={{
+                duration: 0.3,
               }}
-              className="flex min-h-[560px] items-center justify-center rounded-2xl border border-dashed border-border bg-card"
             >
-              <div className="max-w-md px-6 text-center">
-                <motion.div
-                  animate={{
-                    y: [0, -5, 0],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10"
-                >
-                  <CalendarDays className="h-7 w-7 text-primary" />
-                </motion.div>
-
-                <h2 className="text-xl font-semibold">
-                  Plan your week
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Choose the topics you
-                  want to practice and
-                  Dykstra will arrange your
-                  problems across the week.
-                </p>
-
-                <motion.button
-                  whileHover={{
-                    y: -2,
-                  }}
-                  whileTap={{
-                    scale: 0.96,
-                  }}
-                  type="button"
-                  onClick={() =>
-                    setShowSetup(true)
-                  }
-                  className="mt-6 inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Build My Week
-                </motion.button>
-              </div>
+              <PlannerWeekView
+                weekStart={
+                  weekStart
+                }
+                items={items}
+                onMoveItem={
+                  moveItem
+                }
+                onOpenProblem={
+                  openProblem
+                }
+                onAddProblem={
+                  handleAddProblem
+                }
+              />
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* WEEK BOARD */}
-
-        {/* {!loading && plan && (
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 10,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              duration: 0.4,
-            }}
-          >
-            <PlannerWeekView
-              weekStart={weekStart}
-              items={items}
-              onMoveItem={moveItem}
-              onOpenProblem={openProblem}
-              onAddProblem={
-                handleAddProblem
-              }
-            />
-          </motion.div>
-        )} */}
+          </AnimatePresence>
+        )}
 
         {/* SETUP */}
 
@@ -649,7 +735,9 @@ const buildWeek = async () => {
               selectedDifficulties={
                 selectedDifficulties
               }
-              goalCount={goalCount}
+              goalCount={
+                goalCount
+              }
               onTopicsChange={
                 setSelectedTopics
               }
@@ -659,11 +747,15 @@ const buildWeek = async () => {
               onGoalCountChange={
                 setGoalCount
               }
-              onBuild={buildWeek}
+              onBuild={
+                buildWeek
+              }
               onClose={() =>
                 setShowSetup(false)
               }
-              loading={building}
+              loading={
+                building
+              }
             />
           )}
         </AnimatePresence>

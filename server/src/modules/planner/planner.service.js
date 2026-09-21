@@ -1,6 +1,5 @@
 import * as plannerRepository from "./planner.repository.js";
 
-
 /*
 |--------------------------------------------------------------------------
 | Date helpers
@@ -10,7 +9,6 @@ import * as plannerRepository from "./planner.repository.js";
 const pad = (value) =>
   String(value).padStart(2, "0");
 
-
 const formatDate = (date) => {
   return [
     date.getFullYear(),
@@ -18,7 +16,6 @@ const formatDate = (date) => {
     pad(date.getDate()),
   ].join("-");
 };
-
 
 const getMonday = (date = new Date()) => {
   const result = new Date(date);
@@ -33,23 +30,21 @@ const getMonday = (date = new Date()) => {
       : 1 - day;
 
   result.setDate(
-    result.getDate() + diff
+    result.getDate() + diff,
   );
 
   return result;
 };
-
 
 const addDays = (date, days) => {
   const result = new Date(date);
 
   result.setDate(
-    result.getDate() + days
+    result.getDate() + days,
   );
 
   return result;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -57,9 +52,7 @@ const addDays = (date, days) => {
 |--------------------------------------------------------------------------
 */
 
-const normalizeDifficulty = (
-  difficulty
-) => {
+const normalizeDifficulty = (difficulty) => {
   if (!difficulty) {
     return "";
   }
@@ -69,13 +62,9 @@ const normalizeDifficulty = (
     .toLowerCase();
 };
 
-
 /*
 |--------------------------------------------------------------------------
-| Build candidate score
-|--------------------------------------------------------------------------
-|
-| Higher score = stronger candidate.
+| Candidate scoring
 |--------------------------------------------------------------------------
 */
 
@@ -84,55 +73,31 @@ const scoreProblem = (
   {
     mentorProblemIds,
     selectedTopics,
-  }
+  },
 ) => {
   let score = 0;
 
-  const problemId =
-    Number(problem.id);
+  const problemId = Number(problem.id);
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Mentor priority
-  |--------------------------------------------------------------------------
-  */
-
-  if (
-    mentorProblemIds.has(problemId)
-  ) {
+  if (mentorProblemIds.has(problemId)) {
     score += 1000;
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Topic preference
-  |--------------------------------------------------------------------------
-  */
-
   if (
-    selectedTopics.includes(
-      problem.topic
+    selectedTopics.some(
+      (topic) =>
+        String(topic).trim().toLowerCase() ===
+        String(problem.topic)
+          .trim()
+          .toLowerCase(),
     )
   ) {
     score += 100;
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Difficulty balance
-  |--------------------------------------------------------------------------
-  |
-  | Prefer Easy/Medium before Hard.
-  |
-  */
-
-  const difficulty =
-    normalizeDifficulty(
-      problem.difficulty
-    );
+  const difficulty = normalizeDifficulty(
+    problem.difficulty,
+  );
 
   if (difficulty === "easy") {
     score += 30;
@@ -146,28 +111,19 @@ const scoreProblem = (
     score += 10;
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Stable tie breaker
-  |--------------------------------------------------------------------------
-  */
-
+  // Stable deterministic tie-breaker.
   score +=
     Math.max(
       0,
-      10_000 - problemId
-    ) /
-    100_000;
-
+      10_000 - problemId,
+    ) / 100_000;
 
   return score;
 };
 
-
 /*
 |--------------------------------------------------------------------------
-| Select balanced problems
+| Select problems
 |--------------------------------------------------------------------------
 */
 
@@ -184,66 +140,65 @@ const selectProblems = ({
     return [];
   }
 
-
-  const scored =
-    candidates
-      .map((problem) => ({
+  const scored = candidates
+    .map((problem) => ({
+      problem,
+      score: scoreProblem(
         problem,
-
-        score: scoreProblem(
-          problem,
-          {
-            mentorProblemIds,
-            selectedTopics,
-          }
-        ),
-      }))
-      .sort(
-        (a, b) =>
-          b.score - a.score
-      );
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | First pass:
-  | Try to cover every selected topic.
-  |--------------------------------------------------------------------------
-  */
+        {
+          mentorProblemIds,
+          selectedTopics,
+        },
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        b.score - a.score,
+    );
 
   const selected = [];
+  const usedIds = new Set();
 
-  const usedIds =
-    new Set();
-
-  const topicBuckets =
-    new Map();
-
+  const topicBuckets = new Map();
 
   for (const item of scored) {
-    const topic =
-      item.problem.topic;
+    const normalizedTopic =
+      String(item.problem.topic)
+        .trim()
+        .toLowerCase();
 
     if (
-      !topicBuckets.has(topic)
+      !topicBuckets.has(
+        normalizedTopic,
+      )
     ) {
       topicBuckets.set(
-        topic,
-        []
+        normalizedTopic,
+        [],
       );
     }
 
     topicBuckets
-      .get(topic)
+      .get(normalizedTopic)
       .push(item.problem);
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | First pass: cover selected topics
+  |--------------------------------------------------------------------------
+  */
 
-  for (
-    const topic of selectedTopics
-  ) {
+  for (const topic of selectedTopics) {
+    const normalizedTopic =
+      String(topic)
+        .trim()
+        .toLowerCase();
+
     const bucket =
-      topicBuckets.get(topic);
+      topicBuckets.get(
+        normalizedTopic,
+      );
 
     if (
       !bucket ||
@@ -252,14 +207,15 @@ const selectProblems = ({
       continue;
     }
 
-    const problem =
-      bucket[0];
+    const problem = bucket[0];
+    const problemId = Number(problem.id);
+
+    if (usedIds.has(problemId)) {
+      continue;
+    }
 
     selected.push(problem);
-
-    usedIds.add(
-      Number(problem.id)
-    );
+    usedIds.add(problemId);
 
     if (
       selected.length >= goalCount
@@ -268,11 +224,9 @@ const selectProblems = ({
     }
   }
 
-
   /*
   |--------------------------------------------------------------------------
-  | Second pass:
-  | Fill remaining slots according to score.
+  | Second pass: fill remaining slots
   |--------------------------------------------------------------------------
   */
 
@@ -283,86 +237,77 @@ const selectProblems = ({
       break;
     }
 
-    const id =
+    const problemId =
       Number(item.problem.id);
 
-    if (
-      usedIds.has(id)
-    ) {
+    if (usedIds.has(problemId)) {
       continue;
     }
 
-    selected.push(
-      item.problem
-    );
-
-    usedIds.add(id);
+    selected.push(item.problem);
+    usedIds.add(problemId);
   }
-
 
   return selected;
 };
 
-
 /*
 |--------------------------------------------------------------------------
-| Build weekly dates
+| Distribute across week
+|--------------------------------------------------------------------------
+|
+| <= 5 problems:
+| Monday -> Friday
+|
+| > 5:
+| Monday -> Sunday
+|
 |--------------------------------------------------------------------------
 */
 
 const distributeProblemsAcrossWeek = (
   problems,
-  weekStart
+  weekStart,
 ) => {
   if (
+    !problems ||
     problems.length === 0
   ) {
     return [];
   }
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Practice days are Monday-Friday.
-  |--------------------------------------------------------------------------
-  |
-  | If there are more than 5 problems,
-  | Saturday/Sunday are used as well.
-  |
-  */
 
   const practiceDays =
     problems.length <= 5
       ? [0, 1, 2, 3, 4]
       : [0, 1, 2, 3, 4, 5, 6];
 
-
   return problems.map(
     (problem, index) => {
       const dayIndex =
         practiceDays[
-          index % practiceDays.length
+          index %
+            practiceDays.length
         ];
+
+      const plannedDate =
+        formatDate(
+          addDays(
+            weekStart,
+            dayIndex,
+          ),
+        );
 
       return {
         problem,
-        plannedDate:
-          formatDate(
-            addDays(
-              weekStart,
-              dayIndex
-            )
-          ),
-        position:
-          Math.floor(
-            index /
-              practiceDays.length
-          ),
+        plannedDate,
+        position: Math.floor(
+          index /
+            practiceDays.length,
+        ),
       };
-    }
+    },
   );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -372,15 +317,13 @@ const distributeProblemsAcrossWeek = (
 
 export const getPlan = async (
   userId,
-  weekStart
+  weekStart,
 ) => {
-  return await plannerRepository
-    .getPlanRepo(
-      userId,
-      weekStart
-    );
+  return await plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -397,22 +340,18 @@ export const generateWeeklyDraft = async ({
   mentorProblemIds = [],
 }) => {
   const candidates =
-    await plannerRepository
-      .getCandidateProblemsRepo({
+    await plannerRepository.getCandidateProblemsRepo(
+      {
         userId,
         topics,
         difficulties,
         limit: 200,
-      });
-
-
-  const mentorIds =
-    new Set(
-      mentorProblemIds.map(
-        Number
-      )
+      },
     );
 
+  const mentorIds = new Set(
+    mentorProblemIds.map(Number),
+  );
 
   const selected =
     selectProblems({
@@ -422,68 +361,85 @@ export const generateWeeklyDraft = async ({
       mentorProblemIds: mentorIds,
     });
 
-
   const monday =
-    new Date(
-      `${weekStart}T00:00:00`
+    getMonday(
+      new Date(
+        `${weekStart}T00:00:00`,
+      ),
     );
-
 
   const scheduled =
     distributeProblemsAcrossWeek(
       selected,
-      monday
+      monday,
     );
 
+  const weekEnd = formatDate(
+    addDays(monday, 6),
+  );
+
+  /*
+  |--------------------------------------------------------------------------
+  | IMPORTANT
+  |--------------------------------------------------------------------------
+  | Draft now uses the SAME shape as PlannerItem.
+  |
+  | Do not return problemId/plannedDate here.
+  |--------------------------------------------------------------------------
+  */
 
   return {
     weekStart,
+    weekEnd,
     goalCount,
     selectedCount:
       selected.length,
-    items:
-      scheduled.map(
-        ({
-          problem,
-          plannedDate,
-          position,
-        }) => ({
-          problemId:
-            problem.id,
 
-          title:
-            problem.title,
+    items: scheduled.map(
+      ({
+        problem,
+        plannedDate,
+        position,
+      }) => ({
+        problem_id: Number(
+          problem.id,
+        ),
 
-          difficulty:
-            problem.difficulty,
-
-          topic:
-            problem.topic,
-
-          questionLink:
-            problem.question_link,
-
-          tags:
-            problem.tags,
-
-          platform:
-            problem.platform,
-
+        planned_date:
           plannedDate,
 
-          position,
+        position,
 
-          source:
-            mentorIds.has(
-              Number(problem.id)
-            )
-              ? "MENTOR"
-              : "PLANNER",
-        })
-      ),
+        source:
+          mentorIds.has(
+            Number(problem.id),
+          )
+            ? "MENTOR"
+            : "PLANNER",
+
+        title:
+          problem.title,
+
+        difficulty:
+          problem.difficulty,
+
+        topic:
+          problem.topic,
+
+        tags:
+          problem.tags,
+
+        platform:
+          problem.platform,
+
+        question_link:
+          problem.question_link,
+
+        solved: false,
+      }),
+    ),
   };
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -499,96 +455,65 @@ export const saveWeeklyPlan = async ({
   items,
 }) => {
   let plan =
-    await plannerRepository
-      .getPlanRepo(
-        userId,
-        weekStart
-      );
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | Create plan
-  |--------------------------------------------------------------------------
-  */
+    await plannerRepository.getPlanRepo(
+      userId,
+      weekStart,
+    );
 
   if (!plan) {
     plan =
-      await plannerRepository
-        .createPlanRepo(
-          userId,
-          weekStart,
-          weekEnd,
-          goalCount
-        );
+      await plannerRepository.createPlanRepo(
+        userId,
+        weekStart,
+        weekEnd,
+        goalCount,
+      );
   } else {
     plan =
-      await plannerRepository
-        .updatePlanRepo(
-          plan.id,
-          goalCount
-        );
+      await plannerRepository.updatePlanRepo(
+        plan.id,
+        goalCount,
+      );
   }
 
-
-  /*
-  |--------------------------------------------------------------------------
-  | Replace draft items
-  |--------------------------------------------------------------------------
-  |
-  | Planner editing is easiest when the frontend
-  | sends the current complete plan.
-  |
-  */
-
-  await plannerRepository
-    .deletePlanItemsRepo(
-      plan.id
-    );
-
+  await plannerRepository.deletePlanItemsRepo(
+    plan.id,
+  );
 
   for (
     let index = 0;
     index < items.length;
     index++
   ) {
-    const item =
-      items[index];
+    const item = items[index];
 
+    await plannerRepository.addPlanItemRepo({
+      planId: plan.id,
 
-    await plannerRepository
-      .addPlanItemRepo({
-        planId:
-          plan.id,
+      problemId:
+        Number(item.problemId),
 
-        problemId:
-          Number(
-            item.problemId
-          ),
+      plannedDate:
+        String(item.plannedDate).slice(
+          0,
+          10,
+        ),
 
-        plannedDate:
-          item.plannedDate,
+      position:
+        Number(
+          item.position ?? index,
+        ),
 
-        position:
-          Number(
-            item.position ??
-              index
-          ),
-
-        source:
-          item.source ||
-          "USER",
-      });
+      source:
+        item.source || "USER",
+    });
   }
 
-
-  return await plannerRepository
-    .getPlanRepo(
-      userId,
-      weekStart
-    );
+  return await plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -603,36 +528,33 @@ export const updatePlanItem = async ({
   position,
 }) => {
   const owner =
-    await plannerRepository
-      .getPlanItemOwnerRepo(
-        itemId
-      );
-
+    await plannerRepository.getPlanItemOwnerRepo(
+      itemId,
+    );
 
   if (!owner) {
     throw new Error(
-      "Planner item not found"
+      "Planner item not found",
     );
   }
-
 
   if (
-    owner.user_id !== userId
+    String(owner.user_id) !==
+    String(userId)
   ) {
     throw new Error(
-      "Unauthorized planner item"
+      "Unauthorized planner item",
     );
   }
 
-
-  return await plannerRepository
-    .updatePlanItemRepo({
+  return await plannerRepository.updatePlanItemRepo(
+    {
       itemId,
       plannedDate,
       position,
-    });
+    },
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -645,38 +567,33 @@ export const deletePlanItem = async ({
   itemId,
 }) => {
   const owner =
-    await plannerRepository
-      .getPlanItemOwnerRepo(
-        itemId
-      );
-
+    await plannerRepository.getPlanItemOwnerRepo(
+      itemId,
+    );
 
   if (!owner) {
     throw new Error(
-      "Planner item not found"
+      "Planner item not found",
     );
   }
-
 
   if (
-    owner.user_id !== userId
+    String(owner.user_id) !==
+    String(userId)
   ) {
     throw new Error(
-      "Unauthorized planner item"
+      "Unauthorized planner item",
     );
   }
 
-
-  await plannerRepository
-    .deletePlanItemRepo(
-      itemId
-    );
+  await plannerRepository.deletePlanItemRepo(
+    itemId,
+  );
 };
-
 
 /*
 |--------------------------------------------------------------------------
-| Get progress
+| Progress
 |--------------------------------------------------------------------------
 */
 
@@ -685,31 +602,27 @@ export const getPlanProgress = async ({
   planId,
 }) => {
   const owner =
-    await plannerRepository
-      .getPlanOwnerRepo(
-        planId
-      );
-
+    await plannerRepository.getPlanOwnerRepo(
+      planId,
+    );
 
   if (!owner) {
     throw new Error(
-      "Planner plan not found"
+      "Planner plan not found",
     );
   }
-
 
   if (
-    owner.user_id !== userId
+    String(owner.user_id) !==
+    String(userId)
   ) {
     throw new Error(
-      "Unauthorized planner plan"
+      "Unauthorized planner plan",
     );
   }
 
-
-  return await plannerRepository
-    .getPlanProgressRepo(
-      userId,
-      planId
-    );
+  return await plannerRepository.getPlanProgressRepo(
+    userId,
+    planId,
+  );
 };

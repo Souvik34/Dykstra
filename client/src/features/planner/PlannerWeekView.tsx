@@ -1,6 +1,7 @@
 /* eslint-disable prettier/prettier */
 
 import { motion } from "framer-motion";
+
 import type { PlannerItem } from "./planner.types";
 
 import PlannerDayColumn from "./PlannerDayColumn";
@@ -8,12 +9,13 @@ import PlannerDayColumn from "./PlannerDayColumn";
 import {
   WEEK_DAYS,
   addDays,
-  getMonday,
   formatDate,
+  getMonday,
 } from "./planner.utils";
 
 interface PlannerWeekViewProps {
   weekStart: Date;
+
   items: PlannerItem[];
 
   onMoveItem: (
@@ -37,53 +39,74 @@ export default function PlannerWeekView({
   onOpenProblem,
   onAddProblem,
 }: PlannerWeekViewProps) {
-  const monday = getMonday(weekStart);
+  const monday =
+    getMonday(weekStart);
 
   return (
     <motion.div
       initial={{
         opacity: 0,
-        scale: 0.99,
+        y: 8,
       }}
       animate={{
         opacity: 1,
-        scale: 1,
+        y: 0,
       }}
-      className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#070707] shadow-[0_30px_100px_-50px_rgba(0,0,0,0.95)]"
+      transition={{
+        duration: 0.35,
+      }}
+      className="overflow-x-auto rounded-2xl border border-border bg-[#070707] shadow-[0_30px_100px_-50px_rgba(0,0,0,0.95)]"
     >
-      <div className="flex min-w-[1470px]">
-        {WEEK_DAYS.map((_, index) => {
-          const date = addDays(
-            monday,
-            index,
-          );
+      <div className="flex min-w-[1540px]">
 
-          const dateString =
-            formatDate(date);
+        {WEEK_DAYS.map(
+          (day, index) => {
+            const date =
+              addDays(
+                monday,
+                index,
+              );
 
-          const dayItems = items.filter(
-            (item) =>
-              item.planned_date.slice(
-                0,
-                10,
-              ) === dateString,
-          );
+            const dateString =
+              formatDate(date);
 
-          return (
-            <PlannerDayColumn
-              key={dateString}
-              date={date}
-              items={dayItems}
-              onDropItem={onMoveItem}
-              onOpenProblem={
-                onOpenProblem
-              }
-              onAddProblem={
-                onAddProblem
-              }
-            />
-          );
-        })}
+            const dayItems =
+              items
+                .filter(
+                  (item) =>
+                    String(
+                      item.planned_date,
+                    ).slice(
+                      0,
+                      10,
+                    ) ===
+                    dateString,
+                )
+                .sort(
+                  (a, b) =>
+                    a.position -
+                    b.position,
+                );
+
+            return (
+              <PlannerDayColumn
+                key={dateString}
+                date={date}
+                dayName={day}
+                items={dayItems}
+                onDropItem={
+                  onMoveItem
+                }
+                onOpenProblem={
+                  onOpenProblem
+                }
+                onAddProblem={
+                  onAddProblem
+                }
+              />
+            );
+          },
+        )}
       </div>
     </motion.div>
   );

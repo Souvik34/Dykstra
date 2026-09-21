@@ -1,15 +1,24 @@
 /* eslint-disable prettier/prettier */
 
-import { useState } from "react";
 import {
+  useState,
+  type DragEvent,
+} from "react";
+
+import {
+  CalendarPlus,
   Plus,
-  MousePointer2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+
+import {
+  motion,
+} from "framer-motion";
 
 import PlannerProblemCard from "./PlannerProblemCard";
 
-import type { PlannerItem } from "./planner.types";
+import type {
+  PlannerItem,
+} from "./planner.types";
 
 import {
   formatDate,
@@ -20,6 +29,9 @@ import {
 
 interface PlannerDayColumnProps {
   date: Date;
+
+  dayName: string;
+
   items: PlannerItem[];
 
   onDropItem: (
@@ -38,6 +50,7 @@ interface PlannerDayColumnProps {
 
 export default function PlannerDayColumn({
   date,
+  dayName,
   items,
   onDropItem,
   onOpenProblem,
@@ -46,30 +59,20 @@ export default function PlannerDayColumn({
   const [isDragOver, setIsDragOver] =
     useState(false);
 
-  const today = isSameDay(
-    date,
-    new Date(),
-  );
-
-  const past = isPastDay(date);
-
-  const dateKey = formatDate(date);
-
-  const sortedItems = [...items].sort(
-    (a, b) =>
-      a.position - b.position,
-  );
-
-  const weekday =
-    date.toLocaleDateString(
-      "en-US",
-      {
-        weekday: "short",
-      },
+  const today =
+    isSameDay(
+      date,
+      new Date(),
     );
 
+  const past =
+    isPastDay(date);
+
+  const dateKey =
+    formatDate(date);
+
   const handleDragOver = (
-    event: React.DragEvent<HTMLDivElement>,
+    event: DragEvent<HTMLDivElement>,
   ) => {
     event.preventDefault();
 
@@ -80,30 +83,42 @@ export default function PlannerDayColumn({
   };
 
   const handleDragLeave = (
-    event: React.DragEvent<HTMLDivElement>,
+    event: DragEvent<HTMLDivElement>,
   ) => {
+    /*
+    Don't remove highlight while
+    moving between children.
+    */
+
     if (
-      event.currentTarget ===
-      event.target
+      event.currentTarget.contains(
+        event.relatedTarget as Node,
+      )
     ) {
-      setIsDragOver(false);
+      return;
     }
+
+    setIsDragOver(false);
   };
 
   const handleDrop = (
-    event: React.DragEvent<HTMLDivElement>,
+    event: DragEvent<HTMLDivElement>,
   ) => {
     event.preventDefault();
 
     setIsDragOver(false);
 
-    const itemId = Number(
+    const rawId =
       event.dataTransfer.getData(
         "planner-item-id",
-      ),
-    );
+      );
 
-    if (!itemId) return;
+    const itemId =
+      Number(rawId);
+
+    if (!itemId) {
+      return;
+    }
 
     onDropItem(
       itemId,
@@ -113,67 +128,68 @@ export default function PlannerDayColumn({
 
   return (
     <motion.div
-      layout
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
       animate={{
-        backgroundColor: isDragOver
-          ? "rgba(59,130,246,0.055)"
-          : today
-            ? "rgba(59,130,246,0.018)"
-            : "rgba(255,255,255,0.0)",
+        scale: isDragOver
+          ? 1.01
+          : 1,
       }}
       transition={{
-        duration: 0.18,
+        duration: 0.15,
       }}
+      onDragOver={
+        handleDragOver
+      }
+      onDragLeave={
+        handleDragLeave
+      }
+      onDrop={handleDrop}
       className={[
-        "relative flex min-h-[570px] min-w-[210px]",
-        "flex-1 flex-col border-r",
-        "border-white/[0.06]",
-        "last:border-r-0",
+        "relative flex min-h-[620px] min-w-[220px] flex-1 flex-col border-r border-white/[0.06] transition-colors last:border-r-0",
+        past
+          ? "bg-white/[0.012]"
+          : "bg-[#090909]",
+        isDragOver
+          ? "bg-primary/[0.07]"
+          : "",
       ].join(" ")}
     >
-      {/* DRAG GLOW */}
 
-      <AnimatePresence>
-        {isDragOver && (
-          <motion.div
-            initial={{
-              opacity: 0,
-            }}
-            animate={{
-              opacity: 1,
-            }}
-            exit={{
-              opacity: 0,
-            }}
-            className="pointer-events-none absolute inset-2 rounded-xl border border-blue-400/30 bg-blue-500/[0.025] shadow-[inset_0_0_30px_rgba(59,130,246,0.04)]"
-          />
-        )}
-      </AnimatePresence>
+      {/* DROP GLOW */}
+
+      {isDragOver && (
+        <motion.div
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: 1,
+          }}
+          className="pointer-events-none absolute inset-1 rounded-xl border border-primary/30 bg-primary/[0.025]"
+        />
+      )}
 
       {/* HEADER */}
 
       <div
         className={[
-          "relative z-10 border-b border-white/[0.06]",
-          "px-4 py-3",
-          "bg-[#090909]/90 backdrop-blur-xl",
-          past ? "opacity-50" : "",
+          "relative z-10 border-b border-white/[0.06] px-4 py-3",
+          past
+            ? "opacity-50"
+            : "",
         ].join(" ")}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
+
           <div>
             <p
               className={[
-                "text-[10px] font-semibold uppercase tracking-[0.14em]",
+                "text-[11px] font-semibold uppercase tracking-[0.14em]",
                 today
-                  ? "text-blue-400"
-                  : "text-slate-600",
+                  ? "text-primary"
+                  : "text-muted-foreground",
               ].join(" ")}
             >
-              {weekday}
+              {dayName}
             </p>
 
             <div className="mt-1 flex items-baseline gap-1.5">
@@ -181,14 +197,14 @@ export default function PlannerDayColumn({
                 className={[
                   "text-xl font-semibold",
                   today
-                    ? "text-blue-300"
-                    : "text-slate-200",
+                    ? "text-primary"
+                    : "text-foreground",
                 ].join(" ")}
               >
                 {date.getDate()}
               </span>
 
-              <span className="text-xs text-slate-600">
+              <span className="text-xs text-muted-foreground/60">
                 {formatMonth(date)}
               </span>
             </div>
@@ -204,7 +220,7 @@ export default function PlannerDayColumn({
                 opacity: 1,
                 scale: 1,
               }}
-              className="rounded-full border border-blue-400/15 bg-blue-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-blue-300"
+              className="rounded-full bg-primary/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-primary"
             >
               Today
             </motion.span>
@@ -214,73 +230,74 @@ export default function PlannerDayColumn({
 
       {/* TASK AREA */}
 
-      <div className="relative z-10 flex flex-1 flex-col gap-2 p-3">
-        <AnimatePresence initial={false}>
-          {sortedItems.map((item) => (
-            <PlannerProblemCard
-              key={item.id}
-              item={item}
-              onOpen={() =>
-                onOpenProblem(item)
+      <div className="relative z-10 flex flex-1 flex-col gap-2.5 p-3">
+
+        {items.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center">
+            <motion.div
+              animate={
+                isDragOver
+                  ? {
+                      opacity: 1,
+                      scale: 1.02,
+                    }
+                  : {
+                      opacity: 0.45,
+                      scale: 1,
+                    }
               }
-            />
-          ))}
-        </AnimatePresence>
+              className="w-full rounded-xl border border-dashed border-white/[0.07] px-3 py-8 text-center"
+            >
+              <CalendarPlus className="mx-auto mb-2 h-4 w-4 text-muted-foreground/40" />
 
-        {/* DROP STATE */}
-
-        {sortedItems.length === 0 &&
-          !isDragOver && (
-            <div className="flex min-h-[150px] flex-1 items-center justify-center">
-              <div className="text-center">
-                <MousePointer2 className="mx-auto mb-2 h-4 w-4 text-slate-800" />
-
-                <p className="text-[10px] uppercase tracking-wider text-slate-700">
-                  Empty
-                </p>
-              </div>
-            </div>
-          )}
-
-        {isDragOver && (
-          <motion.div
-            initial={{
-              opacity: 0,
-              scale: 0.96,
-            }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-            }}
-            className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-blue-400/30 bg-blue-500/[0.035]"
-          >
-            <div className="text-center">
-              <MousePointer2 className="mx-auto mb-2 h-5 w-5 text-blue-400" />
-
-              <p className="text-xs font-medium text-blue-300">
-                Drop here
+              <p className="text-[11px] text-muted-foreground/50">
+                {isDragOver
+                  ? "Drop here"
+                  : "No tasks"}
               </p>
-
-              <p className="mt-1 text-[10px] text-blue-400/50">
-                Move task to {weekday}
-              </p>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
+        ) : (
+          items.map(
+            (item, index) => (
+              <PlannerProblemCard
+                key={item.id}
+                item={item}
+                index={index}
+                onOpen={() =>
+                  onOpenProblem(
+                    item,
+                  )
+                }
+              />
+            ),
+          )
         )}
       </div>
 
       {/* ADD */}
 
-      <button
-        type="button"
-        onClick={() =>
-          onAddProblem(dateKey)
-        }
-        className="relative z-10 mx-3 mb-3 flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-white/[0.07] hover:bg-white/[0.025] hover:text-slate-300"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Add task
-      </button>
+      <div className="relative z-10 border-t border-white/[0.06] p-2.5">
+        <motion.button
+          type="button"
+          whileHover={{
+            backgroundColor:
+              "rgba(255,255,255,0.035)",
+          }}
+          whileTap={{
+            scale: 0.97,
+          }}
+          onClick={() =>
+            onAddProblem(
+              dateKey,
+            )
+          }
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-muted-foreground transition hover:border-white/[0.07] hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add task
+        </motion.button>
+      </div>
     </motion.div>
   );
 }
