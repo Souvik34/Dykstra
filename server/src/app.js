@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { connectRedis } from "./config/redis.js";
 const app = express();
+app.set("trust proxy", "loopback");
 import "./workers/solve.worker.js";
 import "./workers/revisionReminder.worker.js";
 import "./schedulers/revisionReminder.scheduler.js";
