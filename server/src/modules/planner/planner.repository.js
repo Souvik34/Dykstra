@@ -453,3 +453,76 @@ export const getPlanOwnerRepo = async (
 
   return result.rows[0] || null;
 };
+
+export const getPlannerSuggestionsRepo = async ({
+  userId,
+  topic,
+  difficulties,
+  limit = 100,
+}) => {
+  const values = [userId, topic];
+
+  let query = `
+    SELECT
+      p.id AS problem_id,
+      p.title,
+      p.difficulty,
+      p.topic,
+      p.tags,
+      p.platform,
+      p.question_link,
+
+      CASE
+        WHEN sp.problem_id IS NOT NULL
+        THEN true
+        ELSE false
+      END AS solved
+
+    FROM problems p
+
+    LEFT JOIN solved_problems sp
+      ON sp.problem_id = p.id
+      AND sp.user_id = $1
+
+    WHERE LOWER(TRIM(p.topic)) =
+          LOWER(TRIM($2))
+  `;
+
+  if (
+    difficulties &&
+    difficulties.length > 0
+  ) {
+    values.push(
+      difficulties.map((difficulty) =>
+        String(difficulty)
+          .trim()
+          .toLowerCase()
+      )
+    );
+
+    query += `
+      AND LOWER(TRIM(p.difficulty::text)) =
+          ANY($${values.length})
+    `;
+  }
+
+  values.push(limit);
+
+  query += `
+    ORDER BY
+      CASE
+        WHEN sp.problem_id IS NULL THEN 0
+        ELSE 1
+      END,
+      p.id ASC
+
+    LIMIT $${values.length}
+  `;
+
+  const result = await pool.query(
+    query,
+    values
+  );
+
+  return result.rows;
+};

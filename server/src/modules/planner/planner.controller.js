@@ -370,3 +370,54 @@ export const getProgress = async (
     });
   }
 };
+
+export const getSuggestions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const {
+      topic,
+      difficulties,
+    } = req.query;
+
+    if (!topic) {
+      return res.status(400).json({
+        success: false,
+        message: "topic is required",
+      });
+    }
+
+    const difficultyList =
+      difficulties
+        ? String(difficulties)
+            .split(",")
+            .map((item) =>
+              item.trim().toLowerCase()
+            )
+            .filter(Boolean)
+        : [];
+
+    const suggestions =
+      await plannerService.getSuggestions({
+        userId,
+        topic,
+        difficulties:
+          difficultyList,
+      });
+
+    return res.json({
+      success: true,
+      data: suggestions,
+    });
+  } catch (err) {
+    console.error(
+      "GET PLANNER SUGGESTIONS ERROR:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};

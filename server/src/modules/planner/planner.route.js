@@ -52,6 +52,10 @@ router.delete(
   deleteItem
 );
 
+router.get(
+  "/suggestions",
+  plannerController.getSuggestions
+);
 
 router.get(
   "/:planId/progress",

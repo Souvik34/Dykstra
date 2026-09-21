@@ -626,3 +626,16 @@ export const getPlanProgress = async ({
     planId,
   );
 };
+
+export const getSuggestions = async ({
+  userId,
+  topic,
+  difficulties,
+}) => {
+  return getPlannerSuggestionsRepo({
+    userId,
+    topic,
+    difficulties,
+    limit: 100,
+  });
+};
