@@ -574,11 +574,11 @@ export default function PlannerPage() {
       |--------------------------------------------------------------------------
       */
 
-     await addPlannerItem({
+   const added = await addPlannerItem({
   weekStart: weekStartString,
-  problemId: problem.id,
+  problemId: problem.problem_id,
   plannedDate: date,
-  position: 0,
+  position: nextPosition,
   source: "USER",
 });
 
