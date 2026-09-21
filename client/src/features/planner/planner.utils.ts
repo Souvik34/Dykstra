@@ -43,6 +43,10 @@ export const formatDate = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
     date.getDate(),
   )}`;
+  export const formatMonth = (date: Date) =>
+  date.toLocaleDateString("en-US", {
+    month: "short",
+  });
 
 export const getMonday = (date: Date) => {
   const result = new Date(date);

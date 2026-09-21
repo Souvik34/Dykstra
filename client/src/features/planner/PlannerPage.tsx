@@ -1,24 +1,30 @@
 /* eslint-disable prettier/prettier */
 
-import { useMemo, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Pencil,
+  ListTodo,
   Sparkles,
 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import PlannerSetup from "./PlannerSetup";
 import PlannerWeekView from "./PlannerWeekView";
 import PlannerCalendar from "./PlannerCalendar";
 
+import {
+  generatePlannerDraft,
+  getPlanner,
+  savePlanner,
+  updatePlannerItem,
+} from "./planner.api";
+
 import type {
   PlannerDifficulty,
   PlannerItem,
+  PlannerPlan,
 } from "./planner.types";
 
 import {
@@ -28,74 +34,311 @@ import {
   getMonday,
 } from "./planner.utils";
 
-type PlannerView = "week" | "calendar";
+type ViewMode = "week" | "calendar";
 
 export default function PlannerPage() {
-  const [weekStart, setWeekStart] =
-    useState(() =>
-      getMonday(new Date()),
-    );
+  // --------------------------------------------------
+  // WEEK
+  // --------------------------------------------------
 
-  const [view, setView] =
-    useState<PlannerView>("week");
-
-  const [showSetup, setShowSetup] =
-    useState(false);
-
-  const [selectedTopics, setSelectedTopics] =
-    useState<string[]>([]);
-
-  const [
-    selectedDifficulties,
-    setSelectedDifficulties,
-  ] = useState<PlannerDifficulty[]>([
-    "easy",
-    "medium",
-  ]);
-
-  const [goalCount, setGoalCount] =
-    useState(5);
-
-  const [building, setBuilding] =
-    useState(false);
-
-  const [items, setItems] =
-    useState<PlannerItem[]>([]);
-
-  const weekEnd = useMemo(
-    () => addDays(weekStart, 6),
-    [weekStart],
+  const [weekStart, setWeekStart] = useState(() =>
+    getMonday(new Date()),
   );
 
-  const solvedCount = items.filter(
-    (item) => item.solved,
-  ).length;
+  // --------------------------------------------------
+  // PLANNER DATA
+  // --------------------------------------------------
 
-  const progress =
-    items.length === 0
-      ? 0
-      : Math.round(
-          (solvedCount /
-            items.length) *
-            100,
+  const [plan, setPlan] = useState<PlannerPlan | null>(null);
+  const [items, setItems] = useState<PlannerItem[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [building, setBuilding] = useState(false);
+
+  // --------------------------------------------------
+  // SETUP STATE
+  // --------------------------------------------------
+
+  const [showSetup, setShowSetup] = useState(false);
+
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(
+    [],
+  );
+
+  const [selectedDifficulties, setSelectedDifficulties] =
+    useState<PlannerDifficulty[]>([
+      "easy",
+      "medium",
+    ]);
+
+  const [goalCount, setGoalCount] = useState(5);
+
+  // --------------------------------------------------
+  // VIEW
+  // --------------------------------------------------
+
+  const [viewMode, setViewMode] =
+    useState<ViewMode>("week");
+
+  // --------------------------------------------------
+  // DATES
+  // --------------------------------------------------
+
+  const weekStartString = formatDate(weekStart);
+
+  // --------------------------------------------------
+  // LOAD EXISTING PLAN
+  // --------------------------------------------------
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPlanner = async () => {
+      setLoading(true);
+
+      try {
+        const result = await getPlanner(
+          weekStartString,
         );
 
-  const moveItem = (
+        if (cancelled) return;
+
+        setPlan(result);
+        setItems(result?.items ?? []);
+
+        if (result) {
+          setGoalCount(result.goal_count);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load planner:",
+          error,
+        );
+
+        if (!cancelled) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to load planner",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPlanner();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [weekStartString]);
+
+  // --------------------------------------------------
+  // PROGRESS
+  // --------------------------------------------------
+
+  const progress = useMemo(() => {
+    const total = items.length;
+
+    const solved = items.filter(
+      (item) => item.solved,
+    ).length;
+
+    return {
+      total,
+      solved,
+      remaining: Math.max(
+        total - solved,
+        0,
+      ),
+      percentage:
+        total === 0
+          ? 0
+          : Math.round(
+              (solved / total) * 100,
+            ),
+    };
+  }, [items]);
+
+  // --------------------------------------------------
+  // WEEK NAVIGATION
+  // --------------------------------------------------
+
+  const goToPreviousWeek = () => {
+    setWeekStart((current) =>
+      addDays(current, -7),
+    );
+  };
+
+  const goToNextWeek = () => {
+    setWeekStart((current) =>
+      addDays(current, 7),
+    );
+  };
+
+  const goToCurrentWeek = () => {
+    setWeekStart(
+      getMonday(new Date()),
+    );
+  };
+
+  // --------------------------------------------------
+  // BUILD WEEK
+  // --------------------------------------------------
+
+  const buildWeek = async () => {
+    if (selectedTopics.length === 0) {
+      toast.error(
+        "Select at least one topic",
+      );
+      return;
+    }
+
+    if (
+      selectedDifficulties.length === 0
+    ) {
+      toast.error(
+        "Select at least one difficulty",
+      );
+      return;
+    }
+
+    setBuilding(true);
+
+    try {
+      // 1. Generate draft
+      const draft =
+        await generatePlannerDraft({
+          weekStart: weekStartString,
+          topics: selectedTopics,
+          difficulties:
+            selectedDifficulties,
+          goalCount,
+          mentorProblemIds: [],
+        });
+
+      // 2. Save generated draft
+      const savedPlan =
+        await savePlanner({
+          weekStart: draft.weekStart,
+          weekEnd: draft.weekEnd,
+          goalCount: draft.goalCount,
+          items: draft.items.map(
+            (item) => ({
+              problemId:
+                item.problem_id,
+              plannedDate:
+                item.planned_date,
+              position:
+                item.position,
+              source:
+                item.source,
+            }),
+          ),
+        });
+
+      // 3. Update UI
+      setPlan(savedPlan);
+      setItems(savedPlan.items);
+
+      setShowSetup(false);
+
+      toast.success(
+        "Your week is ready",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to build planner:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to build your week",
+      );
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  // --------------------------------------------------
+  // MOVE ITEM
+  // --------------------------------------------------
+
+  const moveItem = async (
     itemId: number,
     plannedDate: string,
   ) => {
+    const item = items.find(
+      (current) =>
+        current.id === itemId,
+    );
+
+    if (!item) return;
+
+    const previousItems = items;
+
+    // Optimistic update
     setItems((current) =>
-      current.map((item) =>
-        item.id === itemId
+      current.map((currentItem) =>
+        currentItem.id === itemId
           ? {
-              ...item,
+              ...currentItem,
               planned_date:
                 plannedDate,
             }
-          : item,
+          : currentItem,
       ),
     );
+
+    try {
+      const updatedItem =
+        await updatePlannerItem(
+          itemId,
+          {
+            plannedDate,
+            position:
+              item.position,
+          },
+        );
+
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === itemId
+            ? {
+                ...currentItem,
+                planned_date:
+                  updatedItem.planned_date,
+                position:
+                  updatedItem.position,
+              }
+            : currentItem,
+        ),
+      );
+    } catch (error) {
+      console.error(
+        "Failed to move planner item:",
+        error,
+      );
+
+      // Roll back
+      setItems(previousItems);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to move problem",
+      );
+    }
   };
+
+  // --------------------------------------------------
+  // OPEN PROBLEM
+  // --------------------------------------------------
 
   const openProblem = (
     item: PlannerItem,
@@ -109,279 +352,309 @@ export default function PlannerPage() {
     );
   };
 
+  // --------------------------------------------------
+  // ADD PROBLEM
+  // --------------------------------------------------
+
   const handleAddProblem = (
     date: string,
   ) => {
     console.log(
-      "Add problem to:",
+      "Add problem for:",
       date,
     );
 
-    /*
-     * Next:
-     * open the existing Dykstra problem
-     * picker here.
-     */
+    // Problem picker will be added later.
   };
 
-  const buildWeek = async () => {
-    setBuilding(true);
-
-    try {
-      /*
-       * API wiring comes here.
-       *
-       * POST /api/v1/planner/draft
-       */
-
-      await new Promise(
-        (resolve) =>
-          setTimeout(resolve, 500),
-      );
-
-      setShowSetup(false);
-    } finally {
-      setBuilding(false);
-    }
-  };
-
-  const previousWeek = () => {
-    setWeekStart((current) =>
-      addDays(current, -7),
-    );
-  };
-
-  const nextWeek = () => {
-    setWeekStart((current) =>
-      addDays(current, 7),
-    );
-  };
-
-  const today = () => {
-    setWeekStart(
-      getMonday(new Date()),
-    );
-  };
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
 
   return (
-    <div className="min-h-full bg-black px-6 py-6 text-white">
-      {/* HEADER */}
+    <div className="min-h-full bg-background">
+      <div className="mx-auto max-w-[1600px] px-6 py-6 lg:px-8">
 
-      <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-blue-500/10 text-blue-300">
+        {/* HEADER */}
+        <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
+              <span>Practice</span>
+              <span>/</span>
+              <span>Planner</span>
             </div>
 
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
-              Planner
-            </span>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Weekly Planner
+            </h1>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Decide what you're going to
+              practice this week.
+            </p>
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Your week, planned.
-          </h1>
+          <div className="flex items-center gap-2">
+            {!loading && plan && (
+              <button
+                type="button"
+                onClick={() =>
+                  setShowSetup(true)
+                }
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium transition hover:bg-muted"
+              >
+                <Sparkles className="h-4 w-4" />
+                Edit week
+              </button>
+            )}
 
-          <p className="mt-1 text-sm text-slate-500">
-            Focus on solving. Dykstra handles
-            the plan.
-          </p>
+            {!loading && !plan && (
+              <button
+                type="button"
+                onClick={() =>
+                  setShowSetup(true)
+                }
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+              >
+                <Sparkles className="h-4 w-4" />
+                Build My Week
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={today}
-            className="border-white/10 bg-white/[0.025] text-slate-300 hover:bg-white/[0.06] hover:text-white"
-          >
-            Today
-          </Button>
+        {/* WEEK NAVIGATION */}
+        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
 
-          <div className="flex items-center rounded-lg border border-white/10 bg-white/[0.025]">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={previousWeek}
-              className="h-9 w-9 text-slate-400 hover:bg-white/[0.05] hover:text-white"
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={
+                goToPreviousWeek
+              }
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
             >
               <ChevronLeft className="h-4 w-4" />
-            </Button>
+            </button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={nextWeek}
-              className="h-9 w-9 text-slate-400 hover:bg-white/[0.05] hover:text-white"
+            <button
+              type="button"
+              onClick={
+                goToCurrentWeek
+              }
+              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition hover:bg-muted"
+            >
+              Today
+            </button>
+
+            <button
+              type="button"
+              onClick={
+                goToNextWeek
+              }
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
             >
               <ChevronRight className="h-4 w-4" />
-            </Button>
+            </button>
+
+            <div className="ml-2 text-sm font-medium">
+              {formatWeekRange(
+                weekStart,
+              )}
+            </div>
           </div>
 
           {/* VIEW SWITCH */}
+          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
 
-          <div className="flex rounded-lg border border-white/10 bg-white/[0.025] p-0.5">
             <button
               type="button"
               onClick={() =>
-                setView("week")
+                setViewMode("week")
               }
-              className={[
-                "rounded-md px-3 py-1.5 text-xs font-medium transition",
-                view === "week"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-slate-500 hover:text-slate-300",
-              ].join(" ")}
+              className={`inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
+                viewMode === "week"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
+              <ListTodo className="h-4 w-4" />
               Week
             </button>
 
             <button
               type="button"
               onClick={() =>
-                setView("calendar")
+                setViewMode(
+                  "calendar",
+                )
               }
-              className={[
-                "rounded-md px-3 py-1.5 text-xs font-medium transition",
-                view === "calendar"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-slate-500 hover:text-slate-300",
-              ].join(" ")}
+              className={`inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
+                viewMode === "calendar"
+                  ? "bg-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
+              <CalendarDays className="h-4 w-4" />
               Calendar
             </button>
-          </div>
 
-          <Button
-            onClick={() =>
-              setShowSetup(true)
-            }
-            className="gap-2 bg-blue-500 text-white shadow-[0_0_30px_-12px_rgba(59,130,246,0.9)] hover:bg-blue-400"
-          >
-            {items.length > 0 ? (
-              <>
-                <Pencil className="h-4 w-4" />
-                Edit week
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Build my week
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* SUMMARY */}
-
-      <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-sm font-medium text-slate-200">
-            {formatWeekRange(
-              weekStart,
-            )}
-          </div>
-
-          <div className="mt-1 text-xs text-slate-500">
-            {items.length === 0
-              ? "Your week is waiting to be planned."
-              : `${solvedCount} of ${items.length} problems completed`}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 w-36 overflow-hidden rounded-full bg-white/[0.07]">
-            <div
-              className="h-full rounded-full bg-blue-400 transition-all duration-500"
-              style={{
-                width: `${progress}%`,
-              }}
-            />
-          </div>
+        {/* PROGRESS */}
+        {plan && !loading && (
+          <div className="mb-5 rounded-xl border border-border bg-card p-4 shadow-sm">
 
-          <span className="text-xs font-semibold text-slate-400">
-            {progress}%
-          </span>
-        </div>
-      </div>
+            <div className="flex items-center justify-between gap-4">
 
-      {/* EMPTY STATE */}
+              <div>
+                <p className="text-sm font-medium">
+                  This week's progress
+                </p>
 
-      {items.length === 0 ? (
-        <div className="flex min-h-[520px] items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.012]">
-          <div className="max-w-md text-center">
-            <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-blue-400/10 bg-blue-500/[0.06] text-blue-300 shadow-[0_0_50px_-25px_rgba(59,130,246,0.8)]">
-              <Sparkles className="h-6 w-6" />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {progress.solved} of{" "}
+                  {progress.total}{" "}
+                  planned problems
+                  solved
+                </p>
+              </div>
+
+              <span className="text-sm font-semibold">
+                {progress.percentage}%
+              </span>
+
             </div>
 
-            <h2 className="text-lg font-semibold text-slate-200">
-              Your week isn't planned yet.
-            </h2>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{
+                  width: `${progress.percentage}%`,
+                }}
+              />
+            </div>
 
-            <p className="mt-2 text-sm leading-relaxed text-slate-500">
-              Choose the topics and workload you
-              want to focus on. Dykstra will build
-              the first version of your week.
-            </p>
-
-            <Button
-              onClick={() =>
-                setShowSetup(true)
-              }
-              className="mt-5 gap-2 bg-blue-500 text-white hover:bg-blue-400"
-            >
-              <Sparkles className="h-4 w-4" />
-              Build my week
-            </Button>
           </div>
-        </div>
-      ) : view === "week" ? (
-        <PlannerWeekView
-          weekStart={weekStart}
-          items={items}
-          onMoveItem={moveItem}
-          onOpenProblem={openProblem}
-          onAddProblem={
-            handleAddProblem
-          }
-        />
-      ) : (
-        <PlannerCalendar
-          weekStart={weekStart}
-          items={items}
-          onOpenProblem={openProblem}
-        />
-      )}
+        )}
 
-      {/* SETUP */}
+        {/* LOADING */}
+        {loading && (
+          <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-border bg-card">
+            <div className="text-center">
 
-      {showSetup && (
-        <PlannerSetup
-          selectedTopics={
-            selectedTopics
-          }
-          selectedDifficulties={
-            selectedDifficulties
-          }
-          goalCount={goalCount}
-          onTopicsChange={
-            setSelectedTopics
-          }
-          onDifficultiesChange={
-            setSelectedDifficulties
-          }
-          onGoalCountChange={
-            setGoalCount
-          }
-          onBuild={buildWeek}
-          onClose={() =>
-            setShowSetup(false)
-          }
-          loading={building}
-        />
-      )}
+              <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-primary" />
+
+              <p className="text-sm text-muted-foreground">
+                Loading your planner...
+              </p>
+
+            </div>
+          </div>
+        )}
+
+        {/* EMPTY STATE */}
+        {!loading && !plan && (
+          <div className="flex min-h-[480px] items-center justify-center rounded-xl border border-dashed border-border bg-card">
+
+            <div className="max-w-md px-6 text-center">
+
+              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                <CalendarDays className="h-7 w-7 text-primary" />
+              </div>
+
+              <h2 className="text-xl font-semibold">
+                Plan your week
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Choose the topics you
+                want to practice, set
+                your weekly goal, and
+                Dykstra will build a
+                focused plan for you.
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowSetup(true)
+                }
+                className="mt-6 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+              >
+                <Sparkles className="h-4 w-4" />
+                Build My Week
+              </button>
+
+            </div>
+          </div>
+        )}
+
+        {/* PLANNER */}
+        {!loading && plan && (
+          <>
+            {viewMode === "week" ? (
+              <PlannerWeekView
+                weekStart={weekStart}
+                items={items}
+                onDropItem={
+                  moveItem
+                }
+                onOpenProblem={
+                  openProblem
+                }
+                onAddProblem={
+                  handleAddProblem
+                }
+              />
+            ) : (
+              <PlannerCalendar
+                weekStart={weekStart}
+                items={items}
+                onOpenProblem={
+                  openProblem
+                }
+              />
+            )}
+          </>
+        )}
+
+        {/* SETUP MODAL */}
+        {showSetup && (
+          <PlannerSetup
+            selectedTopics={
+              selectedTopics
+            }
+            selectedDifficulties={
+              selectedDifficulties
+            }
+            goalCount={
+              goalCount
+            }
+            onTopicsChange={
+              setSelectedTopics
+            }
+            onDifficultiesChange={
+              setSelectedDifficulties
+            }
+            onGoalCountChange={
+              setGoalCount
+            }
+            onBuild={
+              buildWeek
+            }
+            onClose={() =>
+              setShowSetup(false)
+            }
+            loading={
+              building
+            }
+          />
+        )}
+
+      </div>
     </div>
   );
 }
