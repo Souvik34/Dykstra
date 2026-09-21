@@ -233,7 +233,7 @@ export default function PlannerDayColumn({
 
       <div
         className={[
-          "relative z-10 overflow-hidden border-b border-slate-200/80",
+          "relative z-30 overflow-hidden border-b border-slate-200/80",
           past
             ? "opacity-50"
             : "",
@@ -405,7 +405,7 @@ export default function PlannerDayColumn({
         <>
           {/* TASK AREA */}
 
-          <div className="relative z-10 flex flex-1 flex-col gap-2.5 p-3">
+          <div className="relative z-0 flex flex-1 flex-col gap-2.5 p-3">
             {items.length === 0 ? (
               <div className="flex flex-1 items-center justify-center">
                 <motion.div
