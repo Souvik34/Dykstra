@@ -64,6 +64,9 @@ app.use("/api/v1/broadcast", broadcastRoutes);
 import publicStatsRoutes from "./modules/publicStats/publicStats.routes.js";
 app.use("/api/public/stats", publicStatsRoutes);
 
+import plannerRoutes from "./modules/planner/planner.route.js";
+app.use("/api/v1/planner", plannerRoutes);
+
 app.use((err, req, res, next) => {
   console.error(err);
 
