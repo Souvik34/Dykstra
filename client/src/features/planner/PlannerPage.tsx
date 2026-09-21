@@ -5,14 +5,13 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ListTodo,
   Sparkles,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
 import PlannerSetup from "./PlannerSetup";
 import PlannerWeekView from "./PlannerWeekView";
-import PlannerCalendar from "./PlannerCalendar";
 
 import {
   generatePlannerDraft,
@@ -34,36 +33,28 @@ import {
   getMonday,
 } from "./planner.utils";
 
-type ViewMode = "week" | "calendar";
-
 export default function PlannerPage() {
-  // --------------------------------------------------
-  // WEEK
-  // --------------------------------------------------
-
   const [weekStart, setWeekStart] = useState(() =>
     getMonday(new Date()),
   );
 
-  // --------------------------------------------------
-  // PLANNER DATA
-  // --------------------------------------------------
+  const [plan, setPlan] =
+    useState<PlannerPlan | null>(null);
 
-  const [plan, setPlan] = useState<PlannerPlan | null>(null);
-  const [items, setItems] = useState<PlannerItem[]>([]);
+  const [items, setItems] =
+    useState<PlannerItem[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [building, setBuilding] = useState(false);
+  const [loading, setLoading] =
+    useState(true);
 
-  // --------------------------------------------------
-  // SETUP STATE
-  // --------------------------------------------------
+  const [building, setBuilding] =
+    useState(false);
 
-  const [showSetup, setShowSetup] = useState(false);
+  const [showSetup, setShowSetup] =
+    useState(false);
 
-  const [selectedTopics, setSelectedTopics] = useState<string[]>(
-    [],
-  );
+  const [selectedTopics, setSelectedTopics] =
+    useState<string[]>([]);
 
   const [selectedDifficulties, setSelectedDifficulties] =
     useState<PlannerDifficulty[]>([
@@ -71,23 +62,14 @@ export default function PlannerPage() {
       "medium",
     ]);
 
-  const [goalCount, setGoalCount] = useState(5);
+  const [goalCount, setGoalCount] =
+    useState(5);
+
+  const weekStartString =
+    formatDate(weekStart);
 
   // --------------------------------------------------
-  // VIEW
-  // --------------------------------------------------
-
-  const [viewMode, setViewMode] =
-    useState<ViewMode>("week");
-
-  // --------------------------------------------------
-  // DATES
-  // --------------------------------------------------
-
-  const weekStartString = formatDate(weekStart);
-
-  // --------------------------------------------------
-  // LOAD EXISTING PLAN
+  // LOAD PLAN
   // --------------------------------------------------
 
   useEffect(() => {
@@ -150,10 +132,6 @@ export default function PlannerPage() {
     return {
       total,
       solved,
-      remaining: Math.max(
-        total - solved,
-        0,
-      ),
       percentage:
         total === 0
           ? 0
@@ -164,7 +142,7 @@ export default function PlannerPage() {
   }, [items]);
 
   // --------------------------------------------------
-  // WEEK NAVIGATION
+  // NAVIGATION
   // --------------------------------------------------
 
   const goToPreviousWeek = () => {
@@ -189,104 +167,114 @@ export default function PlannerPage() {
   // BUILD WEEK
   // --------------------------------------------------
 
-const buildWeek = async () => {
-  if (selectedTopics.length === 0) {
-    toast.error("Select at least one topic");
-    return;
-  }
-
-  if (selectedDifficulties.length === 0) {
-    toast.error("Select at least one difficulty");
-    return;
-  }
-
-  setBuilding(true);
-
-  try {
-    const draft = await generatePlannerDraft({
-      weekStart: weekStartString,
-      topics: selectedTopics,
-      difficulties: selectedDifficulties,
-      goalCount,
-      mentorProblemIds: [],
-    });
-
-    if (!draft) {
-      throw new Error(
-        "Planner could not generate a weekly draft.",
+  const buildWeek = async () => {
+    if (selectedTopics.length === 0) {
+      toast.error(
+        "Select at least one topic",
       );
+      return;
     }
-
-    if (!draft.weekStart) {
-      throw new Error(
-        "Planner draft is missing week start.",
-      );
-    }
-
-    if (!draft.weekEnd) {
-      throw new Error(
-        "Planner draft is missing week end.",
-      );
-    }
-
-    if (!draft.goalCount || draft.goalCount < 1) {
-      throw new Error(
-        "Planner draft has an invalid goal count.",
-      );
-    }
-
-    if (!Array.isArray(draft.items)) {
-      throw new Error(
-        "Planner draft contains invalid items.",
-      );
-    }
-
-    const savePayload = {
-      weekStart: draft.weekStart,
-      weekEnd: draft.weekEnd,
-      goalCount: draft.goalCount,
-      items: draft.items.map((item) => ({
-        problemId: Number(item.problem_id),
-        plannedDate: item.planned_date.slice(0, 10),
-        position: Number(item.position),
-        source: item.source ?? "PLANNER",
-      })),
-    };
 
     if (
-      !savePayload.weekStart ||
-      !savePayload.weekEnd ||
-      !savePayload.goalCount
+      selectedDifficulties.length === 0
     ) {
-      throw new Error(
-        "Unable to create planner: incomplete weekly plan.",
+      toast.error(
+        "Select at least one difficulty",
       );
+      return;
     }
 
-    const savedPlan = await savePlanner(savePayload);
+    setBuilding(true);
 
-    setPlan(savedPlan);
-    setItems(savedPlan.items);
-    setShowSetup(false);
+    try {
+      const draft =
+        await generatePlannerDraft({
+          weekStart: weekStartString,
+          topics: selectedTopics,
+          difficulties:
+            selectedDifficulties,
+          goalCount,
+          mentorProblemIds: [],
+        });
 
-    toast.success("Your week is ready");
-  } catch (error) {
-    console.error(
-      "Failed to build planner:",
-      error,
-    );
+      if (!draft) {
+        throw new Error(
+          "Planner could not generate a draft.",
+        );
+      }
 
-    toast.error(
-      error instanceof Error
-        ? error.message
-        : "Failed to build your week",
-    );
-  } finally {
-    setBuilding(false);
-  }
-};
+      if (!draft.weekStart) {
+        throw new Error(
+          "Planner draft is missing week start.",
+        );
+      }
+
+      if (!draft.weekEnd) {
+        throw new Error(
+          "Planner draft is missing week end.",
+        );
+      }
+
+      if (!Array.isArray(draft.items)) {
+        throw new Error(
+          "Planner returned invalid tasks.",
+        );
+      }
+
+      if (draft.items.length === 0) {
+        throw new Error(
+          "No unsolved problems matched your selected topics and difficulties.",
+        );
+      }
+
+      const savedPlan =
+        await savePlanner({
+          weekStart: draft.weekStart,
+          weekEnd: draft.weekEnd,
+          goalCount: draft.goalCount,
+          items: draft.items.map(
+            (item) => ({
+              problemId:
+                Number(item.problem_id),
+              plannedDate:
+                item.planned_date.slice(
+                  0,
+                  10,
+                ),
+              position:
+                Number(item.position),
+              source:
+                item.source ??
+                "PLANNER",
+            }),
+          ),
+        });
+
+      setPlan(savedPlan);
+      setItems(savedPlan.items);
+      setShowSetup(false);
+
+      toast.success(
+        "Your week is ready",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to build planner:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to build your week",
+      );
+    } finally {
+      setBuilding(false);
+    }
+  };
+
   // --------------------------------------------------
-  // MOVE ITEM
+  // MOVE TASK
   // --------------------------------------------------
 
   const moveItem = async (
@@ -300,9 +288,15 @@ const buildWeek = async () => {
 
     if (!item) return;
 
+    if (
+      item.planned_date.slice(0, 10) ===
+      plannedDate
+    ) {
+      return;
+    }
+
     const previousItems = items;
 
-    // Optimistic update
     setItems((current) =>
       current.map((currentItem) =>
         currentItem.id === itemId
@@ -345,7 +339,6 @@ const buildWeek = async () => {
         error,
       );
 
-      // Roll back
       setItems(previousItems);
 
       toast.error(
@@ -380,11 +373,11 @@ const buildWeek = async () => {
     date: string,
   ) => {
     console.log(
-      "Add problem for:",
+      "Add problem:",
       date,
     );
 
-    // Problem picker will be added later.
+    // Problem picker comes next.
   };
 
   // --------------------------------------------------
@@ -393,15 +386,34 @@ const buildWeek = async () => {
 
   return (
     <div className="min-h-full bg-background">
-      <div className="mx-auto max-w-[1600px] px-6 py-6 lg:px-8">
+      <div className="mx-auto max-w-[1800px] px-4 py-5 sm:px-6 lg:px-8">
 
         {/* HEADER */}
-        <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: -8,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.35,
+          }}
+          className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+        >
           <div>
-            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
+            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+
               <span>Practice</span>
-              <span>/</span>
+
+              <span className="text-muted-foreground/40">
+                /
+              </span>
+
               <span>Planner</span>
             </div>
 
@@ -415,265 +427,271 @@ const buildWeek = async () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {!loading && plan && (
-              <button
-                type="button"
-                onClick={() =>
-                  setShowSetup(true)
-                }
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium transition hover:bg-muted"
-              >
-                <Sparkles className="h-4 w-4" />
-                Edit week
-              </button>
-            )}
+          {!loading && (
+            <motion.button
+              whileHover={{
+                y: -1,
+              }}
+              whileTap={{
+                scale: 0.97,
+              }}
+              type="button"
+              onClick={() =>
+                setShowSetup(true)
+              }
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10 transition hover:shadow-primary/20"
+            >
+              <Sparkles className="h-4 w-4" />
 
-            {!loading && !plan && (
-              <button
-                type="button"
-                onClick={() =>
-                  setShowSetup(true)
-                }
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-              >
-                <Sparkles className="h-4 w-4" />
-                Build My Week
-              </button>
-            )}
-          </div>
-        </div>
+              {plan
+                ? "Edit week"
+                : "Build My Week"}
+            </motion.button>
+          )}
+        </motion.div>
 
-        {/* WEEK NAVIGATION */}
-        <div className="mb-5 flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        {/* NAVIGATION BAR */}
 
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 6,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            delay: 0.05,
+            duration: 0.35,
+          }}
+          className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card/70 px-2 py-2 shadow-sm backdrop-blur"
+        >
           <div className="flex items-center gap-1">
-            <button
+            <motion.button
+              whileHover={{
+                backgroundColor:
+                  "rgba(255,255,255,0.05)",
+              }}
+              whileTap={{
+                scale: 0.92,
+              }}
               type="button"
               onClick={
                 goToPreviousWeek
               }
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
+              className="flex h-9 w-9 items-center justify-center rounded-lg"
+              aria-label="Previous week"
             >
               <ChevronLeft className="h-4 w-4" />
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+              whileTap={{
+                scale: 0.96,
+              }}
               type="button"
               onClick={
                 goToCurrentWeek
               }
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium transition hover:bg-muted"
+              className="h-9 rounded-lg px-3 text-xs font-medium transition hover:bg-muted"
             >
               Today
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+              whileHover={{
+                backgroundColor:
+                  "rgba(255,255,255,0.05)",
+              }}
+              whileTap={{
+                scale: 0.92,
+              }}
               type="button"
-              onClick={
-                goToNextWeek
-              }
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
+              onClick={goToNextWeek}
+              className="flex h-9 w-9 items-center justify-center rounded-lg"
+              aria-label="Next week"
             >
               <ChevronRight className="h-4 w-4" />
-            </button>
+            </motion.button>
 
-            <div className="ml-2 text-sm font-medium">
+            <div className="ml-2 hidden text-sm font-medium sm:block">
               {formatWeekRange(
                 weekStart,
               )}
             </div>
           </div>
 
-          {/* VIEW SWITCH */}
-          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
-
-            <button
-              type="button"
-              onClick={() =>
-                setViewMode("week")
-              }
-              className={`inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
-                viewMode === "week"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <ListTodo className="h-4 w-4" />
-              Week
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                setViewMode(
-                  "calendar",
-                )
-              }
-              className={`inline-flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${
-                viewMode === "calendar"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <CalendarDays className="h-4 w-4" />
-              Calendar
-            </button>
-
-          </div>
-        </div>
-
-        {/* PROGRESS */}
-        {plan && !loading && (
-          <div className="mb-5 rounded-xl border border-border bg-card p-4 shadow-sm">
-
-            <div className="flex items-center justify-between gap-4">
-
-              <div>
-                <p className="text-sm font-medium">
-                  This week's progress
-                </p>
-
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {progress.solved} of{" "}
-                  {progress.total}{" "}
-                  planned problems
-                  solved
-                </p>
-              </div>
-
-              <span className="text-sm font-semibold">
-                {progress.percentage}%
-              </span>
-
+          <div className="flex items-center gap-3 pr-2">
+            <div className="hidden text-xs text-muted-foreground sm:block">
+              {progress.solved}/
+              {progress.total} completed
             </div>
 
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:w-28">
+              <motion.div
+                initial={{
+                  width: 0,
+                }}
+                animate={{
                   width: `${progress.percentage}%`,
                 }}
+                transition={{
+                  duration: 0.6,
+                  ease: "easeOut",
+                }}
+                className="h-full rounded-full bg-primary"
               />
             </div>
 
+            <span className="text-xs font-medium">
+              {progress.percentage}%
+            </span>
           </div>
-        )}
+        </motion.div>
 
         {/* LOADING */}
+
         {loading && (
-          <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-border bg-card">
-            <div className="text-center">
-
-              <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-primary" />
-
-              <p className="text-sm text-muted-foreground">
-                Loading your planner...
-              </p>
-
-            </div>
+          <div className="flex min-h-[560px] items-center justify-center rounded-2xl border border-border bg-card">
+            <motion.div
+              animate={{
+                rotate: 360,
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              className="h-6 w-6 rounded-full border-2 border-muted border-t-primary"
+            />
           </div>
         )}
 
-        {/* EMPTY STATE */}
-        {!loading && !plan && (
-          <div className="flex min-h-[480px] items-center justify-center rounded-xl border border-dashed border-border bg-card">
+        {/* EMPTY */}
 
-            <div className="max-w-md px-6 text-center">
+        <AnimatePresence mode="wait">
+          {!loading && !plan && (
+            <motion.div
+              key="empty"
+              initial={{
+                opacity: 0,
+                scale: 0.98,
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.98,
+              }}
+              className="flex min-h-[560px] items-center justify-center rounded-2xl border border-dashed border-border bg-card"
+            >
+              <div className="max-w-md px-6 text-center">
+                <motion.div
+                  animate={{
+                    y: [0, -5, 0],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10"
+                >
+                  <CalendarDays className="h-7 w-7 text-primary" />
+                </motion.div>
 
-              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                <CalendarDays className="h-7 w-7 text-primary" />
+                <h2 className="text-xl font-semibold">
+                  Plan your week
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Choose the topics you
+                  want to practice and
+                  Dykstra will arrange your
+                  problems across the week.
+                </p>
+
+                <motion.button
+                  whileHover={{
+                    y: -2,
+                  }}
+                  whileTap={{
+                    scale: 0.96,
+                  }}
+                  type="button"
+                  onClick={() =>
+                    setShowSetup(true)
+                  }
+                  className="mt-6 inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Build My Week
+                </motion.button>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              <h2 className="text-xl font-semibold">
-                Plan your week
-              </h2>
+        {/* WEEK BOARD */}
 
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Choose the topics you
-                want to practice, set
-                your weekly goal, and
-                Dykstra will build a
-                focused plan for you.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowSetup(true)
-                }
-                className="mt-6 inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-              >
-                <Sparkles className="h-4 w-4" />
-                Build My Week
-              </button>
-
-            </div>
-          </div>
-        )}
-
-        {/* PLANNER */}
         {!loading && plan && (
-          <>
-            {viewMode === "week" ? (
-              <PlannerWeekView
-                weekStart={weekStart}
-                items={items}
-                onDropItem={
-                  moveItem
-                }
-                onOpenProblem={
-                  openProblem
-                }
-                onAddProblem={
-                  handleAddProblem
-                }
-              />
-            ) : (
-              <PlannerCalendar
-                weekStart={weekStart}
-                items={items}
-                onOpenProblem={
-                  openProblem
-                }
-              />
-            )}
-          </>
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 10,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.4,
+            }}
+          >
+            <PlannerWeekView
+              weekStart={weekStart}
+              items={items}
+              onMoveItem={moveItem}
+              onOpenProblem={openProblem}
+              onAddProblem={
+                handleAddProblem
+              }
+            />
+          </motion.div>
         )}
 
-        {/* SETUP MODAL */}
-        {showSetup && (
-          <PlannerSetup
-            selectedTopics={
-              selectedTopics
-            }
-            selectedDifficulties={
-              selectedDifficulties
-            }
-            goalCount={
-              goalCount
-            }
-            onTopicsChange={
-              setSelectedTopics
-            }
-            onDifficultiesChange={
-              setSelectedDifficulties
-            }
-            onGoalCountChange={
-              setGoalCount
-            }
-            onBuild={
-              buildWeek
-            }
-            onClose={() =>
-              setShowSetup(false)
-            }
-            loading={
-              building
-            }
-          />
-        )}
+        {/* SETUP */}
 
+        <AnimatePresence>
+          {showSetup && (
+            <PlannerSetup
+              selectedTopics={
+                selectedTopics
+              }
+              selectedDifficulties={
+                selectedDifficulties
+              }
+              goalCount={goalCount}
+              onTopicsChange={
+                setSelectedTopics
+              }
+              onDifficultiesChange={
+                setSelectedDifficulties
+              }
+              onGoalCountChange={
+                setGoalCount
+              }
+              onBuild={buildWeek}
+              onClose={() =>
+                setShowSetup(false)
+              }
+              loading={building}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
