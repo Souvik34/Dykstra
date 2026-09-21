@@ -189,82 +189,102 @@ export default function PlannerPage() {
   // BUILD WEEK
   // --------------------------------------------------
 
-  const buildWeek = async () => {
-    if (selectedTopics.length === 0) {
-      toast.error(
-        "Select at least one topic",
+const buildWeek = async () => {
+  if (selectedTopics.length === 0) {
+    toast.error("Select at least one topic");
+    return;
+  }
+
+  if (selectedDifficulties.length === 0) {
+    toast.error("Select at least one difficulty");
+    return;
+  }
+
+  setBuilding(true);
+
+  try {
+    const draft = await generatePlannerDraft({
+      weekStart: weekStartString,
+      topics: selectedTopics,
+      difficulties: selectedDifficulties,
+      goalCount,
+      mentorProblemIds: [],
+    });
+
+    if (!draft) {
+      throw new Error(
+        "Planner could not generate a weekly draft.",
       );
-      return;
     }
+
+    if (!draft.weekStart) {
+      throw new Error(
+        "Planner draft is missing week start.",
+      );
+    }
+
+    if (!draft.weekEnd) {
+      throw new Error(
+        "Planner draft is missing week end.",
+      );
+    }
+
+    if (!draft.goalCount || draft.goalCount < 1) {
+      throw new Error(
+        "Planner draft has an invalid goal count.",
+      );
+    }
+
+    if (!Array.isArray(draft.items)) {
+      throw new Error(
+        "Planner draft contains invalid items.",
+      );
+    }
+
+    const savePayload = {
+      weekStart: draft.weekStart,
+      weekEnd: draft.weekEnd,
+      goalCount: draft.goalCount,
+      items: draft.items.map((item) => ({
+        problemId: Number(item.problem_id),
+        plannedDate: item.planned_date.slice(0, 10),
+        position: Number(item.position),
+        source: item.source ?? "PLANNER",
+      })),
+    };
 
     if (
-      selectedDifficulties.length === 0
+      !savePayload.weekStart ||
+      !savePayload.weekEnd ||
+      !savePayload.goalCount
     ) {
-      toast.error(
-        "Select at least one difficulty",
+      throw new Error(
+        "Unable to create planner: incomplete weekly plan.",
       );
-      return;
     }
 
-    setBuilding(true);
+    const savedPlan = await savePlanner(savePayload);
 
-    try {
-      // 1. Generate draft
-      const draft =
-        await generatePlannerDraft({
-          weekStart: weekStartString,
-          topics: selectedTopics,
-          difficulties:
-            selectedDifficulties,
-          goalCount,
-          mentorProblemIds: [],
-        });
+    setPlan(savedPlan);
+    setItems(savedPlan.items);
+    setShowSetup(false);
 
-      // 2. Save generated draft
-      const savedPlan =
-        await savePlanner({
-          weekStart: draft.weekStart,
-          weekEnd: draft.weekEnd,
-          goalCount: draft.goalCount,
-          items: draft.items.map(
-            (item) => ({
-              problemId:
-                item.problem_id,
-              plannedDate:
-                item.planned_date,
-              position:
-                item.position,
-              source:
-                item.source,
-            }),
-          ),
-        });
+    toast.success("Your week is ready");
+  } catch (error) {
+    console.error(
+      "Failed to build planner:",
+      error,
+    );
 
-      // 3. Update UI
-      setPlan(savedPlan);
-      setItems(savedPlan.items);
-
-      setShowSetup(false);
-
-      toast.success(
-        "Your week is ready",
-      );
-    } catch (error) {
-      console.error(
-        "Failed to build planner:",
-        error,
-      );
-
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to build your week",
-      );
-    } finally {
-      setBuilding(false);
-    }
-  };
-
+    toast.error(
+      error instanceof Error
+        ? error.message
+        : "Failed to build your week",
+    );
+  } finally {
+    setBuilding(false);
+  }
+};
   // --------------------------------------------------
   // MOVE ITEM
   // --------------------------------------------------
