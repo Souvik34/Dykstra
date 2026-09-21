@@ -36,14 +36,34 @@ export default function PlannerProblemCard({
   const difficulty =
     item.difficulty.toLowerCase();
 
-  const difficultyClass =
+  const difficultyConfig =
     difficulty === "easy"
-      ? "text-emerald-500"
+      ? {
+          label: "Easy",
+          bar: "bg-emerald-400",
+          text: "text-emerald-600",
+          soft: "bg-emerald-50",
+        }
       : difficulty === "medium"
-        ? "text-amber-500"
+        ? {
+            label: "Medium",
+            bar: "bg-amber-400",
+            text: "text-amber-600",
+            soft: "bg-amber-50",
+          }
         : difficulty === "hard"
-          ? "text-red-500"
-          : "text-muted-foreground";
+          ? {
+              label: "Hard",
+              bar: "bg-rose-400",
+              text: "text-rose-600",
+              soft: "bg-rose-50",
+            }
+          : {
+              label: item.difficulty,
+              bar: "bg-slate-400",
+              text: "text-slate-500",
+              soft: "bg-slate-50",
+            };
 
   const handleDragStart = (
     event: DragEvent<HTMLDivElement>,
@@ -74,127 +94,178 @@ export default function PlannerProblemCard({
       draggable
       onDragStart={handleDragStart}
       className={[
-        "group relative rounded-xl border",
-        "border-border bg-card",
-        "p-3 transition-all duration-200",
+        "group relative overflow-hidden rounded-xl",
+        "border border-slate-200/80",
+        "bg-white",
+        "shadow-[0_1px_3px_rgba(15,23,42,0.04)]",
+        "transition-all duration-200",
         "hover:-translate-y-[1px]",
-        "hover:border-primary/20",
-        "hover:shadow-sm",
+        "hover:border-slate-300",
+        "hover:shadow-[0_6px_18px_rgba(15,23,42,0.07)]",
         "active:cursor-grabbing",
         item.solved
-          ? "opacity-70"
+          ? "opacity-65"
           : "",
       ].join(" ")}
     >
-      <div className="flex gap-2">
-        <div className="pt-0.5">
-          <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground/30 transition group-hover:text-muted-foreground" />
-        </div>
+      {/* DIFFICULTY HEADER BAR */}
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-2">
-            <div
+      <div
+        className={[
+          "h-1 w-full",
+          difficultyConfig.bar,
+        ].join(" ")}
+      />
+
+      <div className="p-3">
+        <div className="flex gap-2">
+          {/* DRAG HANDLE */}
+
+          <div className="pt-0.5">
+            <GripVertical
               className={[
-                "grid h-5 w-5 shrink-0 place-items-center rounded-full border",
-                item.solved
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                  : "border-border bg-muted/50",
+                "h-4 w-4 cursor-grab",
+                "text-slate-300",
+                "transition-colors",
+                "group-hover:text-slate-400",
               ].join(" ")}
-            >
-              {item.solved && (
-                <span className="text-[10px] font-bold">
-                  ✓
-                </span>
-              )}
-            </div>
+            />
+          </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                onOpen?.(item)
-              }
-              className={[
-                "min-w-0 flex-1 text-left text-sm font-medium leading-snug transition",
-                item.solved
-                  ? "text-muted-foreground line-through"
-                  : "text-foreground hover:text-primary",
-              ].join(" ")}
-            >
-              {item.title}
-            </button>
+          <div className="min-w-0 flex-1">
+            {/* TITLE ROW */}
 
-            <div className="relative shrink-0">
+            <div className="flex items-start gap-2">
+              {/* SOLVED INDICATOR */}
+
+              <div
+                className={[
+                  "grid h-5 w-5 shrink-0 place-items-center",
+                  "rounded-full border",
+                  item.solved
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                    : "border-slate-200 bg-slate-50",
+                ].join(" ")}
+              >
+                {item.solved && (
+                  <span className="text-[10px] font-bold">
+                    ✓
+                  </span>
+                )}
+              </div>
+
+              {/* TITLE */}
+
               <button
                 type="button"
                 onClick={() =>
-                  setMenuOpen(
-                    (value) => !value,
-                  )
+                  onOpen?.(item)
                 }
-                className="rounded-md p-1 text-muted-foreground/50 opacity-0 transition hover:bg-muted hover:text-foreground group-hover:opacity-100"
-                aria-label="Task actions"
+                className={[
+                  "min-w-0 flex-1 text-left",
+                  "text-sm font-medium leading-snug",
+                  "transition-colors",
+                  item.solved
+                    ? "text-slate-400 line-through"
+                    : "text-slate-800 hover:text-slate-950",
+                ].join(" ")}
               >
-                <MoreHorizontal className="h-4 w-4" />
+                {item.title}
               </button>
 
-              {menuOpen && (
-                <div className="absolute right-0 top-7 z-30 w-40 overflow-hidden rounded-lg border border-border bg-popover p-1 shadow-xl">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onOpen?.(item);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-popover-foreground transition hover:bg-muted"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open in Problems
-                  </button>
+              {/* MENU */}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onDelete?.(item);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-red-500 transition hover:bg-red-500/10"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Remove task
-                  </button>
-                </div>
-              )}
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMenuOpen(
+                      (value) => !value,
+                    )
+                  }
+                  className={[
+                    "rounded-md p-1",
+                    "text-slate-400",
+                    "opacity-0 transition",
+                    "hover:bg-slate-100",
+                    "hover:text-slate-700",
+                    "group-hover:opacity-100",
+                  ].join(" ")}
+                  aria-label="Task actions"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 top-7 z-30 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onOpen?.(item);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open in Problems
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        onDelete?.(item);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-rose-500 transition hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove task
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* META */}
+
+            <div className="mt-2 flex items-center gap-2 pl-7">
+              <span
+                className={[
+                  "rounded-md px-1.5 py-0.5",
+                  "text-[9px] font-bold uppercase tracking-wide",
+                  difficultyConfig.soft,
+                  difficultyConfig.text,
+                ].join(" ")}
+              >
+                {difficultyConfig.label}
+              </span>
+
+              <span className="text-[10px] text-slate-300">
+                •
+              </span>
+
+              <span className="truncate text-[10px] text-slate-500">
+                {item.topic}
+              </span>
+            </div>
+
+            {/* MENTOR */}
+
+            {item.source === "MENTOR" && (
+              <div className="mt-2.5 flex items-center gap-1 pl-7 text-[9px] font-semibold text-violet-600">
+                <Sparkles className="h-3 w-3" />
+                Mentor recommendation
+              </div>
+            )}
+
+            {/* SOLVED */}
+
+            {item.solved && (
+              <div className="mt-2 pl-7 text-[9px] font-medium text-emerald-600">
+                Already solved
+              </div>
+            )}
           </div>
-
-          <div className="mt-2 flex items-center gap-2 pl-7">
-            <span
-              className={`text-[10px] font-semibold uppercase ${difficultyClass}`}
-            >
-              {item.difficulty}
-            </span>
-
-            <span className="text-[10px] text-muted-foreground/30">
-              •
-            </span>
-
-            <span className="truncate text-[10px] text-muted-foreground">
-              {item.topic}
-            </span>
-          </div>
-
-          {item.source === "MENTOR" && (
-            <div className="mt-2 flex items-center gap-1 pl-7 text-[9px] font-semibold text-primary">
-              <Sparkles className="h-3 w-3" />
-              Mentor recommendation
-            </div>
-          )}
-
-          {item.solved && (
-            <div className="mt-2 pl-7 text-[9px] font-medium text-emerald-500">
-              Already solved
-            </div>
-          )}
         </div>
       </div>
     </motion.div>

@@ -9,10 +9,13 @@ import {
 import {
   AlertTriangle,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ListChecks,
   RotateCcw,
   Sparkles,
+  Target,
   Trash2,
 } from "lucide-react";
 
@@ -32,7 +35,10 @@ import {
   deletePlannerItem,
   generatePlannerDraft,
   getPlanner,
+  getPlannerLeaves,
+  removePlannerLeave,
   savePlanner,
+  setPlannerLeave,
   updatePlannerItem,
 } from "./planner.api";
 
@@ -73,6 +79,9 @@ export default function PlannerPage() {
 
   const [items, setItems] =
     useState<PlannerItem[]>([]);
+
+  const [leaves, setLeaves] =
+    useState<string[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -182,6 +191,28 @@ export default function PlannerPage() {
 
         setItems(
           result?.items ?? [],
+        );
+
+        const leaveResult =
+          await getPlannerLeaves(
+            weekStartString,
+          );
+
+        if (cancelled) return;
+
+        const leaveDates = (
+          leaveResult?.data ?? []
+        ).map(
+          (leave: {
+            leave_date: string;
+          }) =>
+            String(
+              leave.leave_date,
+            ).slice(0, 10),
+        );
+
+        setLeaves(
+          leaveDates,
         );
 
         if (result) {
@@ -335,16 +366,6 @@ export default function PlannerPage() {
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | IMPORTANT
-      |--------------------------------------------------------------------------
-      |
-      | savePlanner currently replaces the planner items for this week.
-      | Rebuild is therefore protected by a confirmation modal.
-      |
-      */
-
       const savedPlan =
         await savePlanner({
           weekStart:
@@ -390,6 +411,17 @@ export default function PlannerPage() {
         savedPlan.items,
       );
 
+      setLeaves(
+        (savedPlan.leaves ?? []).map(
+          (leave: {
+            leave_date: string;
+          }) =>
+            String(
+              leave.leave_date,
+            ).slice(0, 10),
+        ),
+      );
+
       setShowSetup(false);
 
       setConfirmAction(null);
@@ -431,6 +463,17 @@ export default function PlannerPage() {
 
     if (!item) return;
 
+    if (
+      leaves.includes(
+        plannedDate,
+      )
+    ) {
+      toast.error(
+        "Cannot move a task to a leave day",
+      );
+      return;
+    }
+
     const currentDate =
       String(
         item.planned_date,
@@ -444,12 +487,6 @@ export default function PlannerPage() {
 
     const previousItems =
       items;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Optimistic update
-    |--------------------------------------------------------------------------
-    */
 
     setItems((current) =>
       current.map(
@@ -513,12 +550,6 @@ export default function PlannerPage() {
   |--------------------------------------------------------------------------
   | OPEN PROBLEM
   |--------------------------------------------------------------------------
-  |
-  | Planner does NOT solve problems.
-  |
-  | It sends the user to the Problems module,
-  | which remains the source of truth for solving.
-  |
   */
 
   const openProblem = (
@@ -537,7 +568,130 @@ export default function PlannerPage() {
   const handleAddProblem = (
     date: string,
   ) => {
+    if (
+      leaves.includes(date)
+    ) {
+      toast.error(
+        "Cannot add a task to a leave day",
+      );
+      return;
+    }
+
     setPickerDate(date);
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | SET LEAVE
+  |--------------------------------------------------------------------------
+  */
+
+  const handleSetLeave = async (
+    date: string,
+  ) => {
+    try {
+      const result =
+        await setPlannerLeave({
+          weekStart:
+            weekStartString,
+          leaveDate: date,
+        });
+
+      const updatedPlan =
+        result?.data ?? result;
+
+      setPlan(updatedPlan);
+
+      setItems(
+        updatedPlan?.items ?? [],
+      );
+
+      setLeaves(
+        (
+          updatedPlan?.leaves ??
+          []
+        ).map(
+          (leave: {
+            leave_date: string;
+          }) =>
+            String(
+              leave.leave_date,
+            ).slice(0, 10),
+        ),
+      );
+
+      toast.success(
+        "Leave added. Planner reorganized.",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to set planner leave:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to set leave",
+      );
+    }
+  };
+
+  /*
+  |--------------------------------------------------------------------------
+  | REMOVE LEAVE
+  |--------------------------------------------------------------------------
+  */
+
+  const handleRemoveLeave = async (
+    date: string,
+  ) => {
+    try {
+      const result =
+        await removePlannerLeave({
+          weekStart:
+            weekStartString,
+          leaveDate: date,
+        });
+
+      const updatedPlan =
+        result?.data ?? result;
+
+      setPlan(updatedPlan);
+
+      setItems(
+        updatedPlan?.items ?? [],
+      );
+
+      setLeaves(
+        (
+          updatedPlan?.leaves ??
+          []
+        ).map(
+          (leave: {
+            leave_date: string;
+          }) =>
+            String(
+              leave.leave_date,
+            ).slice(0, 10),
+        ),
+      );
+
+      toast.success(
+        "Leave removed.",
+      );
+    } catch (error) {
+      console.error(
+        "Failed to remove planner leave:",
+        error,
+      );
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove leave",
+      );
+    }
   };
 
   /*
@@ -550,13 +704,16 @@ export default function PlannerPage() {
     problem: PlannerSuggestion,
     date: string,
   ) => {
-    try {
-      /*
-      |--------------------------------------------------------------------------
-      | Position
-      |--------------------------------------------------------------------------
-      */
+    if (
+      leaves.includes(date)
+    ) {
+      toast.error(
+        "Cannot add a task to a leave day",
+      );
+      return;
+    }
 
+    try {
       const existingForDay =
         items.filter(
           (item) =>
@@ -568,25 +725,22 @@ export default function PlannerPage() {
       const nextPosition =
         existingForDay.length;
 
-      /*
-      |--------------------------------------------------------------------------
-      | API
-      |--------------------------------------------------------------------------
-      */
+      const added =
+        await addPlannerItem({
+          weekStart:
+            weekStartString,
 
-   const added = await addPlannerItem({
-  weekStart: weekStartString,
-  problemId: problem.problem_id,
-  plannedDate: date,
-  position: nextPosition,
-  source: "USER",
-});
+          problemId:
+            problem.problem_id,
 
-      /*
-      |--------------------------------------------------------------------------
-      | Add to local state
-      |--------------------------------------------------------------------------
-      */
+          plannedDate:
+            date,
+
+          position:
+            nextPosition,
+
+          source: "USER",
+        });
 
       const enrichedItem: PlannerItem =
         {
@@ -624,14 +778,6 @@ export default function PlannerPage() {
 
       setPickerDate(null);
 
-      /*
-      |--------------------------------------------------------------------------
-      | If the week did not previously have
-      | a plan, reload it so we get the
-      | actual plan metadata.
-      |--------------------------------------------------------------------------
-      */
-
       if (!plan) {
         const refreshed =
           await getPlanner(
@@ -644,6 +790,25 @@ export default function PlannerPage() {
           refreshed?.items ?? [
             enrichedItem,
           ],
+        );
+
+        const refreshedLeaves =
+          await getPlannerLeaves(
+            weekStartString,
+          );
+
+        setLeaves(
+          (
+            refreshedLeaves?.data ??
+            []
+          ).map(
+            (leave: {
+              leave_date: string;
+            }) =>
+              String(
+                leave.leave_date,
+              ).slice(0, 10),
+          ),
         );
       }
 
@@ -723,15 +888,16 @@ export default function PlannerPage() {
       return;
     }
 
+    if (
+      leaves.includes(date)
+    ) {
+      setConfirmAction(null);
+      return;
+    }
+
     setActionLoading(true);
 
     try {
-      /*
-      |--------------------------------------------------------------------------
-      | Keep every item except this day.
-      |--------------------------------------------------------------------------
-      */
-
       const remainingItems =
         items.filter(
           (item) =>
@@ -775,6 +941,17 @@ export default function PlannerPage() {
 
       setItems(
         savedPlan.items,
+      );
+
+      setLeaves(
+        (savedPlan.leaves ?? []).map(
+          (leave: {
+            leave_date: string;
+          }) =>
+            String(
+              leave.leave_date,
+            ).slice(0, 10),
+        ),
       );
 
       setConfirmAction(null);
@@ -830,6 +1007,17 @@ export default function PlannerPage() {
       setPlan(savedPlan);
 
       setItems([]);
+
+      setLeaves(
+        (savedPlan.leaves ?? []).map(
+          (leave: {
+            leave_date: string;
+          }) =>
+            String(
+              leave.leave_date,
+            ).slice(0, 10),
+        ),
+      );
 
       setConfirmAction(null);
 
@@ -892,7 +1080,6 @@ export default function PlannerPage() {
         await deleteProblem(
           confirmAction.item,
         );
-
         return;
       }
 
@@ -903,7 +1090,6 @@ export default function PlannerPage() {
         await resetDay(
           confirmAction.date,
         );
-
         return;
       }
 
@@ -912,7 +1098,6 @@ export default function PlannerPage() {
         "reset-week"
       ) {
         await resetWeek();
-
         return;
       }
 
@@ -932,10 +1117,10 @@ export default function PlannerPage() {
   */
 
   return (
-    <div className="min-h-full bg-background">
-      <div className="mx-auto max-w-[1800px] px-4 py-5 sm:px-6 lg:px-8">
+    <div className="min-h-full bg-slate-50">
+      <div className="mx-auto max-w-[1800px] px-4 py-7 sm:px-6 lg:px-8">
 
-        {/* HEADER */}
+        {/* PAGE HEADER */}
 
         <motion.div
           initial={{
@@ -949,32 +1134,34 @@ export default function PlannerPage() {
           transition={{
             duration: 0.35,
           }}
-          className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+          className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
         >
           <div>
-            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" />
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+              <CalendarDays className="h-4 w-4 text-indigo-600" />
 
               <span>Practice</span>
 
-              <span className="text-muted-foreground/40">
+              <span className="text-slate-300">
                 /
               </span>
 
-              <span>Planner</span>
+              <span className="text-slate-900">
+                Planner
+              </span>
             </div>
 
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
               Weekly Planner
             </h1>
 
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-2 text-base font-medium text-slate-600">
               Organize your DSA practice
               across the week.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             {plan &&
               items.length > 0 && (
                 <motion.button
@@ -986,15 +1173,13 @@ export default function PlannerPage() {
                   }}
                   type="button"
                   onClick={() =>
-                    setConfirmAction(
-                      {
-                        type: "reset-week",
-                      },
-                    )
+                    setConfirmAction({
+                      type: "reset-week",
+                    })
                   }
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4 text-slate-500" />
 
                   Reset week
                 </motion.button>
@@ -1011,14 +1196,104 @@ export default function PlannerPage() {
               onClick={
                 handlePlanButton
               }
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/10"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-4 w-4 text-amber-300" />
 
               {plan
                 ? "Rebuild week"
                 : "Plan my week"}
             </motion.button>
+          </div>
+        </motion.div>
+
+        {/* WEEK SUMMARY */}
+
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 6,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            delay: 0.05,
+            duration: 0.35,
+          }}
+          className="mb-5 grid gap-3 sm:grid-cols-3"
+        >
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
+                <Target className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Weekly goal
+                </p>
+
+                <p className="mt-0.5 text-xl font-bold text-slate-950">
+                  {goalCount} problems
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Completed
+                </p>
+
+                <p className="mt-0.5 text-xl font-bold text-slate-950">
+                  {progress.solved} /{" "}
+                  {progress.total}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-violet-50 text-violet-600">
+                <ListChecks className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Progress
+                  </p>
+
+                  <span className="text-sm font-bold text-slate-950">
+                    {progress.percentage}%
+                  </span>
+                </div>
+
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                  <motion.div
+                    initial={{
+                      width: 0,
+                    }}
+                    animate={{
+                      width: `${progress.percentage}%`,
+                    }}
+                    transition={{
+                      duration: 0.6,
+                    }}
+                    className="h-full rounded-full bg-violet-500"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </motion.div>
 
@@ -1034,10 +1309,10 @@ export default function PlannerPage() {
             y: 0,
           }}
           transition={{
-            delay: 0.05,
+            delay: 0.1,
             duration: 0.35,
           }}
-          className="mb-4 flex items-center justify-between rounded-xl border border-border bg-card/70 px-2 py-2 shadow-sm backdrop-blur"
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm"
         >
           <div className="flex items-center gap-1">
             <motion.button
@@ -1048,10 +1323,10 @@ export default function PlannerPage() {
               onClick={
                 goToPreviousWeek
               }
-              className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100"
               aria-label="Previous week"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" />
             </motion.button>
 
             <motion.button
@@ -1062,7 +1337,7 @@ export default function PlannerPage() {
               onClick={
                 goToCurrentWeek
               }
-              className="h-9 rounded-lg px-3 text-xs font-medium transition hover:bg-muted"
+              className="h-10 rounded-xl px-4 text-sm font-bold text-slate-800 transition hover:bg-slate-100"
             >
               Today
             </motion.button>
@@ -1075,43 +1350,25 @@ export default function PlannerPage() {
               onClick={
                 goToNextWeek
               }
-              className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-muted"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100"
               aria-label="Next week"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" />
             </motion.button>
 
-            <div className="ml-2 hidden text-sm font-medium sm:block">
+            <div className="ml-3 border-l border-slate-200 pl-4 text-sm font-bold text-slate-900 sm:text-base">
               {formatWeekRange(
                 weekStart,
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pr-2">
-            <div className="hidden text-xs text-muted-foreground sm:block">
+          <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+
+            <span className="text-sm font-semibold text-slate-700">
               {progress.solved}/
-              {progress.total}{" "}
-              completed
-            </div>
-
-            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:w-28">
-              <motion.div
-                initial={{
-                  width: 0,
-                }}
-                animate={{
-                  width: `${progress.percentage}%`,
-                }}
-                transition={{
-                  duration: 0.6,
-                }}
-                className="h-full rounded-full bg-primary"
-              />
-            </div>
-
-            <span className="text-xs font-medium">
-              {progress.percentage}%
+              {progress.total} completed
             </span>
           </div>
         </motion.div>
@@ -1119,7 +1376,7 @@ export default function PlannerPage() {
         {/* LOADING */}
 
         {loading ? (
-          <div className="flex min-h-[560px] items-center justify-center rounded-2xl border border-border bg-card">
+          <div className="flex min-h-[560px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
             <motion.div
               animate={{
                 rotate: 360,
@@ -1129,7 +1386,7 @@ export default function PlannerPage() {
                 repeat: Infinity,
                 ease: "linear",
               }}
-              className="h-6 w-6 rounded-full border-2 border-muted border-t-primary"
+              className="h-7 w-7 rounded-full border-2 border-slate-200 border-t-indigo-600"
             />
           </div>
         ) : (
@@ -1155,6 +1412,7 @@ export default function PlannerPage() {
                   weekStart
                 }
                 items={items}
+                leaves={leaves}
                 onMoveItem={
                   moveItem
                 }
@@ -1167,20 +1425,22 @@ export default function PlannerPage() {
                 onDeleteProblem={(
                   item,
                 ) =>
-                  setConfirmAction(
-                    {
-                      type: "delete",
-                      item,
-                    },
-                  )
+                  setConfirmAction({
+                    type: "delete",
+                    item,
+                  })
                 }
                 onResetDay={(date) =>
-                  setConfirmAction(
-                    {
-                      type: "reset-day",
-                      date,
-                    },
-                  )
+                  setConfirmAction({
+                    type: "reset-day",
+                    date,
+                  })
+                }
+                onSetLeave={
+                  handleSetLeave
+                }
+                onRemoveLeave={
+                  handleRemoveLeave
                 }
               />
             </motion.div>
@@ -1259,7 +1519,7 @@ export default function PlannerPage() {
               exit={{
                 opacity: 0,
               }}
-              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
             >
               <motion.div
                 initial={{
@@ -1277,15 +1537,15 @@ export default function PlannerPage() {
                   y: 5,
                   scale: 0.98,
                 }}
-                className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl"
+                className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
               >
-                <div className="flex gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500/10 text-amber-500">
+                <div className="flex gap-4">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600">
                     <AlertTriangle className="h-5 w-5" />
                   </div>
 
                   <div>
-                    <h3 className="font-semibold text-foreground">
+                    <h3 className="text-lg font-bold text-slate-950">
                       {confirmAction.type ===
                       "delete"
                         ? "Remove this task?"
@@ -1298,7 +1558,7 @@ export default function PlannerPage() {
                             : "Rebuild this week?"}
                     </h3>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-1.5 text-sm font-medium leading-6 text-slate-600">
                       {confirmAction.type ===
                       "delete"
                         ? "This removes the problem from your planner only. Your solved status and Problems data are not affected."
@@ -1313,7 +1573,7 @@ export default function PlannerPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="mt-7 flex justify-end gap-2">
                   <button
                     type="button"
                     disabled={
@@ -1324,7 +1584,7 @@ export default function PlannerPage() {
                         null,
                       )
                     }
-                    className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium transition hover:bg-muted disabled:opacity-50"
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1338,15 +1598,15 @@ export default function PlannerPage() {
                       handleConfirmAction
                     }
                     className={[
-                      "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50",
+                      "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:opacity-50",
                       confirmAction.type ===
                         "rebuild"
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                        ? "bg-slate-950 text-white hover:bg-slate-800"
+                        : "bg-red-600 text-white hover:bg-red-700",
                     ].join(" ")}
                   >
                     {actionLoading && (
-                      <RotateCcw className="h-3.5 w-3.5 animate-spin" />
+                      <RotateCcw className="h-4 w-4 animate-spin" />
                     )}
 
                     {confirmAction.type ===

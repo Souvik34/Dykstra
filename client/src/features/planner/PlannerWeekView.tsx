@@ -16,6 +16,7 @@ import {
 interface PlannerWeekViewProps {
   weekStart: Date;
   items: PlannerItem[];
+  leaves?: string[];
 
   onMoveItem: (
     itemId: number,
@@ -37,18 +38,35 @@ interface PlannerWeekViewProps {
   onResetDay: (
     date: string,
   ) => void;
+
+  onSetLeave?: (
+    date: string,
+  ) => void;
+
+  onRemoveLeave?: (
+    date: string,
+  ) => void;
 }
 
 export default function PlannerWeekView({
   weekStart,
   items,
+  leaves = [],
   onMoveItem,
   onOpenProblem,
   onAddProblem,
   onDeleteProblem,
   onResetDay,
+  onSetLeave,
+  onRemoveLeave,
 }: PlannerWeekViewProps) {
   const monday = getMonday(weekStart);
+
+  const leaveSet = new Set(
+    leaves.map((date) =>
+      String(date).slice(0, 10),
+    ),
+  );
 
   return (
     <motion.div
@@ -63,9 +81,9 @@ export default function PlannerWeekView({
       transition={{
         duration: 0.35,
       }}
-      className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm"
+      className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-slate-50/70 shadow-sm"
     >
-      <div className="flex min-w-[1540px]">
+      <div className="flex min-w-[1540px] divide-x divide-slate-200/70">
         {WEEK_DAYS.map(
           (day, index) => {
             const date = addDays(
@@ -91,12 +109,18 @@ export default function PlannerWeekView({
                     b.position,
                 );
 
+            const isLeave =
+              leaveSet.has(
+                dateString,
+              );
+
             return (
               <PlannerDayColumn
                 key={dateString}
                 date={date}
                 dayName={day}
                 items={dayItems}
+                isLeave={isLeave}
                 onDropItem={
                   onMoveItem
                 }
@@ -111,6 +135,12 @@ export default function PlannerWeekView({
                 }
                 onResetDay={
                   onResetDay
+                }
+                onSetLeave={
+                  onSetLeave
+                }
+                onRemoveLeave={
+                  onRemoveLeave
                 }
               />
             );

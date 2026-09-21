@@ -119,3 +119,42 @@ export const addPlannerItem = async (payload: {
   const response = await api.post("/planner/items", payload);
   return response.data.data;
 };
+export const getPlannerLeaves = async (weekStart: string) => {
+  const response = await api.get("/planner/leaves", {
+    params: { weekStart },
+  });
+
+  return response.data;
+};
+
+export const setPlannerLeave = async ({
+  weekStart,
+  leaveDate,
+}: {
+  weekStart: string;
+  leaveDate: string;
+}) => {
+  const response = await api.post("/planner/leaves", {
+    weekStart,
+    leaveDate,
+  });
+
+  return response.data;
+};
+
+export const removePlannerLeave = async ({
+  weekStart,
+  leaveDate,
+}: {
+  weekStart: string;
+  leaveDate: string;
+}) => {
+  const response = await api.delete("/planner/leaves", {
+    data: {
+      weekStart,
+      leaveDate,
+    },
+  });
+
+  return response.data;
+};
