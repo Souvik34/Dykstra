@@ -1746,7 +1746,7 @@ is another.
               </div>
 
               <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                Meet the person behind Dykstra.
+                About Dykstra!!
               </h3>
 
               <p className="mt-2 max-w-lg text-sm leading-6 text-white/55 sm:text-base">
