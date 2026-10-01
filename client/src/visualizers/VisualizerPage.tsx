@@ -32,7 +32,7 @@ import { twoPointers } from "@/algorithms/twoPointers";
 import "../index.css";
 
 function VisualizerPage() {
-  const [algorithm, setAlgorithm] = useState("binary-search");
+  const [algorithm, setAlgorithm] = useState("two-pointers");
 
   const [visualization, setVisualization] = useState<any>(null);
 

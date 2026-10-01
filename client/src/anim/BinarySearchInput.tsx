@@ -270,13 +270,7 @@ function BinarySearchInput({ onVisualize }) {
 >
   Visualize
 </button>
-        <Play
-          size={18}
-          fill="currentColor"
-        />
-
-        Visualize Binary Search
-      </button>
+      
     </div>
   );
 }
