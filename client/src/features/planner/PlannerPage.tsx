@@ -1189,7 +1189,7 @@ const addProblemToPlanner = async (
               </span>
             </div>
 
-            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-50 sm:text-4xl">
               Weekly Planner
             </h1>
 
@@ -1215,7 +1215,7 @@ const addProblemToPlanner = async (
                       type: "reset-week",
                     })
                   }
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-950"
                 >
                   <Trash2 className="h-4 w-4 text-slate-500" />
 
@@ -1316,7 +1316,7 @@ const addProblemToPlanner = async (
                   </span>
                 </div>
 
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-950">
                   <motion.div
                     initial={{
                       width: 0,
@@ -1361,7 +1361,7 @@ const addProblemToPlanner = async (
               onClick={
                 goToPreviousWeek
               }
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-950"
               aria-label="Previous week"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -1375,7 +1375,7 @@ const addProblemToPlanner = async (
               onClick={
                 goToCurrentWeek
               }
-              className="h-10 rounded-xl px-4 text-sm font-bold text-slate-800 transition hover:bg-slate-100"
+              className="h-10 rounded-xl px-4 text-sm font-bold text-slate-800 transition hover:bg-slate-950"
             >
               Today
             </motion.button>
@@ -1388,7 +1388,7 @@ const addProblemToPlanner = async (
               onClick={
                 goToNextWeek
               }
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-950"
               aria-label="Next week"
             >
               <ChevronRight className="h-5 w-5" />
