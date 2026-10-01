@@ -777,51 +777,93 @@ export const addPlanItem = async ({
   position,
   source = "USER",
 }) => {
-  const planDate = String(plannedDate).slice(0, 10);
+  const planDate =
+    String(plannedDate).slice(0, 10);
 
-if (isPastDate(planDate)) {
-  throw new Error("Past planner days are locked");
-}
+  if (isPastDate(planDate)) {
+    throw new Error(
+      "Past planner days are locked",
+    );
+  }
 
- const plan =
-  await plannerRepository.getPlanRepo(
-    userId,
-    weekStart,
+  let plan =
+    await plannerRepository.getPlanRepo(
+      userId,
+      weekStart,
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | Create an empty planner week if the user
+  | is manually planning before generating a plan.
+  |--------------------------------------------------------------------------
+  */
+
+  if (!plan) {
+    const monday = getMonday(
+      new Date(
+        `${String(weekStart).slice(0, 10)}T00:00:00`,
+      ),
+    );
+
+    const weekEnd = formatDate(
+      addDays(monday, 6),
+    );
+
+    plan =
+      await plannerRepository.createPlanRepo(
+        userId,
+        formatDate(monday),
+        weekEnd,
+        5,
+      );
+  }
+
+  const planLeaves =
+    await plannerRepository.getPlanLeavesRepo(
+      plan.id,
+    );
+
+  const leaveDates = new Set(
+    planLeaves.map((leave) =>
+      String(
+        leave.leave_date,
+      ).slice(0, 10),
+    ),
   );
 
-if (!plan) {
-  throw new Error("Planner week not found");
-}
+  const normalizedPlannedDate =
+    String(plannedDate).slice(0, 10);
 
-const planLeaves =
-  await plannerRepository.getPlanLeavesRepo(plan.id);
+  if (
+    leaveDates.has(
+      normalizedPlannedDate,
+    )
+  ) {
+    throw new Error(
+      "Cannot add a task to a leave day",
+    );
+  }
 
-const leaveDates = new Set(
-  planLeaves.map((leave) =>
-    String(leave.leave_date).slice(0, 10),
-  ),
-);
+  if (
+    isPastDate(
+      normalizedPlannedDate,
+    )
+  ) {
+    throw new Error(
+      "Cannot add a task to a past day",
+    );
+  }
 
-const normalizedPlannedDate =
-  String(plannedDate).slice(0, 10);
-
-if (leaveDates.has(normalizedPlannedDate)) {
-  throw new Error("Cannot add a task to a leave day");
-}
-
-if (isPastDate(normalizedPlannedDate)) {
-  throw new Error("Cannot add a task to a past day");
-}
-
-return plannerRepository.addPlanItemRepo({
-  planId: plan.id,
-  problemId,
-  plannedDate: normalizedPlannedDate,
-  position,
-  source,
-});
-}
-
+  return plannerRepository.addPlanItemRepo({
+    planId: plan.id,
+    problemId,
+    plannedDate:
+      normalizedPlannedDate,
+    position,
+    source,
+  });
+};
 export const getPlanLeaves = async ({
   userId,
   weekStart,
@@ -878,14 +920,15 @@ if (
       weekStart,
     );
 
-  if (!plan) {
-    plan =
-      await plannerRepository.createPlanRepo({
-        userId,
-        weekStart,
-        goalCount: 5,
-      });
-  }
+ if (!plan) {
+  plan =
+    await plannerRepository.createPlanRepo(
+      userId,
+      formatDate(monday),
+      weekEnd,
+      5,
+    );
+}
 
   const existingLeaves = new Set(
     (plan.leaves ?? []).map((leave) =>
@@ -990,16 +1033,34 @@ export const removePlanLeave = async ({
     throw new Error("Cannot modify leave for a past day");
   }
 
-  const plan =
-    await plannerRepository.getPlanRepo(
+let plan =
+  await plannerRepository.getPlanRepo(
+    userId,
+    weekStart,
+  );
+
+if (!plan) {
+  const monday = getMonday(
+    new Date(
+      `${String(weekStart).slice(0, 10)}T00:00:00`,
+    ),
+  );
+
+  const normalizedWeekStart =
+    formatDate(monday);
+
+  const weekEnd = formatDate(
+    addDays(monday, 6),
+  );
+
+  plan =
+    await plannerRepository.createPlanRepo(
       userId,
-      weekStart,
+      normalizedWeekStart,
+      weekEnd,
+      5,
     );
-
-  if (!plan) {
-    throw new Error("Planner week not found");
-  }
-
+}
   await plannerRepository.deletePlanLeaveRepo({
     planId: plan.id,
     leaveDate: normalizedLeaveDate,
