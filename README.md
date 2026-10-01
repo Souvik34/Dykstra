@@ -531,31 +531,7 @@ Production credentials are kept outside the repository.
 
 ---
 
-# 📍 Current Status
 
-<div align="center">
-
-### Dykstra is in active development.
-
-**Product → Stabilization → Polish → Launch**
-
-</div>
-
-The current focus is on:
-
-```text
-        Product Stability
-              ↓
-        UX Refinement
-              ↓
-       Infrastructure
-              ↓
-       Security Hardening
-              ↓
-          Launch
-```
-
----
 
 # 💡 The Philosophy
 
