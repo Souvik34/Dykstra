@@ -1075,3 +1075,8 @@ function InterviewHistoryPage() {
   );
 }
 
+export const Route = createFileRoute(
+  "/interview-history"
+)({
+  component: InterviewHistoryPage,
+});
