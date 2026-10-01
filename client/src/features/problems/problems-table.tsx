@@ -50,7 +50,47 @@ import { toast } from "sonner";
 /* =========================================================
    CONSTANTS
 ========================================================= */
-
+const TOPIC_ORDER = [
+  "array",
+  "arrays",
+  "string",
+  "strings",
+  "hashing",
+  "two pointers",
+  "sliding window",
+  "prefix sum",
+  "binary search",
+  "sorting",
+  "stack",
+  "queue",
+  "deque",
+  "linked list",
+  "intervals",
+  "heap",
+  "priority queue",
+  "greedy",
+  "recursion",
+  "backtracking",
+  "tree",
+  "trees",
+  "binary search tree",
+  "bst",
+  "trie",
+  "graph",
+  "graphs",
+  "bfs",
+  "dfs",
+  "topological sort",
+  "union find",
+  "disjoint set",
+  "shortest path",
+  "minimum spanning tree",
+  "mst",
+  "dynamic programming",
+  "dp",
+  "bit manipulation",
+  "math",
+];
 const LIMIT = 50;
 
 const ACCORDION_STORAGE_KEY =
@@ -523,30 +563,42 @@ if (response.problems.length < LIMIT) {
      GROUP BY TOPIC
   ======================================================= */
 
-  const groupedProblems = useMemo(() => {
-    const groups = new Map<
-      string,
-      Problem[]
-    >();
+const groupedProblems = useMemo(() => {
+  const groups = new Map<string, Problem[]>();
 
-    filtered.forEach((problem) => {
-      const key = getTopicKey(
-        problem.topic,
-      );
+  filtered.forEach((problem) => {
+    const key = getTopicKey(problem.topic);
 
-      if (!groups.has(key)) {
-        groups.set(key, []);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+
+    groups.get(key)!.push(problem);
+  });
+
+  const getOrder = (topic: string) => {
+    const normalized = topic.trim().toLowerCase();
+
+    const index = TOPIC_ORDER.indexOf(normalized);
+
+    return index === -1
+      ? TOPIC_ORDER.length
+      : index;
+  };
+
+  return Array.from(groups.entries()).sort(
+    ([topicA], [topicB]) => {
+      const orderA = getOrder(topicA);
+      const orderB = getOrder(topicB);
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
       }
 
-      groups
-        .get(key)!
-        .push(problem);
-    });
-
-    return Array.from(
-      groups.entries(),
-    );
-  }, [filtered]);
+      return topicA.localeCompare(topicB);
+    },
+  );
+}, [filtered]);
 
   /* =======================================================
      INITIAL FIRST CARD
