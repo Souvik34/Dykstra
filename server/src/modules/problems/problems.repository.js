@@ -93,7 +93,7 @@ if (idsArr.length > 0) {
   try {
 await redisClient.setEx(
   cacheKey,
-  300,
+  3600,
   JSON.stringify({
     problems: result.rows,
     lastUpdated: updatedResult.rows[0].last_updated,
