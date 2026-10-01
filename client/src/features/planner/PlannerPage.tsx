@@ -1184,7 +1184,7 @@ const addProblemToPlanner = async (
                 /
               </span>
 
-              <span className="text-slate-900">
+              <span className="text-slate-50">
                 Planner
               </span>
             </div>
