@@ -562,7 +562,7 @@ That's Dykstra.
 
 <div align="center">
 
-# ⚡ Dykstra
+#  Dykstra
 
 ### **Practice. Revise. Interview. Improve.**
 
