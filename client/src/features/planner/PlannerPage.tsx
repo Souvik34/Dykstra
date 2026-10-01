@@ -1155,7 +1155,7 @@ const addProblemToPlanner = async (
   */
 
   return (
-    <div className="min-h-full bg-slate-200">
+    <div className="min-h-full bg-slate-900">
       <div className="mx-auto max-w-[1800px] px-4 py-7 sm:px-6 lg:px-8">
 
         {/* PAGE HEADER */}
