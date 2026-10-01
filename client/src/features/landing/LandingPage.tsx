@@ -351,10 +351,10 @@ useEffect(() => {
             }}
             className="text-[46px] font-black leading-[0.98] tracking-[-0.055em] drop-shadow-[0_8px_35px_rgba(0,0,0,.45)] sm:text-[66px] md:text-[82px] lg:text-[100px]"
           >
-            One place to
+          Your journey from
             <br />
             <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent [background-size:200%_100%] animate-[gradientShift_6s_ease-in-out_infinite]">
-              become interview ready.
+           DSA practice to interview readiness.
             </span>
           </motion.h1>
 

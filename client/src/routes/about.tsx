@@ -1,8 +1,9 @@
 /* eslint-disable prettier/prettier */
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Brain, Code2, Target, Github, Linkedin } from "lucide-react";
+import { ArrowRight, Brain, Code2, Target, Github, Linkedin, } from "lucide-react";
 import dp from "../assets/images/dp.jpg";
+import { SiLeetcode } from "react-icons/si";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
@@ -178,6 +179,16 @@ function AboutPage() {
           <Linkedin className="h-5 w-5 text-[#0A66C2]" />
           LinkedIn
         </a>
+<a
+  href="https://leetcode.com/u/souvik13109/"
+  target="_blank"
+  rel="noreferrer"
+  aria-label="Souvik Sural on LeetCode"
+  className="inline-flex items-center gap-2 text-sm text-white/50 transition hover:text-white"
+>
+  <SiLeetcode className="h-5 w-5 text-[#FFA116]" />
+  LeetCode
+</a>
 
       </div>
 
