@@ -230,9 +230,14 @@ export const sendPasswordResetEmail = async (to, token) => {
 /**
  * Bug report email
  */
+/**
+ * Bug report email
+ */
 export const sendBugReportEmail = async ({
   description,
   page,
+  userEmail,
+  userId,
 }) => {
   await transporter.sendMail({
     from: `Dykstra <${process.env.EMAIL_FROM}>`,
@@ -241,6 +246,16 @@ export const sendBugReportEmail = async ({
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2>Dykstra Bug Report</h2>
+
+        <p>
+          <strong>Reported by:</strong>
+          ${userEmail}
+        </p>
+
+        <p>
+          <strong>User ID:</strong>
+          ${userId}
+        </p>
 
         <p>
           <strong>Page:</strong>

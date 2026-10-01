@@ -5,10 +5,10 @@ import {
   submitReview,
   fetchApprovedReviews,
 } from "./feedback.controller.js";
-
+import { protect } from "../../../middlewares/auth.middleware.js";
 const router = express.Router();
 
-router.post("/bug", reportBug);
+router.post("/bug", protect, reportBug);
 
 router.post("/review", submitReview);
 

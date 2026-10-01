@@ -20,9 +20,11 @@ export const reportBug = async (req, res, next) => {
     await sendBugReportEmail({
       description: description.trim(),
       page: page || "Unknown page",
+      userEmail: req.user.email,
+        userId: req.user.id,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Bug report sent successfully",
     });
   } catch (error) {
