@@ -139,7 +139,7 @@ function InterviewHistoryPage() {
     useState<InterviewFilters>(EMPTY_FILTERS);
 
   const isDetailPage = !!matchRoute({
-    to: "/interview/history/$interviewId",
+    to: "/interview-history/$interviewId",
   });
 
   useEffect(() => {
@@ -350,7 +350,7 @@ function InterviewHistoryPage() {
     interviewId: string
   ) => {
     navigate({
-      to: "/interview/history/$interviewId",
+      to: "/interview-history/$interviewId",
       params: {
         interviewId,
       },
