@@ -166,6 +166,13 @@ export default function PlannerPage() {
         6,
       ),
     );
+    const isPastDate = (date: string) => {
+  const today = formatDate(new Date());
+  return date < today;
+};
+
+const isEntireWeekPast =
+  weekEndString < formatDate(new Date());
 
   /*
   |--------------------------------------------------------------------------
@@ -304,8 +311,14 @@ export default function PlannerPage() {
   */
 
   const buildWeek = async () => {
-    if (
-      selectedTopics.length === 0
+  if (isEntireWeekPast) {
+    toast.error(
+      "This week has already passed. Please select the current or a future week.",
+    );
+    return;
+  }
+
+  if (selectedTopics.length === 0
     ) {
       toast.error(
         "Select at least one topic",
@@ -462,7 +475,12 @@ export default function PlannerPage() {
       );
 
     if (!item) return;
-
+if (isPastDate(plannedDate)) {
+  toast.error(
+    "You can't move a task to a past date.",
+  );
+  return;
+}
     if (
       leaves.includes(
         plannedDate,
@@ -565,12 +583,19 @@ export default function PlannerPage() {
   |--------------------------------------------------------------------------
   */
 
-  const handleAddProblem = (
-    date: string,
-  ) => {
-    if (
-      leaves.includes(date)
-    ) {
+ const handleAddProblem = (
+  date: string,
+) => {
+  if (isPastDate(date)) {
+    toast.error(
+      "You can't add a task to a past date.",
+    );
+    return;
+  }
+
+  if (
+    leaves.includes(date)
+  ) {
       toast.error(
         "Cannot add a task to a leave day",
       );
@@ -586,10 +611,17 @@ export default function PlannerPage() {
   |--------------------------------------------------------------------------
   */
 
-  const handleSetLeave = async (
-    date: string,
-  ) => {
-    try {
+const handleSetLeave = async (
+  date: string,
+) => {
+  if (isPastDate(date)) {
+    toast.error(
+      "You can't mark a past date as a leave day.",
+    );
+    return;
+  }
+
+  try {
       const result =
         await setPlannerLeave({
           weekStart:
@@ -699,14 +731,20 @@ export default function PlannerPage() {
   | ADD PROBLEM TO PLANNER
   |--------------------------------------------------------------------------
   */
+const addProblemToPlanner = async (
+  problem: PlannerSuggestion,
+  date: string,
+) => {
+  if (isPastDate(date)) {
+    toast.error(
+      "You can't add a task to a past date.",
+    );
+    return;
+  }
 
-  const addProblemToPlanner = async (
-    problem: PlannerSuggestion,
-    date: string,
-  ) => {
-    if (
-      leaves.includes(date)
-    ) {
+  if (
+    leaves.includes(date)
+  ) {
       toast.error(
         "Cannot add a task to a leave day",
       );
