@@ -7,7 +7,7 @@ getProblemNotes,} from "./problems.controller.js";
 import { startProblem } from "./problems.controller.js";
 import { markProblemSolved } from "./problems.controller.js";
 import { revisionMiddleware } from "../../middlewares/revision.middleware.js";
-import { protect } from "../../middlewares/auth.middleware.js";
+import { protect, requireAdmin} from "../../middlewares/auth.middleware.js";
 const router = express.Router();
 
 router.get("/", getAllProblems);
@@ -17,7 +17,13 @@ router.get(
   protect,
   getProgress
 );
-router.post("/", createProblem);
+router.post(
+  "/",
+  protect,
+  requireAdmin,
+  createProblem
+);
+
 router.post(
   "/solve",
   protect,
