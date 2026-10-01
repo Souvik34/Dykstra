@@ -259,10 +259,17 @@ function BinarySearchInput({ onVisualize }) {
         </div>
       )}
 
-      <button
-        className="visualize-button binary-visualize"
-        onClick={handleVisualize}
-      >
+     <button
+  className="visualize-button binary-visualize"
+  onClick={handleVisualize}
+  style={{
+    width: "fit-content",
+    padding: "8px 14px",
+    fontSize: "13px",
+  }}
+>
+  Visualize
+</button>
         <Play
           size={18}
           fill="currentColor"
