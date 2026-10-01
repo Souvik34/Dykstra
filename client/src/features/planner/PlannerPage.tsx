@@ -1175,7 +1175,7 @@ const addProblemToPlanner = async (
           className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
         >
           <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-50">
               <CalendarDays className="h-4 w-4 text-indigo-600" />
 
               <span>Practice</span>
@@ -1193,7 +1193,7 @@ const addProblemToPlanner = async (
               Weekly Planner
             </h1>
 
-            <p className="mt-2 text-base font-medium text-slate-600">
+            <p className="mt-2 text-base font-medium text-slate-50">
               Organize your DSA practice
               across the week.
             </p>
@@ -1234,7 +1234,7 @@ const addProblemToPlanner = async (
               onClick={
                 handlePlanButton
               }
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-800"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 text-sm font-bold text-white shadow-lg shadow-slate-900/10 transition hover:bg-slate-600"
             >
               <Sparkles className="h-4 w-4 text-amber-300" />
 
